@@ -1,0 +1,3 @@
+[submodule "src/kiro_nav"]
+	path = src/kiro_nav
+	url = git@github.com:marina-frag/kiro_nav.git
