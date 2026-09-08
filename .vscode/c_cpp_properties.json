@@ -1,0 +1,23 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/opt/ros/jazzy/include/**",
+        "/home/marina-fragkouli/crowd_aware_ws/src/pmb2_hunav_simulation/hunav_gz_ws/src/hunav_gazebo_wrapper/include/**",
+        "/home/marina-fragkouli/crowd_aware_ws/src/pmb2_hunav_simulation/hunav_gz_ws/src/hunav_sim/hunav_agent_manager/include/**",
+        "/home/marina-fragkouli/crowd_aware_ws/src/pmb2_hunav_simulation/hunav_gz_ws/src/hunav_sim/hunav_rviz2_panel/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

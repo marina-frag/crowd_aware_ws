@@ -63,3 +63,17 @@ crowd_aware_ws/
 
 - **DWB** remains an upstream Nav2 dependency. Project-specific behavior is implemented as external plugins in `crowd_aware_dwb_critics`.
 - **HATEB/CoHAN** is maintained as a separate fork and imported into `src/hateb_fork` through `dependencies.repos`. Changes to the upstream source should remain minimal.
+
+
+---
+## Running
+```bash
+cd ~/crowd_aware_ws
+source ~/crowd_aware_ws/install/setup.bash
+
+colcon build   --symlink-install   --packages-select iwalk_description
+
+ros2 launch iwalk_description display.launch.py
+
+
+```

@@ -1,3 +1,5 @@
+stack: Ubuntu24 +ross 2 jazzy
+
 ---
 project: Crowd-Aware Front-Following for Assistive Mobile Robots
 document_role: Single source of truth for the weekly presentation

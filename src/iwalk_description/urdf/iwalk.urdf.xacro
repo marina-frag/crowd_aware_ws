@@ -6,23 +6,21 @@
 
   <!-- ==================================================== -->
   <!-- ΒΑΣΙΚΕΣ ΠΑΡΑΜΕΤΡΟΙ                                  -->
-  <!-- Οι παρακάτω αριθμοί είναι προσωρινοί.                -->
-  <!-- Θα αντικατασταθούν με μετρήσεις του πραγματικού      -->
-  <!-- i-Walk και του STL.                                  -->
+
   <!-- ==================================================== -->
 
   <xacro:property name="PI" value="3.141592653589793"/>
 
   <!-- Σταθερό ύψος του base_link από το έδαφος -->
-  <xacro:property name="base_link_height" value="0.10"/>
+  <xacro:property name="base_link_height" value="0.095"/>
   <!-- 0.001 αν το STL είναι σε mm, 1.0 αν είναι σε m -->
 
   <xacro:property name="mesh_scale" value="0.001"/>
 
   <!-- Μετατόπιση και περιστροφή του STL ως προς base_link -->
-  <xacro:property name="mesh_x" value="0.292367371"/>
+  <xacro:property name="mesh_x" value="0.682367371"/>
   <xacro:property name="mesh_y" value="-0.326500000"/>
-  <xacro:property name="mesh_z" value="-0.100114396"/>
+  <xacro:property name="mesh_z" value="-0.095114396"/>
 
   <xacro:property name="mesh_roll"  value="0.0"/>
   <xacro:property name="mesh_pitch" value="0.0"/>
@@ -32,9 +30,9 @@
   <xacro:property name="body_width"  value="0.653000000"/>
   <xacro:property name="body_height" value="1.046494491"/>
 
-  <xacro:property name="body_center_x" value="0.0"/>
+  <xacro:property name="body_center_x" value="0.39"/>
   <xacro:property name="body_center_y" value="0.0"/>
-  <xacro:property name="body_center_z" value="0.423247245"/>
+  <xacro:property name="body_center_z" value="0.428247245"/>
     <!-- Προσωρινές δυναμικές παράμετροι -->
   <xacro:property name="body_mass" value="25.0"/>
 
@@ -44,17 +42,17 @@
   <xacro:property name="rear_wheel_mass"   value="0.80"/>
 
   <xacro:property name="rear_wheel_separation" value="0.61"/>
-  <xacro:property name="rear_wheel_x" value="-0.39"/>
-  <xacro:property name="rear_wheel_z" value="-0.005"/>
+  <xacro:property name="rear_wheel_x" value="0.0"/>
+  <xacro:property name="rear_wheel_z" value="0.0"/>
 
   <!-- Εμπρός caster τροχοί -->
   <xacro:property name="front_wheel_radius" value="0.060"/>
   <xacro:property name="front_wheel_width"  value="0.030"/>
   <xacro:property name="front_wheel_mass"   value="0.30"/>
 
-  <xacro:property name="front_caster_x" value="0.24"/>
+  <xacro:property name="front_caster_x" value="0.63"/>
   <xacro:property name="front_caster_separation" value="0.38"/>
-  <xacro:property name="front_wheel_z" value="-0.040"/>
+  <xacro:property name="front_wheel_z" value="-0.035"/>
 
   <xacro:property name="caster_trail" value="0.03"/>
   <!-- ==================================================== -->
@@ -204,7 +202,7 @@
     <child link="base_link"/>
 
     <origin
-      xyz="0 0 ${base_link_height}"
+      xyz="-0.39 0 ${base_link_height}"
       rpy="0 0 0"/>
 
   </joint>
