@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.8)
+project(crowd_aware_simulation)
+find_package(ament_cmake REQUIRED)
+install(DIRECTORY launch rviz scripts DESTINATION share/${PROJECT_NAME})
+ament_package()

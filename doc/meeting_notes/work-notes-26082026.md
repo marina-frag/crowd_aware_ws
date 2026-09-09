@@ -174,9 +174,6 @@ I will model one camera and 1 3d lidar on front IMU
 —----------------------------------
 
 
-canbash+Api commands vs VESC(συνδέεται με pu)+calebration
-
-
 Πλήρως δυναμικό burger ή δυναμική σε σημείο του burger
 
 contacts σιτς ροδες
@@ -209,8 +206,6 @@ ros2 run rosback replay
 το dwal το τρέχει ςμε launch
 
 
-ασχετο αλλα adas autonomous driving level 1 line assist level 5 full autonous driving
-scan d μοντελο dataset
 
 
 
@@ -239,3 +234,68 @@ Camera topics.
 
 ros2 bag info <bag_directory>
 ros2 bag play <bag_directory>
+
+
+--------
+
+
+## Ερωτήσεις
+
+
+Εξηγησε αυτό
+
+Ο incremental encoder παράγει παλμούς καθώς περιστρέφεται ο άξονας. Κάθε παλμός/edge αντιμετωπίζεται σαν ένα tick.
+
+Αν ο συνολικός αριθμός είναι \(N\) counts ανά περιστροφή:
+
+$$ \Delta\theta = 2\pi\frac{\Delta ticks}{N} $$
+
+Η γωνιακή ταχύτητα είναι:
+
+$$ \omega= \frac{\Delta\theta}{\Delta t} $$
+
+Η απόσταση που διένυσε ο τροχός είναι:
+
+$$ \Delta s=r\Delta\theta $$
+
+“Integrating the encoder ticks” σημαίνει ότι προσθέτουμε διαδοχικά τις μικρές μεταβολές:
+
+$$ ticks_{\text{total}} = ticks_{\text{total}}+\Delta ticks $$
+
+Έτσι βρίσκουμε τη συνολική περιστροφή και την απόσταση, όχι μόνο την στιγμιαία ταχύτητα.
+
+Για differential drive:
+
+$$ \Delta s= \frac{\Delta s_R+\Delta s_L}{2} $$ $$ \Delta\theta_{\text{robot}} = \frac{\Delta s_R-\Delta s_L}{L} $$
+
+Από αυτά υπολογίζεται το wheel odometry /odom.
+
+
+
+
+
+
+-----------------
+
+4. Γιατί χρησιμοποιούμε FOC
+
+Για assistive mobile robot πιθανότατα θέλεις FOC — Field-Oriented Control.
+
+Σε σύγκριση με απλό BLDC commutation προσφέρει συνήθως:
+
+πιο ομαλή κίνηση,
+λιγότερο θόρυβο,
+καλύτερο έλεγχο ροπής,
+καλύτερη συμπεριφορά σε μικρές ταχύτητες,
+ομαλότερο ξεκίνημα και φρενάρισμα.
+
+
+
+$I_{max} =min(I_{VESC} ,I_{motor},I_{battery},I_{BMS}, I_{wiring})$
+
+
+----
+120 Ohms in canbus
+
+---
+Τα παρακάτω είναι είδη encoders
