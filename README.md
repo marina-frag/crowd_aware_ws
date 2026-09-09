@@ -67,6 +67,8 @@ crowd_aware_ws/
 
 ---
 ## Running
+
+Simple rViz no controller
 ```bash
 cd ~/crowd_aware_ws
 source ~/crowd_aware_ws/install/setup.bash
@@ -75,5 +77,21 @@ colcon build   --symlink-install   --packages-select iwalk_description
 
 ros2 launch iwalk_description display.launch.py
 
+
+```
+
+
+Vanilla dwal on cafe
+
+```bash
+cd ~/crowd_aware_ws
+bash scripts/run_dwal_cafe.sh build && bash scripts/run_dwal_cafe.sh run
+```
+
+
+Για χειροκίνητη κίνηση:
+
+```bash
+bash scripts/run_dwal_cafe.sh teleop
 
 ```
