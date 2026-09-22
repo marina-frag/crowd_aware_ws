@@ -46,8 +46,10 @@ def setup(context):
         raise RuntimeError('reference_mode must be autonomous or teleop')
     if radius_mode not in ('discrete', 'continuous'):
         raise RuntimeError('radius_mode must be discrete or continuous')
-    if reference_mode == 'teleop' and controller not in ('fixed_dwal', 'dynamic_dwal'):
-        raise RuntimeError('interactive teleoperation is a DWAL shared-control demonstration mode')
+    teleop_input_timeout = float(
+        LaunchConfiguration('teleop_input_timeout').perform(context))
+    if teleop_input_timeout <= 0.0:
+        raise RuntimeError('teleop_input_timeout must be positive')
     try:
         int(seed)
     except ValueError as error:
@@ -128,9 +130,14 @@ def setup(context):
         name='dynamic_radius_policy', output='screen',
         parameters=[str(run/'radius_policy.yaml'), {
             'semantic_mode': semantic_on, 'adaptation_mode': adaptation_mode}])
+    guard_parameters = [str(run/'command_pipeline.yaml')]
+    if reference_mode == 'teleop' and not is_dwal:
+        guard_parameters.append({
+            'reference_gate_enabled': True,
+            'reference_gate_timeout': teleop_input_timeout})
     guard = Node(
         package='crowd_aware_simulation', executable='command_guard.py',
-        name='command_guard', output='screen', parameters=[str(run/'command_pipeline.yaml')])
+        name='command_guard', output='screen', parameters=guard_parameters)
     smoother = Node(
         package='nav2_velocity_smoother', executable='velocity_smoother',
         name='velocity_smoother', output='screen', parameters=[str(run/'command_pipeline.yaml')],
@@ -156,15 +163,24 @@ def setup(context):
 
     task_action = '/reference/follow_path' if is_dwal else '/follow_path'
     task_lifecycle_node = '/reference/controller_server' if is_dwal else '/controller_server'
-    task = Node(
-        package='crowd_aware_simulation', executable='local_task.py', name='local_task',
-        output='screen', parameters=[str(run/'task.yaml'), {
-            'evaluator_enabled': truth(context, 'evaluator'),
-            'experiment_tag': f'{controller}_{semantics}',
-            'run_id': int(seed),
-            'action_name': task_action,
-            'controller_lifecycle_node': task_lifecycle_node,
-            'autostart': reference_mode == 'autonomous'}])
+    if reference_mode == 'teleop' and not is_dwal:
+        task_nodes = [Node(
+            package='crowd_aware_simulation', executable='teleop_path_adapter.py',
+            name='teleop_path_adapter', output='screen', parameters=[{
+                'use_sim_time': True,
+                'action_name': task_action,
+                'controller_lifecycle_node': task_lifecycle_node,
+                'input_timeout': teleop_input_timeout}])]
+    else:
+        task_nodes = [Node(
+            package='crowd_aware_simulation', executable='local_task.py', name='local_task',
+            output='screen', parameters=[str(run/'task.yaml'), {
+                'evaluator_enabled': truth(context, 'evaluator'),
+                'experiment_tag': f'{controller}_{semantics}',
+                'run_id': int(seed),
+                'action_name': task_action,
+                'controller_lifecycle_node': task_lifecycle_node,
+                'autostart': reference_mode == 'autonomous'}])]
 
     condition_nodes = []
     if is_dwal:
@@ -241,7 +257,7 @@ def setup(context):
     runtime_nodes = [
         server, client, rsp, jsp, scan_filter, adapter, context_estimator, radius_policy,
         guard, smoother, collision, final_watchdog, evaluator, pipeline_manager,
-        *condition_nodes, task, rviz]
+        *condition_nodes, *task_nodes, rviz]
 
     def after_world(event, _):
         if event.returncode:
@@ -266,6 +282,7 @@ def generate_launch_description():
         DeclareLaunchArgument('controller', default_value='fixed_dwal'),
         DeclareLaunchArgument('semantics', default_value='off'),
         DeclareLaunchArgument('reference_mode', default_value='autonomous'),
+        DeclareLaunchArgument('teleop_input_timeout', default_value='0.35'),
         DeclareLaunchArgument('radius_mode', default_value='continuous'),
         DeclareLaunchArgument('seed', default_value='1'),
         DeclareLaunchArgument('headless', default_value='false'),

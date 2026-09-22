@@ -52,6 +52,7 @@ headless=${HEADLESS:-true}
 gui=${GUI:-false}
 rviz=${RVIZ:-false}
 reference_mode=${REFERENCE_MODE:-autonomous}
+teleop_input_timeout=${TELEOP_INPUT_TIMEOUT:-0.35}
 radius_mode=${RADIUS_MODE:-continuous}
 for value in "$headless" "$gui" "$rviz"; do
   case "$value" in true|false) ;; *) echo 'HEADLESS, GUI, and RVIZ must be true or false'; exit 2;; esac
@@ -77,6 +78,7 @@ args=(
   "controller:=$controller"
   "semantics:=$semantics"
   "reference_mode:=$reference_mode"
+  "teleop_input_timeout:=$teleop_input_timeout"
   "radius_mode:=$radius_mode"
   "seed:=$seed"
   "headless:=$headless"

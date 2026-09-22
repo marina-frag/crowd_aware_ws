@@ -809,3 +809,161 @@ documented, controller-specific mechanisms in ON.
 The main remaining experimental issues are DWB-ON conservatism, DWAL progress failures,
 lack of repeated-seed statistics, and exact internal controller CPU timing
 instrumentation. These are reported as gaps rather than presented as completed results.
+
+## Addendum: optional DWB/HATEB teleop-as-reference mode
+
+The statement in Section 2 that interactive teleoperation is separate from quantitative
+trials still applies. It is now extended with an optional interactive reference mode for
+DWB and HATEB. The default remains `REFERENCE_MODE=autonomous`, the repeated-experiment
+loop remains automatic, and the deterministic `local_task` path and all eight automatic
+condition configurations are unchanged.
+
+Launch one of the four new interactive combinations with exactly:
+
+```bash
+REFERENCE_MODE=teleop bash scripts/run_dwal_cafe.sh run dwb off 1
+REFERENCE_MODE=teleop bash scripts/run_dwal_cafe.sh run dwb on 1
+REFERENCE_MODE=teleop bash scripts/run_dwal_cafe.sh run hateb off 1
+REFERENCE_MODE=teleop bash scripts/run_dwal_cafe.sh run hateb on 1
+```
+
+Then, in a second terminal:
+
+```bash
+bash scripts/run_dwal_cafe.sh teleop
+```
+
+The keyboard still publishes `geometry_msgs/msg/Twist` only on `/reference_cmd`.
+For these DWB/HATEB teleop runs, `teleop_path_adapter` reads `linear.x` and
+`angular.z`, starts at the current `odom -> sim_base` odometry pose, and integrates a
+short differential-drive arc into a sampled `nav_msgs/msg/Path` in `odom`. It sends
+that path to the existing `/follow_path` Controller Server. Lateral input is not used,
+and reverse `linear.x` is rejected because this experiment has `allow_reverse=false`.
+
+The runtime flow is:
+
+```text
+keyboard teleop
+  -> /reference_cmd (Twist intention)
+  -> teleop_path_adapter
+  -> /experiment/path (short local Path for observation)
+  -> /follow_path (serialized Nav2 FollowPath goal)
+  -> controller_server [the selected DWB or HATEB plugin]
+  -> /cmd_vel_selected
+  -> command_guard
+  -> /cmd_vel_guarded
+  -> nav2_velocity_smoother
+  -> /cmd_vel_smoothed
+  -> nav2_collision_monitor
+  -> /cmd_vel_safe
+  -> final_cmd_watchdog
+  -> /cmd_vel
+  -> Gazebo ideal_planar_base
+```
+
+The adapter runs its input/state check at 10 Hz but does not replace an action goal on
+every check. It replaces on a material command change or after the configured 0.75 s
+local-reference refresh period. Replacement is serialized: the current goal is
+canceled and its result is received before the next goal is sent. This prevents
+overlapping active `FollowPath` goals; live action status contained historical canceled
+goals and exactly one executing goal.
+
+The default teleop-input timeout is 0.35 s and is configurable through, for example,
+`TELEOP_INPUT_TIMEOUT=0.5 REFERENCE_MODE=teleop ...`. A zero, negative-reverse,
+non-finite, missing, or stale keyboard intention cancels the goal. Missing/stale or
+invalid odometry, an inactive/stale Controller Server lifecycle state, unavailable
+action server, rejected goal, or stale action feedback does the same. The adapter also
+publishes a fail-closed Boolean heartbeat on
+`/experiment/teleop_reference_active`. Only in DWB/HATEB teleop mode, `command_guard`
+requires this fresh true heartbeat; a false/stale heartbeat forces zero even if an old
+controller goal failed to cancel. The gate is disabled by default and is not enabled in
+automatic runs or fixed/dynamic-DWAL teleop runs.
+
+No keyboard velocity is published to `/cmd_vel_selected`, `/cmd_vel_guarded`,
+`/cmd_vel_smoothed`, `/cmd_vel_safe`, or `/cmd_vel`. DWB/HATEB remains the only
+publisher of `/cmd_vel_selected`; it still applies its OFF/ON costmap or human-aware
+configuration, obstacle and human constraints, and kinematic limits. The complete
+existing downstream guard, smoother, collision monitor, and watchdog chain remains in
+place, and `final_cmd_watchdog` remains the only `/cmd_vel` publisher.
+
+### Files added or minimally modified
+
+- Added `src/crowd_aware_simulation/scripts/teleop_path_adapter.py`: Twist freshness,
+  odometry/lifecycle/action-feedback validation, differential-drive Path projection,
+  serialized `FollowPath` ownership, and the fail-closed gate heartbeat.
+- Added `src/crowd_aware_simulation/test/test_teleop_path_adapter.py`: straight, curved,
+  and in-place-rotation projection regression tests.
+- Modified `src/crowd_aware_simulation/launch/dwal_cafe.launch.py`: select the adapter
+  and guard gate only for explicit DWB/HATEB teleop runs; declare the timeout argument.
+- Modified `src/crowd_aware_simulation/scripts/command_guard.py`: add the optional,
+  default-disabled teleop-reference heartbeat gate.
+- Modified `src/crowd_aware_simulation/CMakeLists.txt`: install the adapter executable.
+- Modified `scripts/run_dwal_cafe.sh`: pass the configurable
+  `TELEOP_INPUT_TIMEOUT` value (default 0.35 s) to launch.
+- Appended this addendum to `report.md`. Controller parameters, metrics, semantic and
+  dynamic-radius logic, HuNav configuration, model/world, seeds, dependency revisions,
+  and experiment paths were not changed.
+
+### Validation performed on 2026-09-22
+
+- `bash scripts/run_dwal_cafe.sh build`: passed. The image rebuilt
+  `iwalk_description`, `crowd_aware_interfaces`, `dwal_planner`,
+  `bayesian_shared_control`, and `crowd_aware_simulation`; only the already present
+  DWAL deprecation/compiler warnings were emitted.
+- `python3 -m pytest -q` inside the Humble image for `test_policy_core.py` and
+  `test_teleop_path_adapter.py`: `9 passed`.
+- Existing `check_scene.py`: passed the physical-transform, TF-root, footprint,
+  odometry/costmap-frame, full-map, café, and sensor/plugin checks.
+- Python compilation, shell syntax, and `git diff --check`: passed.
+- Default automatic DWB OFF and HATEB OFF were launched without `REFERENCE_MODE`.
+  Both launched `local_task`, sent the unchanged deterministic path to their existing
+  Controller Server, moved the robot, reached the goal, and stored evaluator output.
+- The existing DWB OFF live smoke checker passed every reported item except
+  `nonzero_selected_command`. It was started after the short command-producing part of
+  the task and therefore exited 1, while its latched result showed
+  `FINISHED action_status=4`, `robot_motion: PASS`, `controller_active: PASS`, all
+  command-stage topics `PASS`, and `single_final_publisher: PASS`. This is the late-
+  observer limitation already described in Section 2, not reported as a full smoke
+  pass.
+- DWB OFF, DWB ON, HATEB OFF, and HATEB ON were each launched with
+  `REFERENCE_MODE=teleop`. A repeatable 10 Hz `Twist` publisher was used on
+  `/reference_cmd` in place of manual keystrokes for runtime measurement. In every
+  case the adapter produced live paths, the selected controller accepted serialized
+  `/follow_path` goals, and nonzero controller output was observed. The actual
+  interactive `teleop` subcommand was inspected but was not manually driven in this
+  automated terminal session.
+- Graph inspection showed one `/cmd_vel_selected` publisher named
+  `controller_server`, consumed by `command_guard`, and one `/cmd_vel` publisher named
+  `final_cmd_watchdog`, consumed by `ideal_planar_base`. `/reference_cmd` connected to
+  `teleop_path_adapter`, not to any final command topic.
+- DWB ON retained the two CoHAN social-layer subscriptions on `/tracked_agents` plus
+  `cohan_agents_info_adapter`. HATEB OFF retained no `/tracked_agents` publisher while
+  its configured predictor service host remained present. HATEB ON retained the HuNav
+  bridge publisher and the HATEB/predictor subscriptions.
+- Removing the `/reference_cmd` publisher was checked live in DWB OFF and HATEB OFF.
+  After the timeout, `/experiment/teleop_reference_active` was false,
+  `/experiment/command_guard_status` was `STOP inactive teleop reference`, and every
+  field of the final `/cmd_vel` sample was zero.
+- Action status was inspected while driving: previous goals were terminal canceled
+  (with one observed historic abort in HATEB), and exactly one goal had executing
+  status. No competing selected-command or final-command publisher appeared.
+- The new adapter itself exited cleanly on Ctrl-C after explicit interrupt handling was
+  added and rebuilt.
+
+### Limitations
+
+- A `Path` has geometry but no timing, so the projected arc encodes the requested
+  direction, curvature, and horizon distance; DWB/HATEB still chooses the actual
+  instantaneous velocity. This is intentional so keyboard input remains a reference
+  rather than a controller bypass.
+- Goal serialization creates a brief controller stop during a reference replacement.
+  The 0.75 s refresh avoids high-rate action flooding and can be tuned as an adapter
+  parameter if a different controller/host needs a different responsiveness tradeoff.
+- The pinned HATEB Controller Server continued to exit with signal 11 during global
+  Ctrl-C teardown in both automatic and teleop launches, after completing normal goal
+  execution; several pre-existing Python nodes also report double-shutdown exceptions.
+  These teardown behaviors predate and are outside this feature. The new adapter
+  terminates cleanly, Docker removes the run container, and no runtime process remains.
+- No quantitative teleop trials were performed. Teleop is an optional interactive
+  demonstration/input mode and must not be mixed into the repeated automatic dataset
+  unless explicitly selected and documented.

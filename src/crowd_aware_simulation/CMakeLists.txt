@@ -10,6 +10,7 @@ install(PROGRAMS
   scripts/command_guard.py
   scripts/final_cmd_watchdog.py
   scripts/local_task.py
+  scripts/teleop_path_adapter.py
   scripts/policy_core.py
   DESTINATION lib/${PROJECT_NAME})
 ament_package()

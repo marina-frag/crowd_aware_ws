@@ -4,7 +4,7 @@ import math
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float64, String
+from std_msgs.msg import Bool, Float64, String
 
 
 class CommandGuard(Node):
@@ -17,6 +17,9 @@ class CommandGuard(Node):
             'input_timeout': 0.35, 'speed_limit_timeout': 0.5,
             'output_rate': 20.0, 'max_linear': 0.3, 'max_angular': 0.8,
             'allow_reverse': False,
+            'reference_gate_enabled': False,
+            'reference_gate_topic': '/experiment/teleop_reference_active',
+            'reference_gate_timeout': 0.35,
         }
         for key, value in defaults.items(): self.declare_parameter(key, value)
         self.p = {key: self.get_parameter(key).value for key in defaults}
@@ -24,10 +27,15 @@ class CommandGuard(Node):
         self.command_rx = None
         self.limit = 0.0
         self.limit_rx = None
+        self.reference_gate = False
+        self.reference_gate_rx = None
         self.publisher = self.create_publisher(Twist, self.p['output_topic'], 10)
         self.status_pub = self.create_publisher(String, self.p['status_topic'], 10)
         self.create_subscription(Twist, self.p['input_topic'], self.command_cb, 10)
         self.create_subscription(Float64, self.p['speed_limit_topic'], self.limit_cb, 10)
+        if self.p['reference_gate_enabled']:
+            self.create_subscription(
+                Bool, self.p['reference_gate_topic'], self.reference_gate_cb, 10)
         self.create_timer(1.0 / float(self.p['output_rate']), self.tick)
 
     def command_cb(self, msg):
@@ -36,13 +44,23 @@ class CommandGuard(Node):
     def limit_cb(self, msg):
         self.limit, self.limit_rx = max(0.0, float(msg.data)), self.get_clock().now()
 
+    def reference_gate_cb(self, msg):
+        self.reference_gate = bool(msg.data)
+        self.reference_gate_rx = self.get_clock().now()
+
     def tick(self):
         now = self.get_clock().now()
         reason = 'forwarded'
         out = Twist()
         command_age = math.inf if self.command_rx is None else (now - self.command_rx).nanoseconds / 1e9
         limit_age = math.inf if self.limit_rx is None else (now - self.limit_rx).nanoseconds / 1e9
-        if command_age > float(self.p['input_timeout']):
+        gate_age = (math.inf if self.reference_gate_rx is None else
+                    (now - self.reference_gate_rx).nanoseconds / 1e9)
+        if (self.p['reference_gate_enabled'] and
+                (gate_age > float(self.p['reference_gate_timeout']) or
+                 not self.reference_gate)):
+            reason = 'STOP inactive teleop reference'
+        elif command_age > float(self.p['input_timeout']):
             reason = 'STOP stale selected command'
         elif limit_age > float(self.p['speed_limit_timeout']):
             reason = 'STOP stale speed limit'
