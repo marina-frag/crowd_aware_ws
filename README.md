@@ -108,7 +108,7 @@ validation evidence, evaluation commands, and known limitations.
 
 
 ---
-## Run diff controllers
+## Run diff controllers different usecases
 ```bash
  SCENARIO=<scenario> REFERENCE_MODE=teleop GUI=true HEADLESS=false RVIZ=true bash scripts/run_dwal_cafe.sh run <controller> <on|off> <seed>
 ```
