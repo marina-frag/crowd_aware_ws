@@ -1,0 +1,10 @@
+std_msgs/Header header
+bool valid
+float32 speed
+float32 requested_radius
+float32 applied_radius
+float32 radius_upper_bound
+float32 speed_limit
+string active_profile
+string adaptation_mode
+string reason

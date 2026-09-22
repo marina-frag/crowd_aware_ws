@@ -66,32 +66,42 @@ crowd_aware_ws/
 
 
 ---
-## Running
+## Running the local café experiments
 
-Simple rViz no controller
-```bash
-cd ~/crowd_aware_ws
-source ~/crowd_aware_ws/install/setup.bash
-
-colcon build   --symlink-install   --packages-select iwalk_description
-
-ros2 launch iwalk_description display.launch.py
-
-
-```
-
-
-Vanilla dwal on cafe
+The verified environment is the pinned ROS 2 Humble / Gazebo Classic container.
+Build it once:
 
 ```bash
 cd ~/crowd_aware_ws
-bash scripts/run_dwal_cafe.sh build && bash scripts/run_dwal_cafe.sh run
+bash scripts/run_dwal_cafe.sh build
 ```
 
-
-Για χειροκίνητη κίνηση:
+Select one controller and one semantic mode:
 
 ```bash
+bash scripts/run_dwal_cafe.sh run fixed_dwal off 1
+bash scripts/run_dwal_cafe.sh run fixed_dwal on 1
+bash scripts/run_dwal_cafe.sh run dwb off 1
+bash scripts/run_dwal_cafe.sh run dwb on 1
+bash scripts/run_dwal_cafe.sh run hateb off 1
+bash scripts/run_dwal_cafe.sh run hateb on 1
+bash scripts/run_dwal_cafe.sh run dynamic_dwal off 1
+bash scripts/run_dwal_cafe.sh run dynamic_dwal on 1
+```
+
+Run the matching live gate from a second terminal while the task is moving:
+
+```bash
+bash scripts/run_dwal_cafe.sh check dynamic_dwal on 1
+```
+
+For the separate interactive DWAL demonstration, launch with
+`REFERENCE_MODE=teleop`, then attach the keyboard:
+
+```bash
+REFERENCE_MODE=teleop bash scripts/run_dwal_cafe.sh run fixed_dwal on 1
 bash scripts/run_dwal_cafe.sh teleop
-
 ```
+
+See [report.md](report.md) for the exact condition semantics, graph inventory,
+validation evidence, evaluation commands, and known limitations.

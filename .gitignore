@@ -2,4 +2,6 @@
 build/
 install/
 log/
+rosbags/
+**/__pycache__/
 

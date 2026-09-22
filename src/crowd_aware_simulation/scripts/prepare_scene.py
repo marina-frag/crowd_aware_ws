@@ -81,7 +81,163 @@ def sdf_geometry(parent, g, description):
             add(out, k, v)
 
 
-def prepare(description, wrapper, target):
+def ros_params(name, parameters):
+    return {name: {'ros__parameters': parameters}}
+
+
+def obstacle_layer(scan_topic='/scan'):
+    return {
+        'plugin': 'nav2_costmap_2d::ObstacleLayer', 'enabled': True,
+        'observation_sources': 'scan',
+        'scan': {'topic': scan_topic, 'data_type': 'LaserScan', 'clearing': True,
+                 'marking': True, 'max_obstacle_height': 2.0,
+                 'raytrace_max_range': 10.0, 'obstacle_max_range': 9.5,
+                 'inf_is_valid': True}}
+
+
+def costmap_parameters(footprint, semantic=False):
+    plugins = ['obstacle_layer']
+    if semantic:
+        plugins += ['human_static_layer', 'human_visibility_layer']
+    plugins += ['inflation_layer']
+    result = {
+        'use_sim_time': True, 'global_frame': 'odom', 'robot_base_frame': 'sim_base',
+        # Humble's Costmap2DROS declares width/height as integer parameters.
+        'rolling_window': True, 'width': 8, 'height': 8, 'resolution': 0.05,
+        'update_frequency': 10.0, 'publish_frequency': 5.0,
+        'always_send_full_costmap': True, 'track_unknown_space': False,
+        'transform_tolerance': 0.5, 'footprint': str(footprint),
+        'footprint_padding': 0.02, 'plugins': plugins,
+        'obstacle_layer': obstacle_layer(),
+        'inflation_layer': {'plugin': 'nav2_costmap_2d::InflationLayer',
+                            'inflation_radius': 0.45, 'cost_scaling_factor': 8.0}}
+    if semantic:
+        result.update({
+            'tracked_agents_topic': '/tracked_agents',
+            'agents_states_topic': '/agents_info',
+            'human_static_layer': {'plugin': 'cohan_layers::StaticAgentLayer',
+                                   'agent_radius': 0.4, 'amplitude': 150.0},
+            'human_visibility_layer': {'plugin': 'cohan_layers::AgentVisibilityLayer',
+                                       'agent_radius': 0.4, 'amplitude': 180.0}})
+    return result
+
+
+def common_controller(limits):
+    return {
+        'use_sim_time': True, 'controller_frequency': 20.0,
+        'min_x_velocity_threshold': 0.001, 'min_y_velocity_threshold': 0.001,
+        'min_theta_velocity_threshold': 0.001, 'failure_tolerance': 0.0,
+        'progress_checker_plugin': 'progress_checker',
+        'goal_checker_plugins': ['general_goal_checker'],
+        'controller_plugins': ['FollowPath'],
+        'progress_checker': {'plugin': 'nav2_controller::SimpleProgressChecker',
+                             'required_movement_radius': 0.08,
+                             'movement_time_allowance': 8.0},
+        'general_goal_checker': {'plugin': 'nav2_controller::SimpleGoalChecker',
+                                 'stateful': True, 'xy_goal_tolerance': 0.20,
+                                 'yaw_goal_tolerance': 0.25}}
+
+
+def dwb_plugin(limits):
+    return {
+        'plugin': 'dwb_core::DWBLocalPlanner', 'debug_trajectory_details': True,
+        'min_vel_x': 0.0, 'min_vel_y': 0.0,
+        'max_vel_x': limits['max_linear'], 'max_vel_y': 0.0,
+        'max_vel_theta': limits['max_angular'], 'min_speed_xy': 0.0,
+        'max_speed_xy': limits['max_linear'], 'min_speed_theta': 0.0,
+        'acc_lim_x': limits['acceleration'], 'acc_lim_y': 0.0,
+        'acc_lim_theta': limits['angular_acceleration'],
+        'decel_lim_x': -limits['deceleration'], 'decel_lim_y': 0.0,
+        'decel_lim_theta': -limits['angular_deceleration'],
+        'vx_samples': 20, 'vy_samples': 1, 'vtheta_samples': 30,
+        'sim_time': 2.0, 'linear_granularity': 0.05,
+        'angular_granularity': 0.025, 'transform_tolerance': 0.2,
+        'xy_goal_tolerance': 0.20, 'trans_stopped_velocity': 0.02,
+        'short_circuit_trajectory_evaluation': True, 'stateful': True,
+        'critics': ['RotateToGoal', 'Oscillation', 'BaseObstacle', 'GoalAlign',
+                    'PathAlign', 'PathDist', 'GoalDist'],
+        'BaseObstacle.scale': 0.02, 'PathAlign.scale': 32.0,
+        'PathAlign.forward_point_distance': 0.1, 'GoalAlign.scale': 24.0,
+        'GoalAlign.forward_point_distance': 0.1, 'PathDist.scale': 32.0,
+        'GoalDist.scale': 24.0, 'RotateToGoal.scale': 32.0,
+        'RotateToGoal.slowing_factor': 5.0, 'RotateToGoal.lookahead_time': -1.0}
+
+
+def hateb_plugin(limits, footprint, semantic):
+    return {
+        'plugin': 'hateb_local_planner::HATebLocalPlannerROS',
+        'predict_srv_name': '/agent_path_prediction/predict_agent_poses',
+        'reset_prediction_srv_name': '/agent_path_prediction/reset_prediction_services',
+        'pose_prediction_reset_time': 10.0, 'odom_topic': '/odom',
+        'map_frame': 'odom', 'global_frame': 'odom', 'base_frame': 'sim_base',
+        'footprint_frame': 'sim_base', 'planning_mode': 1 if semantic else 0,
+        'footprint_model': {'type': 'polygon', 'vertices': str(footprint)},
+        'robot': {'max_vel_y': 0.0, 'acc_lim_y': 0.0,
+                  'max_vel_x': limits['max_linear'], 'min_vel_x': 0.0,
+                  'max_vel_x_backwards': 0.05, 'max_vel_theta': limits['max_angular'],
+                  'min_vel_theta': 0.0, 'acc_lim_x': limits['acceleration'],
+                  'acc_lim_theta': limits['angular_acceleration'],
+                  'min_turning_radius': 0.0},
+        'agent': {'agent_radius': 0.4, 'max_agent_vel_x': 1.5,
+                  'max_agent_vel_y': 1.5, 'max_agent_vel_x_backwards': 1.5,
+                  'max_agent_vel_theta': 1.2, 'agent_acc_lim_x': 0.8,
+                  'agent_acc_lim_y': 0.8, 'agent_acc_lim_theta': 1.0},
+        'trajectory': {'teb_autosize': True, 'dt_ref': 0.2, 'dt_hysteresis': 0.02,
+                       'global_plan_overwrite_orientation': True,
+                       'allow_init_with_backwards_motion': False,
+                       'max_global_plan_lookahead_dist': 4.0,
+                       'feasibility_check_no_poses': 5,
+                       'global_plan_viapoint_sep': 0.2, 'shrink_horizon_backup': True},
+        'hateb': {'use_agent_agent_safety_c': semantic,
+                  'use_agent_robot_safety_c': semantic,
+                  'use_agent_robot_rel_vel_c': semantic,
+                  'use_agent_robot_visi_c': semantic,
+                  'add_invisible_humans': False,
+                  'min_agent_agent_dist': 0.4, 'min_agent_robot_dist': 0.8,
+                  'rel_vel_cost_threshold': 1.5, 'visibility_cost_threshold': 2.5,
+                  'invisible_human_threshold': 1.0, 'prediction_time_horizon': 5.0},
+        'goal': {'xy_goal_tolerance': 0.20, 'yaw_goal_tolerance': 0.25,
+                 'free_goal_vel': False},
+        'obstacles': {'min_obstacle_dist': 0.05, 'include_costmap_obstacles': True,
+                      'costmap_obstacles_behind_robot_dist': 0.5,
+                      'obstacle_poses_affected': 15, 'costmap_converter_plugin': '',
+                      'costmap_converter_spin_thread': True,
+                      'costmap_converter_rate': 10, 'obstacle_cost_mult': 1.0,
+                      'use_nonlinear_obstacle_penalty': True},
+        'optim': {'no_inner_iterations': 5, 'no_outer_iterations': 4,
+                  'optimization_activate': True, 'optimization_verbose': False,
+                  'penalty_epsilon': 0.01, 'weight_max_vel_x': 2.0,
+                  'weight_max_vel_y': 2.0, 'weight_max_agent_vel_x': 4.0,
+                  'weight_max_agent_vel_y': 4.0, 'weight_nominal_agent_vel_x': 2.0,
+                  'weight_max_vel_theta': 1.0, 'weight_max_agent_vel_theta': 2.0,
+                  'weight_acc_lim_x': 1.0, 'weight_acc_lim_y': 1.0,
+                  'weight_agent_acc_lim_x': 2.0, 'weight_agent_acc_lim_y': 2.0,
+                  'weight_acc_lim_theta': 1.0, 'weight_agent_acc_lim_theta': 2.0,
+                  'weight_kinematics_nh': 1000.0,
+                  'weight_kinematics_forward_drive': 100.0,
+                  'weight_kinematics_turning_radius': 0.0,
+                  'weight_optimaltime': 1.0, 'weight_agent_optimaltime': 3.0,
+                  'weight_obstacle': 50.0, 'weight_dynamic_obstacle': 50.0,
+                  'weight_agent_viapoint': 0.5, 'weight_viapoint': 1.0,
+                  'weight_shortest_path': 0.5,
+                  'selection_alternative_time_cost': False,
+                  'cap_optimaltime_penalty': True,
+                  'weight_agent_robot_safety': 5.0 if semantic else 0.0,
+                  'weight_agent_agent_safety': 2.0 if semantic else 0.0,
+                  'weight_agent_robot_rel_vel': 5.0 if semantic else 0.0,
+                  'weight_agent_robot_visibility': 5.0 if semantic else 0.0,
+                  'weight_invisible_human': 0.0, 'disable_warm_start': True},
+        'visualization': {'publish_agents_global_plans': semantic,
+                          'publish_agents_local_plan_fp_poses': semantic,
+                          'publish_agents_local_plan_poses': semantic,
+                          'publish_agents_local_plans': semantic,
+                          'publish_robot_global_plan': True,
+                          'publish_robot_local_plan': True,
+                          'publish_robot_local_plan_fp_poses': True,
+                          'publish_robot_local_plan_poses': True}}
+
+
+def prepare(description, wrapper, target, experiment_config=None, headless=False):
     description, wrapper, target = Path(description), Path(wrapper), Path(target)
     target.mkdir(parents=True, exist_ok=True)
     robot = ET.fromstring(xacro.process_file(str(description/'urdf/iwalk.urdf.xacro')).toxml())
@@ -142,25 +298,186 @@ def prepare(description, wrapper, target):
     collision = add(link,'collision',name='navigation_envelope')
     add(collision,'pose',f'{(xmin+xmax)/2} {(ymin+ymax)/2} 0.5 0 0 0')
     add(add(add(collision,'geometry'),'box'),'size',f'{xmax-xmin} {ymax-ymin} 0.96')
-    sensor = add(link, 'sensor', name='lidar', type='gpu_ray')
+    sensor = add(link, 'sensor', name='lidar', type='ray' if headless else 'gpu_ray')
     add(sensor, 'pose', '0.85 0 0.35 0 0 0'); add(sensor,'always_on','true'); add(sensor,'update_rate','15')
     ray=add(sensor,'ray'); scan=add(ray,'scan'); h=add(scan,'horizontal')
     for k,v in {'samples':720,'resolution':1,'min_angle':-math.pi,'max_angle':math.pi}.items(): add(h,k,v)
     ran=add(ray,'range')
     for k,v in {'min':0.05,'max':10,'resolution':0.01}.items(): add(ran,k,v)
     sp=add(sensor,'plugin',name='lidar_ros',filename='libgazebo_ros_ray_sensor.so')
-    ros=add(sp,'ros'); add(ros,'remapping','~/out:=/scan')
+    ros=add(sp,'ros'); add(ros,'remapping','~/out:=/scan_raw')
     add(sp,'output_type','sensor_msgs/LaserScan'); add(sp,'frame_name','laser_frame')
     plugin=add(model,'plugin',name='ideal_planar_base',filename='libgazebo_ros_planar_move.so')
     for k,v in {'update_rate':50,'publish_rate':20,'odometry_frame':'odom','robot_base_frame':'sim_base', 'publish_odom':'true','publish_odom_tf':'true'}.items(): add(plugin,k,v)
     tree.write(target/'cafe.world',encoding='unicode')
-    common={'common/levels':[1.0,1.8],'common/odom_frame':'odom','use_sim_time':True}
-    generator={**common,'dwal_generator/odometryTopic':'/odom','dwal_generator/occ_topic':'/local_costmap/costmap', 'dwal_generator/base_frame':'sim_base','dwal_generator/footprint':[v for p in footprint for v in p], 'dwal_generator/footprint_padding':0.02,'dwal_generator/acc_lim_x':0.5,'dwal_generator/acc_lim_th':1.0,'dwal_generator/max_trans_vel':0.3,'dwal_generator/min_trans_vel':0.1,'dwal_generator/max_vel_theta':0.8,'dwal_generator/sim_period':0.2,'dwal_generator/DS':0.05,'dwal_generator/Kmax':4.0,'dwal_generator/alpha':0.05,'dwal_generator/Hz':10.0}
+    config_path = Path(experiment_config) if experiment_config else Path(__file__).parents[1]/'config/experiment.yaml'
+    exp = yaml.safe_load(config_path.read_text())['experiment']
+    limits, timeouts, dwal_config = exp['limits'], exp['timeouts'], exp['dwal']
+    # Geometry is authoritative from the real URDF. Keep configured values only as an audit check.
+    if abs(float(dwal_config['front_extent']) - xmax) > 0.03 or abs(float(dwal_config['rear_extent']) + xmin) > 0.03:
+        raise ValueError('experiment.yaml iWalk extents disagree with the derived URDF envelope')
+    levels = [float(v) for v in dwal_config['fixed_levels']]
+    common={'common/levels':levels,'common/odom_frame':'odom','use_sim_time':True}
+    generator={**common,'dwal_generator/odometryTopic':'/odom','dwal_generator/occ_topic':'/local_costmap/costmap', 'dwal_generator/base_frame':'sim_base','dwal_generator/footprint':[v for p in footprint for v in p], 'dwal_generator/footprint_padding':0.02,'dwal_generator/acc_lim_x':limits['acceleration'],'dwal_generator/acc_lim_th':limits['angular_acceleration'],'dwal_generator/max_trans_vel':limits['max_linear'],'dwal_generator/min_trans_vel':0.05,'dwal_generator/max_vel_theta':limits['max_angular'],'dwal_generator/sim_period':0.2,'dwal_generator/DS':0.05,'dwal_generator/Kmax':4.0,'dwal_generator/alpha':0.05,'dwal_generator/Hz':10.0,
+               'dwal_generator/dynamic_radius_enabled':True,
+               'dwal_generator/dynamic_radius_topic':'/dwal/dynamic_radius',
+               'dwal_generator/dynamic_radius_min':dwal_config['dynamic_radius_min'],
+               'dwal_generator/dynamic_radius_max':dwal_config['dynamic_radius_max'],
+               'dwal_generator/dynamic_radius_min_delta':dwal_config['dynamic_min_delta']}
     clustering={**common,'dwal_clustering/postfix':['near','far'],'dwal_clustering/spin':[1,1],'dwal_clustering/min_cluster_span':0.2,'dwal_clustering/cluster_separation':5,'dwal_clustering/subsample_step':3}
     (target/'dwal.yaml').write_text(dump_yaml({'/dwal_planner/dwal_generator':{'ros__parameters':generator},'/dwal_planner/dwal_clustering':{'ros__parameters':clustering}}))
-    costmap={'use_sim_time':True,'global_frame':'odom','robot_base_frame':'sim_base','rolling_window':True,'width':10,'height':10,'resolution':0.05,'update_frequency':10.0,'publish_frequency':10.0,'always_send_full_costmap':True,'track_unknown_space':False,'transform_tolerance':0.5,'footprint':str(footprint),'footprint_padding':0.02,'plugins':['obstacle_layer','inflation_layer'],'obstacle_layer':{'plugin':'nav2_costmap_2d::ObstacleLayer','enabled':True,'observation_sources':'scan','scan':{'topic':'/scan','data_type':'LaserScan','clearing':True,'marking':True,'max_obstacle_height':2.0,'raytrace_max_range':10.0,'obstacle_max_range':9.5,'inf_is_valid':True}},'inflation_layer':{'plugin':'nav2_costmap_2d::InflationLayer','inflation_radius':0.45,'cost_scaling_factor':8.0}}
+    costmap=costmap_parameters(footprint, False)
     (target/'costmap.yaml').write_text(dump_yaml({'/costmap/costmap':{'ros__parameters':costmap}}))
-    (target/'geometry.yaml').write_text(dump_yaml({'footprint':footprint,'laser_xyz':[0.85,0,0.35],'base_link_height':height,'description':'Conservative zero-joint visual/collision envelope; provisional lidar mount included.'}))
+    for family in ('dwb', 'hateb'):
+        for semantic in (False, True):
+            controller = common_controller(limits)
+            if family == 'hateb':
+                # HATEB calls setGoalControl() on its concrete goal checker.
+                # The pinned implementation does not safely handle Nav2's
+                # SimpleGoalChecker here, so use the plugin it ships with.
+                controller['general_goal_checker']['plugin'] = \
+                    'hateb_local_planner::HATEBGoalChecker'
+            controller['FollowPath'] = (dwb_plugin(limits) if family == 'dwb'
+                                        else hateb_plugin(limits, footprint, semantic))
+            params = {}
+            params.update(ros_params('/controller_server', controller))
+            params.update(ros_params('/local_costmap/local_costmap',
+                                     costmap_parameters(footprint, semantic and family == 'dwb')))
+            (target/f'{family}_{"on" if semantic else "off"}.yaml').write_text(dump_yaml(params))
+
+    reference = common_controller(limits)
+    reference['FollowPath'] = {
+        'plugin': 'nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController',
+        'desired_linear_vel': limits['max_linear'], 'lookahead_dist': 0.6,
+        'min_lookahead_dist': 0.3, 'max_lookahead_dist': 0.9,
+        'lookahead_time': 1.5, 'rotate_to_heading_angular_vel': 0.5,
+        'transform_tolerance': 0.2, 'use_velocity_scaled_lookahead_dist': True,
+        'min_approach_linear_velocity': 0.05, 'approach_velocity_scaling_dist': 0.6,
+        'use_collision_detection': True, 'max_allowed_time_to_collision_up_to_carrot': 1.0,
+        'use_rotate_to_heading': True, 'allow_reversing': False,
+        'max_angular_accel': limits['angular_acceleration'], 'rotate_to_heading_min_angle': 0.785}
+    reference_params = {}
+    reference_params.update(ros_params('/reference/controller_server', reference))
+    reference_params.update(ros_params('/reference/local_costmap/local_costmap', costmap_parameters(footprint, False)))
+    (target/'reference.yaml').write_text(dump_yaml(reference_params))
+
+    smoother = {'use_sim_time': True, 'smoothing_frequency': 20.0,
+                'scale_velocities': False, 'feedback': 'OPEN_LOOP',
+                'max_velocity': [limits['max_linear'], 0.0, limits['max_angular']],
+                'min_velocity': [0.0, 0.0, -limits['max_angular']],
+                'max_accel': [limits['acceleration'], 0.0, limits['angular_acceleration']],
+                'max_decel': [-limits['deceleration'], 0.0, -limits['angular_deceleration']],
+                'odom_topic': '/odom', 'odom_duration': 0.1,
+                'deadband_velocity': [0.0, 0.0, 0.0], 'velocity_timeout': 0.30}
+    collision = {'use_sim_time': True, 'base_frame_id': 'sim_base', 'odom_frame_id': 'odom',
+                 'cmd_vel_in_topic': '/cmd_vel_smoothed', 'cmd_vel_out_topic': '/cmd_vel_safe',
+                 'transform_tolerance': 0.3, 'source_timeout': 0.30,
+                 'base_shift_correction': True, 'stop_pub_timeout': 0.30,
+                 'polygons': ['FootprintApproach'],
+                 'FootprintApproach': {'type': 'polygon', 'action_type': 'approach',
+                                       'footprint_topic': '/local_costmap/published_footprint',
+                                       'time_before_collision': 1.2,
+                                       'simulation_time_step': 0.05, 'max_points': 1,
+                                       'visualize': True, 'enabled': True},
+                 'observation_sources': ['scan'],
+                 'scan': {'type': 'scan', 'topic': '/scan', 'enabled': True}}
+    pipeline = {}
+    pipeline.update(ros_params('/velocity_smoother', smoother))
+    pipeline.update(ros_params('/collision_monitor', collision))
+    pipeline.update(ros_params('/command_guard', {
+        'use_sim_time': True, 'input_timeout': timeouts['selected_command'],
+        'speed_limit_timeout': timeouts['speed_limit'], 'output_rate': 20.0,
+        'max_linear': limits['max_linear'], 'max_angular': limits['max_angular'],
+        'allow_reverse': False}))
+    pipeline.update(ros_params('/final_cmd_watchdog', {
+        'use_sim_time': True, 'input_timeout': timeouts['final_input'], 'output_rate': 20.0}))
+    (target/'command_pipeline.yaml').write_text(dump_yaml(pipeline))
+
+    context = dict(exp['context'])
+    context.update({'use_sim_time': True, 'tracks_topic': '/tracked_agents_logging',
+                    'costmap_topic': '/local_costmap/costmap', 'odom_topic': '/odom',
+                    'output_topic': '/crowd_context', 'output_rate': context.pop('rate')})
+    (target/'context.yaml').write_text(dump_yaml(ros_params('/context_estimator', context)))
+
+    radius_base = {'use_sim_time': True, 'odom_timeout': timeouts['odom'],
+                   'context_timeout': timeouts['context'], 'fixed_radius': levels[-1],
+                   'radius_min': dwal_config['dynamic_radius_min'],
+                   'sensor_reliable_radius': dwal_config['reliable_sensor_radius'],
+                   'costmap_reliable_radius': dwal_config['reliable_costmap_radius'],
+                   'front_extent': float(xmax), 'brake_deceleration': limits['deceleration'],
+                   'base_margin': exp['profiles']['OPEN_AREA']['margin'],
+                   'base_reaction_time': exp['profiles']['OPEN_AREA']['reaction_time'],
+                   'base_preview_time': exp['profiles']['OPEN_AREA']['preview_time'],
+                   'max_speed': limits['max_linear'],
+                   'radius_decrease_rate': dwal_config['radius_decrease_rate'],
+                   'minimum_radius_delta': dwal_config['dynamic_min_delta'],
+                   'discrete_levels': [dwal_config['dynamic_radius_min'], levels[-1], 2.6,
+                                       dwal_config['dynamic_radius_max']]}
+    for profile, values in exp['profiles'].items():
+        for key, value in values.items(): radius_base[f'profiles.{profile}.{key}'] = value
+    (target/'radius_policy.yaml').write_text(dump_yaml(ros_params('/dynamic_radius_policy', radius_base)))
+
+    shared_common = {'use_sim_time': True, 'odom_topic': '/odom',
+                     'near_cluster_topic': '/dwal_planner/clusters_near',
+                     'far_cluster_topic': '/dwal_planner/clusters_far',
+                     'user_cmd_topic': '/reference_cmd', 'output_cmd_topic': '/cmd_vel_selected',
+                     'use_stamped_twist_input': False, 'use_stamped_twist_output': False,
+                     'tracked_agents_topic': '/tracked_agents',
+                     'context_profile_topic': '/crowd_context/profile',
+                     'odom_timeout': timeouts['odom'], 'cluster_timeout': timeouts['clusters'],
+                     'reference_timeout': timeouts['reference'],
+                     'tracks_timeout': timeouts['tracks'],
+                     'allow_reverse': False, 'allow_no_cluster_passthrough': False,
+                     'personal_space': 0.8, 'social_weight': 0.35,
+                     'c_max': 255.0, 'alpha': 0.7, 's_min': 0.2,
+                     'Kphi': 1.5, 'Kmax': 4.0, 'v_low': 0.22, 'v_high': 0.28,
+                     'intent.alpha': 0.92, 'intent.beta': 8.0,
+                     'intent.eta': 0.5, 'intent.sigma_min': 0.03,
+                     'intent.min_confidence': 0.0}
+    for semantic in (False, True):
+        shared = dict(shared_common)
+        shared['semantic_mode'] = semantic
+        (target/f'shared_control_{"on" if semantic else "off"}.yaml').write_text(
+            dump_yaml(ros_params('/shared_controller', shared)))
+
+    task = {'use_sim_time': True, 'path_xy': exp['local_task']['path_xy'],
+            'odom_topic': '/odom', 'path_topic': '/experiment/path'}
+    (target/'task.yaml').write_text(dump_yaml(ros_params('/local_task', task)))
+
+    scenario = yaml.safe_load((wrapper/'scenarios/agents_cafe.yaml').read_text())
+    scenario = scenario['hunav_loader']['ros__parameters']
+    prediction_goals = []
+    for agent_name in scenario['agents']:
+        agent = scenario[agent_name]
+        for goal_name in agent['goals']:
+            goal = agent[goal_name]
+            prediction_goals.append({
+                'name': f'{agent_name}_{goal_name}',
+                'goal': [float(goal['x']), float(goal['y'])]})
+    goals_file = target/'agent_goals.yaml'
+    goals_file.write_text(dump_yaml({'window_size': 10, 'goals': prediction_goals}))
+    predictor = {'use_sim_time': True, 'tracked_agents_sub_topic': '/tracked_agents',
+                 'robot_frame_id': 'sim_base', 'map_frame_id': 'odom',
+                 'goals_file': str(goals_file), 'publish_markers': True}
+    (target/'agent_prediction.yaml').write_text(dump_yaml(ros_params('/agent_path_prediction', predictor)))
+    self_filter_padding = 0.03
+    scan_filter = {
+        'use_sim_time': True,
+        'filter1': {
+            'name': 'iwalk_self_box',
+            'type': 'laser_filters/LaserScanBoxFilter',
+            'params': {
+                'box_frame': 'sim_base',
+                'min_x': float(xmin - self_filter_padding),
+                'max_x': float(xmax + self_filter_padding),
+                'min_y': float(ymin - self_filter_padding),
+                'max_y': float(ymax + self_filter_padding),
+                'min_z': -1.0, 'max_z': 2.0, 'invert': False}}}
+    (target/'scan_filter.yaml').write_text(dump_yaml(ros_params('/scan_self_filter', scan_filter)))
+    (target/'geometry.yaml').write_text(dump_yaml({
+        'footprint':footprint, 'front_extent':float(xmax), 'rear_extent':float(-xmin),
+        'laser_xyz':[0.85,0,0.35], 'base_link_height':height,
+        'description':'URDF-derived conservative visual/collision envelope; shared by all conditions.'}))
     return target
 
 

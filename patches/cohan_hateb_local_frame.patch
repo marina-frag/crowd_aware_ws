@@ -1,0 +1,66 @@
+diff --git a/src/hateb_local_planner/src/timed_elastic_band.cpp b/src/hateb_local_planner/src/timed_elastic_band.cpp
+--- a/src/hateb_local_planner/src/timed_elastic_band.cpp
++++ b/src/hateb_local_planner/src/timed_elastic_band.cpp
+@@ -49,7 +49,7 @@ double estimateDeltaT(const PoseSE2& start, const PoseSE2& end, double max_vel_x,
+   double dt_constant_motion = 0.1;
+   if (max_vel_x > 0) {
+     double trans_dist = (end.position() - start.position()).norm();
+-    dt_constant_motion = trans_dist / max_vel_x;
++    dt_constant_motion = std::max(dt_constant_motion, trans_dist / max_vel_x);
+   }
+   if (max_vel_theta > 0) {
+     double rot_dist = std::abs(g2o::normalize_theta(end.theta() - start.theta()));
+diff --git a/src/hateb_local_planner/src/hateb_local_planner_ros.cpp b/src/hateb_local_planner/src/hateb_local_planner_ros.cpp
+index 18633bd..f50e7f0 100644
+--- a/src/hateb_local_planner/src/hateb_local_planner_ros.cpp
++++ b/src/hateb_local_planner/src/hateb_local_planner_ros.cpp
+@@ -1344,7 +1344,7 @@ void HATebLocalPlannerROS::updateObstacleContainerWithInvHumans() {
+       if (!cfg_->ns.empty()) {
+         base_link = cfg_->ns + "/" + base_link;
+       }
+-      transform_stamped = tf_->lookupTransform("map", base_link, tf2::TimePointZero, tf2::durationFromSec(0.5));
++      transform_stamped = tf_->lookupTransform(cfg_->map_frame, base_link, tf2::TimePointZero, tf2::durationFromSec(0.5));
+ 
+       robot_x = transform_stamped.transform.translation.x;
+       robot_y = transform_stamped.transform.translation.y;
+diff --git a/src/hateb_local_planner/src/visualization.cpp b/src/hateb_local_planner/src/visualization.cpp
+index 6d881bb..4d276c5 100644
+--- a/src/hateb_local_planner/src/visualization.cpp
++++ b/src/hateb_local_planner/src/visualization.cpp
+@@ -472,6 +472,6 @@ void TebVisualization::publishCrossingPoses(const TimedElasticBand& teb, const
+   geometry_msgs::msg::PoseArray pose_array;
+   pose_array.header.stamp = node_->now();
+-  pose_array.header.frame_id = "map";
++  pose_array.header.frame_id = cfg_->map_frame;
+   cohan_msgs::msg::CrossingInfo crossing_info;
+ 
+   for (auto& agent_teb_kv : agents_tebs_map) {
+@@ -623,7 +623,7 @@ void TebVisualization::publishMode(int mode) {
+       base = ns_ + "/" + base;
+     }
+ 
+-    robot_to_map_tr = tf_->lookupTransform("map", base, tf2::TimePointZero, tf2::durationFromSec(0.1));
++    robot_to_map_tr = tf_->lookupTransform(cfg_->map_frame, base, tf2::TimePointZero, tf2::durationFromSec(0.1));
+     transform_found = true;
+ 
+   } catch (tf2::LookupException& ex) {
+@@ -643,7 +643,7 @@ void TebVisualization::publishMode(int mode) {
+   }
+ 
+   visualization_msgs::msg::Marker mode_text;
+-  mode_text.header.frame_id = "map";
++  mode_text.header.frame_id = cfg_->map_frame;
+   mode_text.header.stamp = node_->now();
+   mode_text.ns = "mode";
+   mode_text.id = 1;
+@@ -686,8 +686,8 @@ void TebVisualization::publishTrackedAgents(cohan_msgs::msg::TrackedAgents::Con
+     visualization_msgs::msg::Marker arrow;
+     // Set the frame ID and timestamp.  See the TF tutorials for information on these.
+-    marker.header.frame_id = "map";
++    marker.header.frame_id = cfg_->map_frame;
+     marker.header.stamp = node_->now();
+-    arrow.header.frame_id = "map";
++    arrow.header.frame_id = cfg_->map_frame;
+     arrow.header.stamp = node_->now();
+ 
+     for (const auto& segment : agent.segments) {  // Set the namespace and id for this marker.  This serves to create a unique ID

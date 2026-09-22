@@ -1,0 +1,72 @@
+experiment:
+  frames:
+    global: odom
+    base: sim_base
+    robot_description_base: base_link
+    laser: laser_frame
+  topics:
+    odom: /odom
+    scan: /scan
+    human_states: /human_states
+    tracked_agents_controller: /tracked_agents
+    tracked_agents_logging: /tracked_agents_logging
+    context: /crowd_context
+    reference_cmd: /reference_cmd
+    selected_cmd: /cmd_vel_selected
+    guarded_cmd: /cmd_vel_guarded
+    smoothed_cmd: /cmd_vel_smoothed
+    collision_checked_cmd: /cmd_vel_safe
+    final_cmd: /cmd_vel
+  limits:
+    max_linear: 0.30
+    max_angular: 0.80
+    acceleration: 0.50
+    deceleration: 0.50
+    angular_acceleration: 1.00
+    angular_deceleration: 1.00
+  timeouts:
+    odom: 0.50
+    clusters: 0.50
+    reference: 0.35
+    tracks: 0.50
+    context: 0.50
+    selected_command: 0.35
+    speed_limit: 0.50
+    final_input: 0.30
+  local_task:
+    # The task is expressed in odom and is identical for all controller families.
+    path_xy: [0.0, 0.0, 0.8, 0.0, 1.6, 0.15, 2.4, 0.15, 3.2, 0.0]
+    goal_tolerance: 0.20
+  dwal:
+    fixed_levels: [1.20, 1.80]
+    # Must stay above the fixed inner clustering level (1.20 m).
+    dynamic_radius_min: 1.40
+    dynamic_radius_max: 4.00
+    front_extent: 0.865
+    rear_extent: 0.103
+    reliable_sensor_radius: 8.0
+    reliable_costmap_radius: 4.0
+    dynamic_min_delta: 0.03
+    radius_decrease_rate: 0.50
+  context:
+    rate: 8.0
+    track_stale_after: 0.50
+    costmap_stale_after: 0.50
+    odom_stale_after: 0.50
+    minimum_dwell: 1.50
+    switch_margin: 0.12
+    crowd_radius: 3.0
+    dense_count: 4
+    narrow_width: 1.50
+    doorway_width: 1.15
+    open_clearance: 2.25
+    junction_clearance: 1.80
+  profiles:
+    OPEN_AREA: {margin: 0.20, reaction_time: 0.35, preview_time: 2.5, max_speed: 0.30}
+    NARROW_CORRIDOR: {margin: 0.30, reaction_time: 0.50, preview_time: 3.0, max_speed: 0.22}
+    DOORWAY: {margin: 0.38, reaction_time: 0.60, preview_time: 3.2, max_speed: 0.16}
+    JUNCTION: {margin: 0.30, reaction_time: 0.55, preview_time: 3.2, max_speed: 0.20}
+    DENSE_CROWD: {margin: 0.48, reaction_time: 0.70, preview_time: 3.8, max_speed: 0.12}
+    OCCLUSION: {margin: 0.45, reaction_time: 0.75, preview_time: 4.0, max_speed: 0.10}
+    UNKNOWN: {margin: 0.48, reaction_time: 0.80, preview_time: 4.0, max_speed: 0.08}
+    STALE: {margin: 0.55, reaction_time: 1.00, preview_time: 4.0, max_speed: 0.0}

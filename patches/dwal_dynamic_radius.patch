@@ -1,0 +1,149 @@
+diff --git a/src/clustering.cpp b/src/clustering.cpp
+index 1fb1a5a..2187798 100644
+--- a/src/clustering.cpp
++++ b/src/clustering.cpp
+@@ -494,6 +494,19 @@ public:
+ 
+   void sampledClusterHandler(const dwal_planner::msg::SampledCluster::SharedPtr msg)
+   {
++    if (msg->levels.size() != group_num ||
++        std::adjacent_find(msg->levels.begin(), msg->levels.end(),
++          [](double a, double b) { return a >= b; }) != msg->levels.end() ||
++        msg->levels.empty() || msg->levels.front() <= 0.0) {
++      RCLCPP_ERROR_THROTTLE(
++        ros_node->get_logger(), *ros_node->get_clock(), 2000,
++        "Rejecting sampled paths with invalid runtime levels");
++      return;
++    }
++    levels = msg->levels;
++    for (size_t k = 0; k < group_num; ++k) {
++      group_objects[k].levels = levels;
++    }
+     if (do_slice)
+     {
+       Clustering & src_cluster = group_objects[static_cast<size_t>(clustering_order[0])];
+diff --git a/src/trajectory_generator.cpp b/src/trajectory_generator.cpp
+index 768c4a0..9f04ddb 100644
+--- a/src/trajectory_generator.cpp
++++ b/src/trajectory_generator.cpp
+@@ -16,6 +16,7 @@
+ #include <tf2/utils.h>
+ 
+ #include <nav_msgs/msg/odometry.hpp>
++#include <std_msgs/msg/float64.hpp>
+ #include <visualization_msgs/msg/marker_array.hpp>
+ 
+ #include <dwal_planner/msg/sampled_cluster.hpp>
+@@ -28,6 +29,7 @@ class TrajectoryGenerator
+ {
+ public:
+   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber;
++  rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr dynamic_radius_subscriber;
+   rclcpp::Publisher<dwal_planner::msg::SampledCluster>::SharedPtr sampledCl_publisher;
+   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr sampledCl_markers_publisher;
+ 
+@@ -52,11 +54,36 @@ public:
+   base_local_planner::LocalPlannerLimits alims;
+   std::vector<dwal_planner::msg::SampledPath> paths;
+   int marker_num{0}, path_num{0};
++  bool dynamic_radius_enabled{false};
++  double dynamic_radius_min{0.0}, dynamic_radius_max{0.0}, dynamic_radius_min_delta{0.01};
+   dwal_planner::msg::SampledCluster cluster;
+ 
+   explicit TrajectoryGenerator(const std::shared_ptr<rclcpp::Node>& node);
+   ~TrajectoryGenerator();
+ 
++  void dynamicRadiusHandler(const std_msgs::msg::Float64::SharedPtr msg)
++  {
++    if (!dynamic_radius_enabled || !std::isfinite(msg->data)) {
++      return;
++    }
++    const double requested = msg->data;
++    if (requested < dynamic_radius_min || requested > dynamic_radius_max) {
++      RCLCPP_ERROR_THROTTLE(
++        node_->get_logger(), *node_->get_clock(), 2000,
++        "Rejecting dynamic radius %.3f outside configured [%.3f, %.3f]",
++        requested, dynamic_radius_min, dynamic_radius_max);
++      return;
++    }
++    if (std::fabs(requested - levels.back()) < dynamic_radius_min_delta) {
++      return;
++    }
++    levels.back() = requested;
++    Rmax = requested;
++    tp.setParameters(sim_period, DS, alpha, kmax, Dphi, &alims, levels);
++    cluster.levels = levels;
++    RCLCPP_INFO(node_->get_logger(), "Applied continuous DWAL outer radius %.3f m", requested);
++  }
++
+   void odomHandler(const nav_msgs::msg::Odometry::SharedPtr msg)
+   {
+     pos[0] = msg->pose.pose.position.x;
+@@ -209,6 +236,11 @@ TrajectoryGenerator::TrajectoryGenerator(const std::shared_ptr<rclcpp::Node>& no
+   node_->declare_parameter<double>("dwal_generator/Hz", 5.0);
+   node_->declare_parameter<std::vector<double>>("common/levels", {});
+   node_->declare_parameter<std::string>("dwal_generator/odometryTopic", "/odom");
++  node_->declare_parameter<bool>("dwal_generator/dynamic_radius_enabled", false);
++  node_->declare_parameter<std::string>("dwal_generator/dynamic_radius_topic", "/dwal/dynamic_radius");
++  node_->declare_parameter<double>("dwal_generator/dynamic_radius_min", 0.5);
++  node_->declare_parameter<double>("dwal_generator/dynamic_radius_max", 4.0);
++  node_->declare_parameter<double>("dwal_generator/dynamic_radius_min_delta", 0.01);
+ 
+   double acc_lim_x{0.5}, acc_lim_th{0.5};
+   node_->get_parameter("dwal_generator/acc_lim_x",      acc_lim_x);
+@@ -226,6 +258,10 @@ TrajectoryGenerator::TrajectoryGenerator(const std::shared_ptr<rclcpp::Node>& no
+   node_->get_parameter("common/levels",    levels);
+ 
+   node_->get_parameter("dwal_generator/odometryTopic", odom_Topic);
++  node_->get_parameter("dwal_generator/dynamic_radius_enabled", dynamic_radius_enabled);
++  node_->get_parameter("dwal_generator/dynamic_radius_min", dynamic_radius_min);
++  node_->get_parameter("dwal_generator/dynamic_radius_max", dynamic_radius_max);
++  node_->get_parameter("dwal_generator/dynamic_radius_min_delta", dynamic_radius_min_delta);
+   RCLCPP_INFO(node_->get_logger(), "Using odometry topic '%s'", odom_Topic.c_str());
+ 
+   alims.setAccLimits(static_cast<float>(acc_lim_x), 0.0f, static_cast<float>(acc_lim_th));
+@@ -241,13 +277,26 @@ TrajectoryGenerator::TrajectoryGenerator(const std::shared_ptr<rclcpp::Node>& no
+   RCLCPP_INFO(node_->get_logger(), " --> min_vel_trans = %f", alims.min_vel_trans);
+   RCLCPP_INFO(node_->get_logger(), " --> max_vel_theta = %f", alims.max_vel_theta);
+ 
++  if (levels.empty() ||
++      std::adjacent_find(levels.begin(), levels.end(),
++        [](double a, double b) { return a >= b; }) != levels.end() ||
++      levels.front() <= 0.0) {
++    throw std::runtime_error("common/levels must be non-empty, positive and sorted");
++  }
++  if (dynamic_radius_enabled &&
++      (dynamic_radius_min <= 0.0 || dynamic_radius_max < dynamic_radius_min ||
++       (levels.size() > 1 && dynamic_radius_min <= levels[levels.size() - 2]) ||
++       levels.back() < dynamic_radius_min || levels.back() > dynamic_radius_max)) {
++    throw std::runtime_error("invalid dynamic radius bounds or initial outer level");
++  }
+   Rmax = levels.back();
++  const double allocation_radius = dynamic_radius_enabled ? dynamic_radius_max : Rmax;
+ 
+-  Dphi = 2 * std::asin(alpha / (2 * Rmax));
+-  if (std::fabs(kmax) < (M_SQRT2 / Rmax))
+-    phi0 = -std::fabs(std::asin(0.5 * Rmax * kmax));
++  Dphi = 2 * std::asin(alpha / (2 * allocation_radius));
++  if (std::fabs(kmax) < (M_SQRT2 / allocation_radius))
++    phi0 = -std::fabs(std::asin(0.5 * allocation_radius * kmax));
+   else
+-    phi0 = -std::fabs(std::acos(1 / (Rmax * kmax)));
++    phi0 = -std::fabs(std::acos(1 / (allocation_radius * kmax)));
+ 
+   marker_num = static_cast<int>(2 * std::fabs(phi0) / Dphi + 1);
+   RCLCPP_INFO(node_->get_logger(), "----marker_num=  %d", marker_num);
+@@ -306,6 +355,13 @@ int main(int argc, char **argv)
+   generator.odom_subscriber = node->create_subscription<nav_msgs::msg::Odometry>(
+     generator.odom_Topic, rclcpp::QoS(1),
+     std::bind(&TrajectoryGenerator::odomHandler, &generator, std::placeholders::_1));
++  if (generator.dynamic_radius_enabled) {
++    std::string radius_topic;
++    node->get_parameter("dwal_generator/dynamic_radius_topic", radius_topic);
++    generator.dynamic_radius_subscriber = node->create_subscription<std_msgs::msg::Float64>(
++      radius_topic, rclcpp::QoS(10),
++      std::bind(&TrajectoryGenerator::dynamicRadiusHandler, &generator, std::placeholders::_1));
++  }
+ 
+   double hz = generator.Hz;
+   node->get_parameter("dwal_generator/Hz", hz);
