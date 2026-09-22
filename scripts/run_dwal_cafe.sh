@@ -5,13 +5,29 @@ mode=${1:-run}
 controller=${2:-fixed_dwal}
 semantics=${3:-off}
 seed=${4:-1}
+scenario=${SCENARIO:-cafe}
+extra_args=("${@:5}")
+while (( ${#extra_args[@]} )); do
+  case "${extra_args[0]}" in
+    --scenario)
+      (( ${#extra_args[@]} >= 2 )) || { echo '--scenario requires a value'; exit 2; }
+      scenario=${extra_args[1]}
+      extra_args=("${extra_args[@]:2}")
+      ;;
+    *) echo "Unknown argument: ${extra_args[0]}"; exit 2;;
+  esac
+done
 case "$mode" in run|build|shell|teleop|check|record) ;;
-  *) echo 'Usage: run_dwal_cafe.sh [run|build|shell|teleop|check|record] [fixed_dwal|dwb|hateb|dynamic_dwal] [off|on] [seed]'; exit 2;;
+  *) echo 'Usage: run_dwal_cafe.sh [run|build|shell|teleop|check|record] [fixed_dwal|dwb|hateb|dynamic_dwal] [off|on] [seed] [--scenario NAME]'; exit 2;;
 esac
 case "$controller" in fixed_dwal|dwb|hateb|dynamic_dwal) ;;
   *) echo "Unknown controller: $controller"; exit 2;;
 esac
 case "$semantics" in off|on) ;; *) echo "Semantic mode must be off or on"; exit 2;; esac
+case "$scenario" in
+  cafe|open_area|narrow_corridor|doorway|junction|crossing|dense_crowd|occlusion|group_blocking|target_confusion) ;;
+  *) echo "Unknown scenario: $scenario"; exit 2;;
+esac
 if [[ "$mode" == check ]]; then
   exec docker exec iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
     /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/smoke_check.py \
@@ -25,7 +41,7 @@ fi
 if [[ "$mode" == record ]]; then
   stamp=$(date -u +%Y%m%dT%H%M%SZ)
   exec docker exec -it iwalk_dwal /bin/bash /dwal_entrypoint.sh ros2 bag record \
-    -o "/rosbags/${controller}_${semantics}_${seed}_${stamp}" \
+    -o "/rosbags/${scenario}_${controller}_${semantics}_${seed}_${stamp}" \
     /odom /scan /human_states /robot_states /tracked_agents_logging /tracked_agents /agents_info \
     /crowd_context /crowd_context/profile /experiment/dynamic_radius_state /experiment/speed_limit \
     /experiment/task_result /experiment/command_guard_status \
@@ -80,11 +96,12 @@ args=(
   "reference_mode:=$reference_mode"
   "teleop_input_timeout:=$teleop_input_timeout"
   "radius_mode:=$radius_mode"
+  "scenario:=$scenario"
   "seed:=$seed"
   "headless:=$headless"
   "gui:=$gui"
   "rviz:=$rviz"
-  "result_file:=/rosbags/metrics_${controller}_${semantics}_seed${seed}"
+  "result_file:=/rosbags/metrics_${scenario}_${controller}_${semantics}_seed${seed}"
 )
 
 if [[ "$mode" == shell ]]; then

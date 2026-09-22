@@ -1,4 +1,4 @@
-"""Eight-condition local-only iWalk / HuNav café experiment."""
+"""Repeatable local-only iWalk / HuNav scenario experiments."""
 import importlib.util
 import os
 import sys
@@ -38,6 +38,7 @@ def setup(context):
     reference_mode = LaunchConfiguration('reference_mode').perform(context)
     radius_mode = LaunchConfiguration('radius_mode').perform(context)
     seed = LaunchConfiguration('seed').perform(context)
+    scenario = LaunchConfiguration('scenario').perform(context)
     if controller not in CONTROLLERS:
         raise RuntimeError(f'controller must be one of {CONTROLLERS}, got {controller!r}')
     if semantics not in SEMANTIC_MODES:
@@ -66,9 +67,10 @@ def setup(context):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     run = module.prepare(
-        description, wrapper, Path(tempfile.mkdtemp(prefix='crowd_aware_cafe_')),
-        share/'config/experiment.yaml', headless=headless)
-    print(f'Experiment={controller}/{semantics}, reference={reference_mode}, '
+        description, wrapper, Path(tempfile.mkdtemp(prefix='crowd_aware_')),
+        share/'config/experiment.yaml', headless=headless, scenario=scenario,
+        seed=int(seed), require_intended_user_support=True)
+    print(f'Scenario={scenario}, experiment={controller}/{semantics}, reference={reference_mode}, '
           f'radius={adaptation_mode}, seed={seed}; runtime files={run}', flush=True)
 
     model_paths = {str(wrapper/'models'), '/usr/share/gazebo-11/models', '/opt/gazebo_models'}
@@ -85,11 +87,11 @@ def setup(context):
 
     loader = Node(
         package='hunav_agent_manager', executable='hunav_loader', output='screen',
-        parameters=[str(wrapper/'scenarios/agents_cafe.yaml')])
+        parameters=[str(run/'agents.yaml')])
     generator = Node(
         package='hunav_gazebo_wrapper', executable='hunav_gazebo_world_generator',
         output='screen', parameters=[{
-            'base_world': str(run/'cafe.world'), 'use_gazebo_obs': True,
+            'base_world': str(run/'scenario.world'), 'use_gazebo_obs': True,
             'use_collision': False, 'update_rate': 20.0, 'robot_name': 'iwalk',
             'global_frame_to_publish': 'odom', 'use_navgoal_to_start': False,
             'navgoal_topic': '/goal_pose', 'ignore_models': 'ground_plane'}])
@@ -176,7 +178,7 @@ def setup(context):
             package='crowd_aware_simulation', executable='local_task.py', name='local_task',
             output='screen', parameters=[str(run/'task.yaml'), {
                 'evaluator_enabled': truth(context, 'evaluator'),
-                'experiment_tag': f'{controller}_{semantics}',
+                'experiment_tag': f'{scenario}_{controller}_{semantics}',
                 'run_id': int(seed),
                 'action_name': task_action,
                 'controller_lifecycle_node': task_lifecycle_node,
@@ -284,6 +286,7 @@ def generate_launch_description():
         DeclareLaunchArgument('reference_mode', default_value='autonomous'),
         DeclareLaunchArgument('teleop_input_timeout', default_value='0.35'),
         DeclareLaunchArgument('radius_mode', default_value='continuous'),
+        DeclareLaunchArgument('scenario', default_value='cafe'),
         DeclareLaunchArgument('seed', default_value='1'),
         DeclareLaunchArgument('headless', default_value='false'),
         DeclareLaunchArgument('gui', default_value='false'),

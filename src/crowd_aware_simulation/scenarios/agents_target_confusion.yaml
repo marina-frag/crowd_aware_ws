@@ -1,0 +1,57 @@
+hunav_loader:
+  ros__parameters:
+    map: open_area
+    publish_people: true
+    agents: [intended_user, distractor1, distractor2, distractor3]
+    intended_user:
+      id: 1
+      skin: 0
+      group_id: -1
+      max_vel: 0.8
+      radius: 0.4
+      behavior: {type: 1, configuration: 1, duration: 120.0, once: true, vel: 0.65, dist: 0.0, goal_force_factor: 2.0, obstacle_force_factor: 10.0, social_force_factor: 5.0, other_force_factor: 20.0}
+      init_pose: {x: 1.5, y: 1.0, z: 1.25, h: 0.0}
+      goal_radius: 0.3
+      cyclic_goals: true
+      goals: [g0, g1]
+      g0: {x: 8.0, y: 1.0, h: 0.0}
+      g1: {x: 1.5, y: 1.0, h: 3.14159}
+    distractor1:
+      id: 2
+      skin: 1
+      group_id: -1
+      max_vel: 0.85
+      radius: 0.4
+      behavior: {type: 1, configuration: 1, duration: 120.0, once: true, vel: 0.7, dist: 0.0, goal_force_factor: 2.0, obstacle_force_factor: 10.0, social_force_factor: 5.0, other_force_factor: 20.0}
+      init_pose: {x: 1.8, y: 1.8, z: 1.25, h: 0.0}
+      goal_radius: 0.3
+      cyclic_goals: true
+      goals: [g0, g1]
+      g0: {x: 8.0, y: 1.8, h: 0.0}
+      g1: {x: 1.8, y: 1.8, h: 3.14159}
+    distractor2:
+      id: 3
+      skin: 2
+      group_id: -1
+      max_vel: 0.9
+      radius: 0.4
+      behavior: {type: 1, configuration: 1, duration: 120.0, once: true, vel: 0.7, dist: 0.0, goal_force_factor: 2.0, obstacle_force_factor: 10.0, social_force_factor: 5.0, other_force_factor: 20.0}
+      init_pose: {x: 4.5, y: -2.5, z: 1.25, h: 1.5708}
+      goal_radius: 0.3
+      cyclic_goals: true
+      goals: [g0, g1]
+      g0: {x: 4.5, y: 2.5, h: 1.5708}
+      g1: {x: 4.5, y: -2.5, h: -1.5708}
+    distractor3:
+      id: 4
+      skin: 3
+      group_id: -1
+      max_vel: 0.8
+      radius: 0.4
+      behavior: {type: 1, configuration: 1, duration: 120.0, once: true, vel: 0.65, dist: 0.0, goal_force_factor: 2.0, obstacle_force_factor: 10.0, social_force_factor: 5.0, other_force_factor: 20.0}
+      init_pose: {x: 7.5, y: 0.2, z: 1.25, h: 3.14159}
+      goal_radius: 0.3
+      cyclic_goals: true
+      goals: [g0, g1]
+      g0: {x: 1.0, y: 0.2, h: 3.14159}
+      g1: {x: 7.5, y: 0.2, h: 0.0}

@@ -22,6 +22,7 @@ class LocalTask(Node):
         self.declare_parameter('path_topic', '/experiment/path')
         self.declare_parameter('odom_topic', '/odom')
         self.declare_parameter('path_xy', [0.0, 0.0, 1.0, 0.0])
+        self.declare_parameter('timeout', 90.0)
         self.declare_parameter('controller_id', 'FollowPath')
         self.declare_parameter('goal_checker_id', 'general_goal_checker')
         self.declare_parameter('controller_lifecycle_node', '/controller_server')
@@ -32,6 +33,9 @@ class LocalTask(Node):
         xy = [float(v) for v in self.get_parameter('path_xy').value]
         if len(xy) < 4 or len(xy) % 2:
             raise ValueError('path_xy must contain at least two x,y pairs')
+        self.timeout = float(self.get_parameter('timeout').value)
+        if not math.isfinite(self.timeout) or self.timeout <= 0.0:
+            raise ValueError('timeout must be positive and finite')
         self.points = list(zip(xy[0::2], xy[1::2]))
         self.client = ActionClient(self, FollowPath, self.get_parameter('action_name').value)
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -50,6 +54,9 @@ class LocalTask(Node):
         self.controller_active = False
         self.odom = None
         self.sent = False
+        self.finished = False
+        self.goal_handle = None
+        self.started_at = None
         self.result_pub.publish(String(data='STARTING waiting for active controller and odometry'))
         self.create_subscription(Odometry, self.get_parameter('odom_topic').value, self.odom_cb, 10)
         self.create_timer(0.5, self.tick)
@@ -79,6 +86,14 @@ class LocalTask(Node):
     def tick(self):
         path = self.make_path()
         self.path_pub.publish(path)
+        if (self.sent and not self.finished and self.started_at is not None and
+                (self.get_clock().now() - self.started_at).nanoseconds/1e9 >= self.timeout):
+            self.finished = True
+            if self.goal_handle is not None:
+                self.goal_handle.cancel_goal_async()
+            self.result_pub.publish(String(data=f'FAILED timeout={self.timeout:.3f}s'))
+            self.stop_evaluation()
+            return
         if self.sent or not self.get_parameter('autostart').value or self.odom is None:
             return
         if not self.controller_active:
@@ -110,6 +125,7 @@ class LocalTask(Node):
         if hasattr(goal, 'progress_checker_id'):
             goal.progress_checker_id = 'progress_checker'
         self.sent = True
+        self.started_at = self.get_clock().now()
         future = self.client.send_goal_async(goal, feedback_callback=self.feedback)
         future.add_done_callback(self.goal_response)
 
@@ -164,15 +180,24 @@ class LocalTask(Node):
 
     def goal_response(self, future):
         handle = future.result()
+        self.goal_handle = handle
+        if self.finished:
+            if handle.accepted:
+                handle.cancel_goal_async()
+            return
         if not handle.accepted:
             self.result_pub.publish(String(data='FAILED goal rejected'))
+            self.finished = True
             self.stop_evaluation()
             return
         result = handle.get_result_async()
         result.add_done_callback(self.done)
 
     def done(self, future):
+        if self.finished:
+            return
         wrapped = future.result()
+        self.finished = True
         self.result_pub.publish(String(data=f'FINISHED action_status={wrapped.status}'))
         self.stop_evaluation()
 

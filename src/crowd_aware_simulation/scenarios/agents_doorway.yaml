@@ -1,0 +1,18 @@
+hunav_loader:
+  ros__parameters:
+    map: doorway
+    publish_people: true
+    agents: [doorway_walker]
+    doorway_walker:
+      id: 1
+      skin: 2
+      group_id: -1
+      max_vel: 0.8
+      radius: 0.4
+      behavior: {type: 1, configuration: 1, duration: 100.0, once: true, vel: 0.65, dist: 0.0, goal_force_factor: 2.0, obstacle_force_factor: 10.0, social_force_factor: 5.0, other_force_factor: 20.0}
+      init_pose: {x: 7.5, y: 0.3, z: 1.25, h: 3.14159}
+      goal_radius: 0.3
+      cyclic_goals: true
+      goals: [g0, g1]
+      g0: {x: 0.5, y: 0.3, h: 3.14159}
+      g1: {x: 7.5, y: 0.3, h: 0.0}

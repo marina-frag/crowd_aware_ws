@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(crowd_aware_simulation)
 find_package(ament_cmake REQUIRED)
-install(DIRECTORY launch rviz scripts config DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY launch rviz scripts config scenarios worlds DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS
   scripts/hunav_to_cohan_bridge.py
   scripts/cohan_agents_info_adapter.py

@@ -967,3 +967,26 @@ place, and `final_cmd_watchdog` remains the only `/cmd_vel` publisher.
 - No quantitative teleop trials were performed. Teleop is an optional interactive
   demonstration/input mode and must not be mixed into the repeated automatic dataset
   unless explicitly selected and documented.
+
+## Evaluation Scenario Suite
+
+The evaluation suite keeps one launch flow and one scene-preparation path. Common
+controller limits, profiles, and timeouts remain in `experiment.yaml`; each scenario
+has a small configuration selecting its robot task, shared world, and HuNav agents.
+
+- `open_area.world`: `open_area`, `crossing`, `dense_crowd`, `group_blocking`, and
+  `target_confusion`
+- `narrow_corridor.world`: `narrow_corridor`
+- `doorway.world`: `doorway`
+- `junction.world`: `junction`
+- `occlusion.world`: `occlusion`
+- `base_cafe.world`: backward-compatible `cafe` integration/stress test
+
+Run with `SCENARIO=<name> HEADLESS=true bash scripts/run_dwal_cafe.sh run
+<controller> <on|off> <seed>`; for example, `SCENARIO=crossing HEADLESS=true bash
+scripts/run_dwal_cafe.sh run hateb on 1`.
+
+These scenarios exercise local-planner behavior and crowd semantics, not
+front-following. `target_confusion` provides validated deterministic assets, but full
+evaluation intentionally remains unavailable until an intended-user tracker and
+front-following interface are integrated.

@@ -1,0 +1,25 @@
+scenario:
+  name: target_confusion
+  world: open_area.world
+  agents: agents_target_confusion.yaml
+  robot:
+    initial_pose: [0.0, 0.0, 0.0]
+    path_xy:
+      - [0.0, 0.0]
+      - [0.8, 0.0]
+      - [1.6, 0.0]
+      - [2.4, 0.0]
+      - [3.2, 0.0]
+      - [4.0, 0.0]
+      - [4.8, 0.0]
+      - [5.6, 0.0]
+      - [6.4, 0.0]
+      - [7.2, 0.0]
+      - [8.0, 0.0]
+  intended_user:
+    enabled: true
+    agent_name: intended_user
+  evaluation:
+    timeout: 120.0
+    goal_tolerance: 0.20
+    personal_space: 0.80

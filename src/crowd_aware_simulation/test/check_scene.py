@@ -1,11 +1,13 @@
 """Offline physical-frame and configuration checks. Pass description, wrapper paths."""
 import sys,tempfile,importlib.util,xml.etree.ElementTree as E
 from pathlib import Path
+import hashlib
 import numpy as np
 import xacro,yaml
 script=Path(__file__).resolve().parents[1]/'scripts/prepare_scene.py'
 spec=importlib.util.spec_from_file_location('scene',script);s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
 description,wrapper=map(Path,sys.argv[1:])
+package=script.parents[1]
 
 def frames(root):
     children={j.find('child').get('link') for j in root.findall('joint')}
@@ -46,9 +48,36 @@ with tempfile.TemporaryDirectory() as t:
             tf=after[link.get('name')]@s.transform(e.find('origin'))
             xy=(pts@tf[:3,:3].T+tf[:3,3])[:,:2]
             assert np.all(xy>=fp.min(axis=0)-1e-9) and np.all(xy<=fp.max(axis=0)+1e-9)
-    world=E.parse(p/'cafe.world').getroot().find('world')
-    assert len(world.findall('include'))==len(E.parse(wrapper/'worlds/cafe.world').getroot().find('world').findall('include'))
+    world=E.parse(p/'scenario.world').getroot().find('world')
+    assert len(world.findall('include'))==len(E.parse(package/'worlds/base_cafe.world').getroot().find('world').findall('include'))
     model=world.find("model[@name='iwalk']")
     assert model.find("plugin[@name='ideal_planar_base']/robot_base_frame").text=='sim_base'
     assert model.find("link/sensor/plugin/frame_name").text=='laser_frame'
     print('PASS: physical transforms preserved, unique TF root, shared conservative footprint, odometry/costmap frames, full map updates, cafe preserved, sensor/odom plugins.')
+
+scenario_names = [
+    'cafe', 'open_area', 'narrow_corridor', 'doorway', 'junction', 'crossing',
+    'dense_crowd', 'occlusion', 'group_blocking', 'target_confusion']
+signatures = set()
+with tempfile.TemporaryDirectory() as root:
+    root = Path(root)
+    for name in scenario_names:
+        output = root/name
+        prepared = s.prepare(description, wrapper, output, scenario=name, seed=17)
+        required = ['scenario.world', 'agents.yaml', 'task.yaml', 'agent_goals.yaml',
+                    'dwal.yaml', 'dwb_off.yaml', 'dwb_on.yaml',
+                    'hateb_off.yaml', 'hateb_on.yaml', 'scenario_manifest.yaml']
+        assert all((prepared/item).is_file() for item in required), name
+        manifest = yaml.safe_load((prepared/'scenario_manifest.yaml').read_text())
+        assert manifest['scenario'] == name and manifest['seed'] == 17
+        signatures.add((
+            hashlib.sha256((prepared/'scenario.world').read_bytes()).hexdigest(),
+            hashlib.sha256((prepared/'agents.yaml').read_bytes()).hexdigest(),
+            tuple(yaml.safe_load((prepared/'task.yaml').read_text())
+                  ['/local_task']['ros__parameters']['path_xy'])))
+    assert len(signatures) == len(scenario_names)
+    repeat = s.prepare(description, wrapper, root/'cafe_repeat', scenario='cafe', seed=17)
+    other_seed = s.prepare(description, wrapper, root/'cafe_other_seed', scenario='cafe', seed=18)
+    assert (root/'cafe/agents.yaml').read_bytes() == (repeat/'agents.yaml').read_bytes()
+    assert (root/'cafe/agents.yaml').read_bytes() != (other_seed/'agents.yaml').read_bytes()
+print('PASS: all scenarios prepared, assets/goals validated, outputs differ, and seeded HuNav materialization repeats.')

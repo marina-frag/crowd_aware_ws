@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="default">
+    <physics type="ode"><max_step_size>0.01</max_step_size><real_time_factor>1</real_time_factor><real_time_update_rate>100</real_time_update_rate></physics>
+    <gui><camera name="user_camera"><pose>5 -12 10 0 0.65 1.5707</pose></camera></gui>
+    <light name="sun" type="directional"><pose>0 0 10 0 0 0</pose><diffuse>0.8 0.8 0.8 1</diffuse><specular>0.2 0.2 0.2 1</specular><direction>-0.3 0.2 -1</direction></light>
+    <include><uri>model://ground_plane</uri></include>
+    <model name="north_west"><static>true</static><pose>2 3 1 0 0 0</pose><link name="block"><collision name="collision"><geometry><box><size>4 4 2</size></box></geometry></collision><visual name="visual"><geometry><box><size>4 4 2</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual></link></model>
+    <model name="south_west"><static>true</static><pose>2 -3 1 0 0 0</pose><link name="block"><collision name="collision"><geometry><box><size>4 4 2</size></box></geometry></collision><visual name="visual"><geometry><box><size>4 4 2</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual></link></model>
+    <model name="north_east"><static>true</static><pose>8 3 1 0 0 0</pose><link name="block"><collision name="collision"><geometry><box><size>4 4 2</size></box></geometry></collision><visual name="visual"><geometry><box><size>4 4 2</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual></link></model>
+    <model name="south_east"><static>true</static><pose>8 -3 1 0 0 0</pose><link name="block"><collision name="collision"><geometry><box><size>4 4 2</size></box></geometry></collision><visual name="visual"><geometry><box><size>4 4 2</size></box></geometry><material><ambient>0.55 0.55 0.58 1</ambient><diffuse>0.55 0.55 0.58 1</diffuse></material></visual></link></model>
+  </world>
+</sdf>

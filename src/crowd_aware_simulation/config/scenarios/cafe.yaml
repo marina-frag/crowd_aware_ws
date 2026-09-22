@@ -1,0 +1,19 @@
+scenario:
+  name: cafe
+  world: base_cafe.world
+  agents: agents_cafe.yaml
+  robot:
+    initial_pose: [0.0, 0.0, 0.0]
+    path_xy:
+      - [0.0, 0.0]
+      - [0.8, 0.0]
+      - [1.6, 0.15]
+      - [2.4, 0.15]
+      - [3.2, 0.0]
+  intended_user:
+    enabled: false
+    agent_name: ""
+  evaluation:
+    timeout: 90.0
+    goal_tolerance: 0.20
+    personal_space: 0.80

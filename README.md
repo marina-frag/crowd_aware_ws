@@ -105,3 +105,43 @@ bash scripts/run_dwal_cafe.sh teleop
 
 See [report.md](report.md) for the exact condition semantics, graph inventory,
 validation evidence, evaluation commands, and known limitations.
+
+
+---
+## Run diff controllers
+```bash
+ SCENARIO=<scenario> REFERENCE_MODE=teleop GUI=true HEADLESS=false RVIZ=true bash scripts/run_dwal_cafe.sh run <controller> <on|off> <seed>
+```
+example
+```bash
+SCENARIO=crossing REFERENCE_MODE=teleop GUI=true HEADLESS=false RVIZ=true bash scripts/run_dwal_cafe.sh run hateb on 1
+```
+
+```bash
+bash scripts/run_dwal_cafe.sh teleop
+```
+
+`<scenario>`
+junction
+narrow_corridor
+group_blocking
+dense_crowd
+crossing
+cafe
+target_confusion **
+doorway
+occlusion **
+open_area
+
+`<controller>`
+
+fixed_dwal
+dynamic_dwal
+dwb
+hateb
+
+`<seed>`
+
+Θετικός ακέραιος:
+
+1, 2, 3, ..., 10

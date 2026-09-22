@@ -33,10 +33,6 @@ experiment:
     selected_command: 0.35
     speed_limit: 0.50
     final_input: 0.30
-  local_task:
-    # The task is expressed in odom and is identical for all controller families.
-    path_xy: [0.0, 0.0, 0.8, 0.0, 1.6, 0.15, 2.4, 0.15, 3.2, 0.0]
-    goal_tolerance: 0.20
   dwal:
     fixed_levels: [1.20, 1.80]
     # Must stay above the fixed inner clustering level (1.20 m).

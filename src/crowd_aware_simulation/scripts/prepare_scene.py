@@ -4,6 +4,8 @@ No ROS publishers or planner implementation live here.
 from pathlib import Path
 import copy
 import math
+import random
+import re
 import struct
 import xml.etree.ElementTree as ET
 import numpy as np
@@ -19,6 +21,228 @@ class RosParamDumper(yaml.SafeDumper):
 
 def dump_yaml(data):
     return yaml.dump(data, Dumper=RosParamDumper)
+
+
+SCENARIO_NAME = re.compile(r'^[a-z][a-z0-9_]*$')
+
+
+def _finite_numbers(value, length, label):
+    if not isinstance(value, list) or len(value) != length:
+        raise ValueError(f'{label} must be a list of {length} numbers')
+    try:
+        result = [float(item) for item in value]
+    except (TypeError, ValueError) as error:
+        raise ValueError(f'{label} must contain only numbers') from error
+    if not all(math.isfinite(item) for item in result):
+        raise ValueError(f'{label} must contain only finite numbers')
+    return result
+
+
+def _asset_path(root, value, label):
+    if not isinstance(value, str) or not value:
+        raise ValueError(f'scenario.{label} must be a non-empty filename')
+    relative = Path(value)
+    if relative.is_absolute() or len(relative.parts) != 1 or relative.name != value:
+        raise ValueError(f'scenario.{label} must be a filename within {root.name}/')
+    path = (root/value).resolve()
+    if path.parent != root.resolve() or not path.is_file():
+        raise ValueError(f'scenario.{label} does not exist: {path}')
+    return path
+
+
+def _load_scenario(package_root, scenario='cafe', scenario_config=None):
+    package_root = Path(package_root).resolve()
+    if scenario_config:
+        config_path = Path(scenario_config).resolve()
+        requested_name = None
+    elif isinstance(scenario, (str, Path)) and (Path(str(scenario)).suffix == '.yaml' or
+                                                len(Path(str(scenario)).parts) > 1):
+        config_path = Path(scenario).resolve()
+        requested_name = None
+    else:
+        requested_name = str(scenario)
+        if not SCENARIO_NAME.fullmatch(requested_name):
+            raise ValueError(f'Invalid scenario name {requested_name!r}')
+        config_path = package_root/'config/scenarios'/f'{requested_name}.yaml'
+    if not config_path.is_file():
+        available = sorted(path.stem for path in (package_root/'config/scenarios').glob('*.yaml'))
+        raise ValueError(f'Unknown scenario {scenario!r}; available scenarios: {available}')
+    document = yaml.safe_load(config_path.read_text())
+    if not isinstance(document, dict) or not isinstance(document.get('scenario'), dict):
+        raise ValueError(f'{config_path}: missing scenario mapping')
+    config = copy.deepcopy(document['scenario'])
+    name = config.get('name')
+    if not isinstance(name, str) or not SCENARIO_NAME.fullmatch(name):
+        raise ValueError(f'{config_path}: scenario.name is invalid')
+    if requested_name and name != requested_name:
+        raise ValueError(f'{config_path}: scenario.name must be {requested_name!r}')
+    config['_config_path'] = config_path
+    config['_world_path'] = _asset_path(package_root/'worlds', config.get('world'), 'world')
+    config['_agents_path'] = _asset_path(package_root/'scenarios', config.get('agents'), 'agents')
+
+    robot = config.get('robot')
+    if not isinstance(robot, dict):
+        raise ValueError(f'{config_path}: scenario.robot must be a mapping')
+    robot['initial_pose'] = _finite_numbers(
+        robot.get('initial_pose'), 3, f'{config_path}: scenario.robot.initial_pose')
+    path = robot.get('path_xy')
+    if not isinstance(path, list) or len(path) < 2:
+        raise ValueError(f'{config_path}: scenario.robot.path_xy needs at least two points')
+    robot['path_xy'] = [
+        _finite_numbers(point, 2, f'{config_path}: scenario.robot.path_xy[{index}]')
+        for index, point in enumerate(path)]
+    if robot['path_xy'][0] != robot['initial_pose'][:2]:
+        raise ValueError(f'{config_path}: path_xy must start at robot.initial_pose x,y')
+
+    intended = config.get('intended_user')
+    if not isinstance(intended, dict) or not isinstance(intended.get('enabled'), bool):
+        raise ValueError(f'{config_path}: scenario.intended_user.enabled must be boolean')
+    if not isinstance(intended.get('agent_name'), str):
+        raise ValueError(f'{config_path}: scenario.intended_user.agent_name must be a string')
+    if intended['enabled'] != bool(intended['agent_name']):
+        raise ValueError(
+            f'{config_path}: enabled intended_user requires exactly one non-empty agent_name')
+
+    evaluation = config.get('evaluation')
+    if not isinstance(evaluation, dict):
+        raise ValueError(f'{config_path}: scenario.evaluation must be a mapping')
+    for key in ('timeout', 'goal_tolerance', 'personal_space'):
+        try:
+            evaluation[key] = float(evaluation[key])
+        except (KeyError, TypeError, ValueError) as error:
+            raise ValueError(f'{config_path}: evaluation.{key} must be a number') from error
+        if not math.isfinite(evaluation[key]) or evaluation[key] <= 0.0:
+            raise ValueError(f'{config_path}: evaluation.{key} must be positive and finite')
+    return config
+
+
+def _load_agents(path, intended_user):
+    document = yaml.safe_load(Path(path).read_text())
+    try:
+        parameters = document['hunav_loader']['ros__parameters']
+        names = parameters['agents']
+    except (KeyError, TypeError) as error:
+        raise ValueError(f'{path}: expected hunav_loader.ros__parameters.agents') from error
+    if not isinstance(names, list) or not all(isinstance(name, str) and name for name in names):
+        raise ValueError(f'{path}: agents must be a list of non-empty names')
+    if len(names) != len(set(names)):
+        raise ValueError(f'{path}: agent names must be unique')
+    ids = []
+    for name in names:
+        agent = parameters.get(name)
+        if not isinstance(agent, dict):
+            raise ValueError(f'{path}: missing definition for agent {name!r}')
+        identifier = agent.get('id')
+        if isinstance(identifier, bool) or not isinstance(identifier, int):
+            raise ValueError(f'{path}: {name}.id must be an integer')
+        ids.append(identifier)
+        goals = agent.get('goals')
+        if not isinstance(goals, list) or not goals or len(goals) != len(set(goals)):
+            raise ValueError(f'{path}: {name}.goals must be a non-empty list of unique names')
+        init_pose = agent.get('init_pose')
+        if not isinstance(init_pose, dict):
+            raise ValueError(f'{path}: {name}.init_pose must be a mapping')
+        _finite_numbers([init_pose.get(key) for key in ('x', 'y', 'z', 'h')], 4,
+                        f'{path}: {name}.init_pose')
+        for goal_name in goals:
+            if not isinstance(goal_name, str) or not isinstance(agent.get(goal_name), dict):
+                raise ValueError(f'{path}: {name} references missing goal {goal_name!r}')
+            _finite_numbers([agent[goal_name].get(key) for key in ('x', 'y', 'h')], 3,
+                            f'{path}: {name}.{goal_name}')
+        try:
+            configuration = int(agent['behavior']['configuration'])
+        except (KeyError, TypeError, ValueError) as error:
+            raise ValueError(f'{path}: {name}.behavior.configuration is missing') from error
+        if configuration not in (0, 1, 2, 3):
+            raise ValueError(f'{path}: {name}.behavior.configuration must be 0, 1, 2, or 3')
+    if len(ids) != len(set(ids)):
+        raise ValueError(f'{path}: agent IDs must be unique')
+    intended_name = intended_user['agent_name']
+    if intended_user['enabled'] and intended_name not in names:
+        raise ValueError(f'{path}: intended user {intended_name!r} is not in agents')
+    return document
+
+
+def _materialize_random_agents(document, seed):
+    """Replace HuNav's random_device modes with reproducible custom parameters."""
+    result = copy.deepcopy(document)
+    parameters = result['hunav_loader']['ros__parameters']
+    rng = random.Random(seed)
+    for name in parameters['agents']:
+        behavior = parameters[name]['behavior']
+        configuration = int(behavior['configuration'])
+        if configuration not in (2, 3):
+            continue
+        behavior_type = int(behavior['type'])
+        if configuration == 2:
+            behavior['goal_force_factor'] = max(0.5, rng.gauss(2.0, 1.5))
+            behavior['obstacle_force_factor'] = max(0.5, rng.gauss(10.0, 4.0))
+            behavior['social_force_factor'] = max(3.0, rng.gauss(4.0, 3.5))
+            duration = rng.gauss(40.0, 15.0)
+            velocity = max(0.4, rng.gauss(0.8, 0.35))
+            detection_distance = max(1.5, rng.gauss(4.5, 2.5))
+            if behavior_type in (3, 4, 5, 6):
+                behavior['duration'] = duration
+            if behavior_type in (4, 5):
+                behavior['vel'] = velocity
+            if behavior_type == 5:
+                behavior['dist'] = rng.gauss(1.5, 0.3)
+            elif behavior_type in (3, 4):
+                behavior['dist'] = detection_distance
+            elif behavior_type == 6:
+                behavior['dist'] = rng.gauss(1.4, 0.3)
+            if behavior_type == 4:
+                behavior['other_force_factor'] = rng.gauss(20.0, 6.0)
+        else:
+            behavior['goal_force_factor'] = rng.uniform(2.0, 5.0)
+            behavior['obstacle_force_factor'] = rng.uniform(2.0, 50.0)
+            behavior['social_force_factor'] = rng.uniform(4.0, 20.0)
+            duration = rng.uniform(25.0, 60.0)
+            velocity = rng.uniform(0.6, 1.2)
+            detection_distance = rng.uniform(2.0, 6.0)
+            if behavior_type in (3, 4, 5, 6):
+                behavior['duration'] = duration
+            if behavior_type in (4, 5):
+                behavior['vel'] = velocity
+            if behavior_type == 5:
+                behavior['dist'] = rng.uniform(1.0, 2.5)
+            elif behavior_type in (3, 4):
+                behavior['dist'] = detection_distance
+            elif behavior_type == 6:
+                behavior['dist'] = rng.uniform(0.8, 1.9)
+            if behavior_type == 4:
+                behavior['other_force_factor'] = rng.uniform(10.0, 25.0)
+        behavior['configuration'] = 1
+    return result
+
+
+def _validate_obvious_static_obstacles(world, points, source):
+    """Reject points inside explicit, unrotated static SDF boxes; skip model:// includes."""
+    for model in world.findall('model'):
+        if (model.findtext('static') or '').strip().lower() not in ('1', 'true'):
+            continue
+        model_pose = [float(value) for value in (model.findtext('pose') or '0 0 0 0 0 0').split()]
+        if any(abs(value) > 1e-9 for value in model_pose[3:]):
+            continue
+        for link in model.findall('link'):
+            link_pose = [float(value) for value in (link.findtext('pose') or '0 0 0 0 0 0').split()]
+            for collision in link.findall('collision'):
+                box = collision.find('geometry/box/size')
+                if box is None or not box.text:
+                    continue
+                collision_pose = [float(value) for value in
+                                  (collision.findtext('pose') or '0 0 0 0 0 0').split()]
+                if any(abs(value) > 1e-9 for value in link_pose[3:] + collision_pose[3:]):
+                    continue
+                center = [model_pose[0] + link_pose[0] + collision_pose[0],
+                          model_pose[1] + link_pose[1] + collision_pose[1]]
+                size = [float(value) for value in box.text.split()]
+                for label, point in points:
+                    if (abs(point[0] - center[0]) < size[0]/2 and
+                            abs(point[1] - center[1]) < size[1]/2):
+                        raise ValueError(
+                            f'{source}: robot {label} {point} lies inside static model '
+                            f'{model.get("name")!r}')
 
 
 def transform(origin):
@@ -122,7 +346,7 @@ def costmap_parameters(footprint, semantic=False):
     return result
 
 
-def common_controller(limits):
+def common_controller(limits, goal_tolerance):
     return {
         'use_sim_time': True, 'controller_frequency': 20.0,
         'min_x_velocity_threshold': 0.001, 'min_y_velocity_threshold': 0.001,
@@ -134,11 +358,11 @@ def common_controller(limits):
                              'required_movement_radius': 0.08,
                              'movement_time_allowance': 8.0},
         'general_goal_checker': {'plugin': 'nav2_controller::SimpleGoalChecker',
-                                 'stateful': True, 'xy_goal_tolerance': 0.20,
+                                 'stateful': True, 'xy_goal_tolerance': goal_tolerance,
                                  'yaw_goal_tolerance': 0.25}}
 
 
-def dwb_plugin(limits):
+def dwb_plugin(limits, goal_tolerance):
     return {
         'plugin': 'dwb_core::DWBLocalPlanner', 'debug_trajectory_details': True,
         'min_vel_x': 0.0, 'min_vel_y': 0.0,
@@ -152,7 +376,7 @@ def dwb_plugin(limits):
         'vx_samples': 20, 'vy_samples': 1, 'vtheta_samples': 30,
         'sim_time': 2.0, 'linear_granularity': 0.05,
         'angular_granularity': 0.025, 'transform_tolerance': 0.2,
-        'xy_goal_tolerance': 0.20, 'trans_stopped_velocity': 0.02,
+        'xy_goal_tolerance': goal_tolerance, 'trans_stopped_velocity': 0.02,
         'short_circuit_trajectory_evaluation': True, 'stateful': True,
         'critics': ['RotateToGoal', 'Oscillation', 'BaseObstacle', 'GoalAlign',
                     'PathAlign', 'PathDist', 'GoalDist'],
@@ -163,7 +387,7 @@ def dwb_plugin(limits):
         'RotateToGoal.slowing_factor': 5.0, 'RotateToGoal.lookahead_time': -1.0}
 
 
-def hateb_plugin(limits, footprint, semantic):
+def hateb_plugin(limits, footprint, semantic, goal_tolerance, personal_space):
     return {
         'plugin': 'hateb_local_planner::HATebLocalPlannerROS',
         'predict_srv_name': '/agent_path_prediction/predict_agent_poses',
@@ -193,10 +417,10 @@ def hateb_plugin(limits, footprint, semantic):
                   'use_agent_robot_rel_vel_c': semantic,
                   'use_agent_robot_visi_c': semantic,
                   'add_invisible_humans': False,
-                  'min_agent_agent_dist': 0.4, 'min_agent_robot_dist': 0.8,
+                  'min_agent_agent_dist': 0.4, 'min_agent_robot_dist': personal_space,
                   'rel_vel_cost_threshold': 1.5, 'visibility_cost_threshold': 2.5,
                   'invisible_human_threshold': 1.0, 'prediction_time_horizon': 5.0},
-        'goal': {'xy_goal_tolerance': 0.20, 'yaw_goal_tolerance': 0.25,
+        'goal': {'xy_goal_tolerance': goal_tolerance, 'yaw_goal_tolerance': 0.25,
                  'free_goal_vel': False},
         'obstacles': {'min_obstacle_dist': 0.05, 'include_costmap_obstacles': True,
                       'costmap_obstacles_behind_robot_dist': 0.5,
@@ -237,8 +461,28 @@ def hateb_plugin(limits, footprint, semantic):
                           'publish_robot_local_plan_poses': True}}
 
 
-def prepare(description, wrapper, target, experiment_config=None, headless=False):
+def prepare(description, wrapper, target, experiment_config=None, headless=False,
+            scenario='cafe', scenario_config=None, seed=1,
+            require_intended_user_support=False):
     description, wrapper, target = Path(description), Path(wrapper), Path(target)
+    try:
+        seed = int(seed)
+    except (TypeError, ValueError) as error:
+        raise ValueError('seed must be an integer') from error
+    if seed < 0:
+        raise ValueError('seed must be non-negative')
+    config_path = (Path(experiment_config) if experiment_config else
+                   Path(__file__).parents[1]/'config/experiment.yaml')
+    package_root = config_path.resolve().parent.parent
+    scenario_data = _load_scenario(package_root, scenario, scenario_config)
+    agents_document = _load_agents(
+        scenario_data['_agents_path'], scenario_data['intended_user'])
+    if require_intended_user_support and scenario_data['intended_user']['enabled']:
+        raise ValueError(
+            f'Scenario {scenario_data["name"]!r} requires intended-user tracking/front-following; '
+            'this project currently provides local-planner evaluation only')
+    runtime_agents = _materialize_random_agents(agents_document, seed)
+    evaluation = scenario_data['evaluation']
     target.mkdir(parents=True, exist_ok=True)
     robot = ET.fromstring(xacro.process_file(str(description/'urdf/iwalk.urdf.xacro')).toxml())
     # Preserve all physical transforms; reroot only the runtime copy at the rear axle projection.
@@ -270,10 +514,19 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
         for j in ready:
             frames[j.find('child').get('link')] = frames[j.find('parent').get('link')] @ transform(j.find('origin'))
             pending.remove(j)
-    tree = ET.parse(wrapper/'worlds/cafe.world')
+    tree = ET.parse(scenario_data['_world_path'])
     world = tree.getroot().find('world')
+    if world is None:
+        raise ValueError(f'{scenario_data["_world_path"]}: missing SDF world element')
+    points = [('start', scenario_data['robot']['initial_pose'][:2])]
+    points.extend((f'path point {index}', point)
+                  for index, point in enumerate(scenario_data['robot']['path_xy']))
+    _validate_obvious_static_obstacles(world, points, scenario_data['_world_path'])
+    if world.find("model[@name='iwalk']") is not None:
+        raise ValueError(f'{scenario_data["_world_path"]}: model name iwalk is reserved')
     model = add(world, 'model', name='iwalk')
-    add(model, 'pose', '0 0 0 0 0 0')
+    initial_x, initial_y, initial_yaw = scenario_data['robot']['initial_pose']
+    add(model, 'pose', f'{initial_x} {initial_y} 0 0 0 {initial_yaw}')
     link = add(model, 'link', name='chassis')
     add(link, 'gravity', 'false')
     inertial = add(link, 'inertial'); add(inertial, 'mass', '25')
@@ -309,8 +562,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     add(sp,'output_type','sensor_msgs/LaserScan'); add(sp,'frame_name','laser_frame')
     plugin=add(model,'plugin',name='ideal_planar_base',filename='libgazebo_ros_planar_move.so')
     for k,v in {'update_rate':50,'publish_rate':20,'odometry_frame':'odom','robot_base_frame':'sim_base', 'publish_odom':'true','publish_odom_tf':'true'}.items(): add(plugin,k,v)
-    tree.write(target/'cafe.world',encoding='unicode')
-    config_path = Path(experiment_config) if experiment_config else Path(__file__).parents[1]/'config/experiment.yaml'
+    tree.write(target/'scenario.world', encoding='unicode')
     exp = yaml.safe_load(config_path.read_text())['experiment']
     limits, timeouts, dwal_config = exp['limits'], exp['timeouts'], exp['dwal']
     # Geometry is authoritative from the real URDF. Keep configured values only as an audit check.
@@ -330,22 +582,25 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     (target/'costmap.yaml').write_text(dump_yaml({'/costmap/costmap':{'ros__parameters':costmap}}))
     for family in ('dwb', 'hateb'):
         for semantic in (False, True):
-            controller = common_controller(limits)
+            controller = common_controller(limits, evaluation['goal_tolerance'])
             if family == 'hateb':
                 # HATEB calls setGoalControl() on its concrete goal checker.
                 # The pinned implementation does not safely handle Nav2's
                 # SimpleGoalChecker here, so use the plugin it ships with.
                 controller['general_goal_checker']['plugin'] = \
                     'hateb_local_planner::HATEBGoalChecker'
-            controller['FollowPath'] = (dwb_plugin(limits) if family == 'dwb'
-                                        else hateb_plugin(limits, footprint, semantic))
+            controller['FollowPath'] = (
+                dwb_plugin(limits, evaluation['goal_tolerance']) if family == 'dwb'
+                else hateb_plugin(limits, footprint, semantic,
+                                  evaluation['goal_tolerance'],
+                                  evaluation['personal_space']))
             params = {}
             params.update(ros_params('/controller_server', controller))
             params.update(ros_params('/local_costmap/local_costmap',
                                      costmap_parameters(footprint, semantic and family == 'dwb')))
             (target/f'{family}_{"on" if semantic else "off"}.yaml').write_text(dump_yaml(params))
 
-    reference = common_controller(limits)
+    reference = common_controller(limits, evaluation['goal_tolerance'])
     reference['FollowPath'] = {
         'plugin': 'nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController',
         'desired_linear_vel': limits['max_linear'], 'lookahead_dist': 0.6,
@@ -428,7 +683,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
                      'reference_timeout': timeouts['reference'],
                      'tracks_timeout': timeouts['tracks'],
                      'allow_reverse': False, 'allow_no_cluster_passthrough': False,
-                     'personal_space': 0.8, 'social_weight': 0.35,
+                     'personal_space': evaluation['personal_space'], 'social_weight': 0.35,
                      'c_max': 255.0, 'alpha': 0.7, 's_min': 0.2,
                      'Kphi': 1.5, 'Kmax': 4.0, 'v_low': 0.22, 'v_high': 0.28,
                      'intent.alpha': 0.92, 'intent.beta': 8.0,
@@ -440,15 +695,17 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
         (target/f'shared_control_{"on" if semantic else "off"}.yaml').write_text(
             dump_yaml(ros_params('/shared_controller', shared)))
 
-    task = {'use_sim_time': True, 'path_xy': exp['local_task']['path_xy'],
+    path_xy = [value for point in scenario_data['robot']['path_xy'] for value in point]
+    task = {'use_sim_time': True, 'path_xy': path_xy,
+            'timeout': evaluation['timeout'],
             'odom_topic': '/odom', 'path_topic': '/experiment/path'}
     (target/'task.yaml').write_text(dump_yaml(ros_params('/local_task', task)))
 
-    scenario = yaml.safe_load((wrapper/'scenarios/agents_cafe.yaml').read_text())
-    scenario = scenario['hunav_loader']['ros__parameters']
+    (target/'agents.yaml').write_text(dump_yaml(runtime_agents))
+    agent_parameters = runtime_agents['hunav_loader']['ros__parameters']
     prediction_goals = []
-    for agent_name in scenario['agents']:
-        agent = scenario[agent_name]
+    for agent_name in agent_parameters['agents']:
+        agent = agent_parameters[agent_name]
         for goal_name in agent['goals']:
             goal = agent[goal_name]
             prediction_goals.append({
@@ -478,10 +735,32 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
         'footprint':footprint, 'front_extent':float(xmax), 'rear_extent':float(-xmin),
         'laser_xyz':[0.85,0,0.35], 'base_link_height':height,
         'description':'URDF-derived conservative visual/collision envelope; shared by all conditions.'}))
+    (target/'scenario_manifest.yaml').write_text(dump_yaml({
+        'scenario': scenario_data['name'],
+        'scenario_config': str(scenario_data['_config_path']),
+        'world': scenario_data['world'],
+        'agents': scenario_data['agents'],
+        'seed': seed,
+        'robot': scenario_data['robot'],
+        'intended_user': scenario_data['intended_user'],
+        'evaluation': evaluation,
+        'runtime_world': str(target/'scenario.world'),
+        'runtime_agents': str(target/'agents.yaml')}))
     return target
 
 
 if __name__ == '__main__':
     import argparse
-    p=argparse.ArgumentParser();p.add_argument('description');p.add_argument('wrapper');p.add_argument('output')
-    a=p.parse_args(); prepare(a.description,a.wrapper,a.output)
+    p = argparse.ArgumentParser()
+    p.add_argument('description')
+    p.add_argument('wrapper')
+    p.add_argument('output')
+    p.add_argument('--experiment-config')
+    p.add_argument('--scenario', default='cafe')
+    p.add_argument('--scenario-config')
+    p.add_argument('--seed', type=int, default=1)
+    p.add_argument('--headless', action='store_true')
+    p.add_argument('--require-intended-user-support', action='store_true')
+    a = p.parse_args()
+    prepare(a.description, a.wrapper, a.output, a.experiment_config, a.headless,
+            a.scenario, a.scenario_config, a.seed, a.require_intended_user_support)
