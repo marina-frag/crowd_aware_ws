@@ -18,9 +18,9 @@ RUN git clone https://github.com/gmoustri/dwal_planner.git src/dwal_planner && \
 RUN git clone https://github.com/gmoustri/bayesian_shared_control.git src/bayesian_shared_control && \
     git -C src/bayesian_shared_control checkout 9d0df25f8a966db449ec94c073349d09e328d517
 COPY patches /tmp/crowd_aware_patches
-RUN git -C src/dwal_planner apply --check /tmp/crowd_aware_patches/dwal_dynamic_radius.patch && \
-    git -C src/dwal_planner apply /tmp/crowd_aware_patches/dwal_dynamic_radius.patch && \
-    git -C src/bayesian_shared_control apply --check /tmp/crowd_aware_patches/bayesian_shared_control_safety_semantics.patch && \
+# Keep the pinned DWAL generator/clustering checkout unmodified for fixed_dwal.
+# The shared-controller patch is a documented ROS/safety integration delta.
+RUN git -C src/bayesian_shared_control apply --check /tmp/crowd_aware_patches/bayesian_shared_control_safety_semantics.patch && \
     git -C src/bayesian_shared_control apply /tmp/crowd_aware_patches/bayesian_shared_control_safety_semantics.patch
 # The PMB2 image carries CoHAN sources but intentionally builds only messages.
 # Pin that checkout, enable the exact packages reused here, and add its Humble

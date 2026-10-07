@@ -36,7 +36,6 @@ def setup(context):
     controller = LaunchConfiguration('controller').perform(context)
     semantics = LaunchConfiguration('semantics').perform(context)
     reference_mode = LaunchConfiguration('reference_mode').perform(context)
-    radius_mode = LaunchConfiguration('radius_mode').perform(context)
     seed = LaunchConfiguration('seed').perform(context)
     scenario = LaunchConfiguration('scenario').perform(context)
     if controller not in CONTROLLERS:
@@ -45,8 +44,6 @@ def setup(context):
         raise RuntimeError(f'semantics must be one of {SEMANTIC_MODES}, got {semantics!r}')
     if reference_mode not in ('autonomous', 'teleop'):
         raise RuntimeError('reference_mode must be autonomous or teleop')
-    if radius_mode not in ('discrete', 'continuous'):
-        raise RuntimeError('radius_mode must be discrete or continuous')
     teleop_input_timeout = float(
         LaunchConfiguration('teleop_input_timeout').perform(context))
     if teleop_input_timeout <= 0.0:
@@ -58,7 +55,8 @@ def setup(context):
 
     semantic_on = semantics == 'on'
     is_dwal = controller in ('fixed_dwal', 'dynamic_dwal')
-    adaptation_mode = ('fixed' if controller != 'dynamic_dwal' else radius_mode)
+    is_fixed_dwal = controller == 'fixed_dwal'
+    is_dynamic_dwal = controller == 'dynamic_dwal'
     headless = truth(context, 'headless')
     share = Path(get_package_share_directory('crowd_aware_simulation'))
     wrapper = Path(get_package_share_directory('hunav_gazebo_wrapper'))
@@ -69,9 +67,9 @@ def setup(context):
     run = module.prepare(
         description, wrapper, Path(tempfile.mkdtemp(prefix='crowd_aware_')),
         share/'config/experiment.yaml', headless=headless, scenario=scenario,
-        seed=int(seed), require_intended_user_support=True)
-    print(f'Scenario={scenario}, experiment={controller}/{semantics}, reference={reference_mode}, '
-          f'radius={adaptation_mode}, seed={seed}; runtime files={run}', flush=True)
+        seed=int(seed), controller=controller, require_intended_user_support=True)
+    print(f'Scenario={scenario}, experiment={controller}/{semantics}, '
+          f'reference={reference_mode}, seed={seed}; runtime files={run}', flush=True)
 
     model_paths = {str(wrapper/'models'), '/usr/share/gazebo-11/models', '/opt/gazebo_models'}
     for model_name in ('cafe', 'cafe_table', 'ground_plane'):
@@ -92,7 +90,7 @@ def setup(context):
         package='hunav_gazebo_wrapper', executable='hunav_gazebo_world_generator',
         output='screen', parameters=[{
             'base_world': str(run/'scenario.world'), 'use_gazebo_obs': True,
-            'use_collision': False, 'update_rate': 20.0, 'robot_name': 'iwalk',
+            'use_collision': is_dynamic_dwal, 'update_rate': 20.0, 'robot_name': 'iwalk',
             'global_frame_to_publish': 'odom', 'use_navgoal_to_start': False,
             'navgoal_topic': '/goal_pose', 'ignore_models': 'ground_plane'}])
     manager = Node(
@@ -127,11 +125,11 @@ def setup(context):
     context_estimator = Node(
         package='crowd_aware_simulation', executable='context_estimator.py',
         name='context_estimator', output='screen', parameters=[str(run/'context.yaml')])
-    radius_policy = Node(
-        package='crowd_aware_simulation', executable='dynamic_radius_policy.py',
-        name='dynamic_radius_policy', output='screen',
-        parameters=[str(run/'radius_policy.yaml'), {
-            'semantic_mode': semantic_on, 'adaptation_mode': adaptation_mode}])
+    context_speed_limit = Node(
+        package='crowd_aware_simulation', executable='context_speed_limit.py',
+        name='context_speed_limit', output='screen',
+        parameters=[str(run/'context_speed_limit.yaml'), {
+            'semantic_mode': semantic_on}])
     guard_parameters = [str(run/'command_pipeline.yaml')]
     if reference_mode == 'teleop' and not is_dwal:
         guard_parameters.append({
@@ -196,6 +194,7 @@ def setup(context):
         condition_nodes += [
             costmap, lifecycle_manager(
                 'costmap_lifecycle_manager', ['/costmap/costmap'])]
+    if is_fixed_dwal:
         clustering = Node(
             package='dwal_planner', executable='dwal_clustering',
             name='dwal_clustering', namespace='dwal_planner',
@@ -218,7 +217,29 @@ def setup(context):
             clustering, clustering_ready,
             Node(package='bayesian_shared_control', executable='shared_control_node',
                  name='shared_controller', output='screen',
-                 parameters=[str(run/f'shared_control_{semantics}.yaml')])]
+                 parameters=[str(run/f'shared_control_{semantics}.yaml')]),
+            # Fixed baseline uses only the common physical cap, not context/radius adaptation.
+            Node(package='crowd_aware_simulation', executable='constant_speed_limit.py',
+                 name='constant_speed_limit', output='screen',
+                 parameters=[{'use_sim_time': True, 'speed_limit': 0.30}])]
+        if reference_mode == 'autonomous':
+            condition_nodes += [
+                Node(package='nav2_controller', executable='controller_server',
+                     name='controller_server', namespace='reference', output='screen',
+                     parameters=[str(run/'reference.yaml')],
+                     remappings=[('cmd_vel', '/reference_cmd')]),
+                lifecycle_manager('reference_lifecycle_manager',
+                                  ['controller_server'], namespace='reference')]
+    elif is_dynamic_dwal:
+        condition_nodes += [
+            Node(package='crowd_aware_simulation',
+                 executable='dynamic_dwal_node', name='dynamic_dwal',
+                 output='screen',
+                 parameters=[str(run/'dynamic_dwal.yaml'), {'mode': semantics}]),
+            Node(package='crowd_aware_simulation',
+                 executable='constant_speed_limit.py',
+                 name='constant_speed_limit', output='screen',
+                 parameters=[{'use_sim_time': True, 'speed_limit': 0.30}])]
         if reference_mode == 'autonomous':
             condition_nodes += [
                 Node(package='nav2_controller', executable='controller_server',
@@ -256,8 +277,10 @@ def setup(context):
         arguments=['-d', str(share/'rviz/dwal.rviz')],
         parameters=[{'use_sim_time': True}],
         condition=IfCondition(LaunchConfiguration('rviz')))
+    adaptation_nodes = (
+        [context_estimator, context_speed_limit] if not is_dwal else [])
     runtime_nodes = [
-        server, client, rsp, jsp, scan_filter, adapter, context_estimator, radius_policy,
+        server, client, rsp, jsp, scan_filter, adapter, *adaptation_nodes,
         guard, smoother, collision, final_watchdog, evaluator, pipeline_manager,
         *condition_nodes, *task_nodes, rviz]
 
@@ -285,7 +308,6 @@ def generate_launch_description():
         DeclareLaunchArgument('semantics', default_value='off'),
         DeclareLaunchArgument('reference_mode', default_value='autonomous'),
         DeclareLaunchArgument('teleop_input_timeout', default_value='0.35'),
-        DeclareLaunchArgument('radius_mode', default_value='continuous'),
         DeclareLaunchArgument('scenario', default_value='cafe'),
         DeclareLaunchArgument('seed', default_value='1'),
         DeclareLaunchArgument('headless', default_value='false'),

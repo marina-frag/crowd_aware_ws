@@ -319,7 +319,7 @@ def obstacle_layer(scan_topic='/scan'):
                  'inf_is_valid': True}}
 
 
-def costmap_parameters(footprint, semantic=False):
+def costmap_parameters(footprint, semantic=False, track_unknown=False):
     plugins = ['obstacle_layer']
     if semantic:
         plugins += ['human_static_layer', 'human_visibility_layer']
@@ -329,7 +329,7 @@ def costmap_parameters(footprint, semantic=False):
         # Humble's Costmap2DROS declares width/height as integer parameters.
         'rolling_window': True, 'width': 8, 'height': 8, 'resolution': 0.05,
         'update_frequency': 10.0, 'publish_frequency': 5.0,
-        'always_send_full_costmap': True, 'track_unknown_space': False,
+        'always_send_full_costmap': True, 'track_unknown_space': track_unknown,
         'transform_tolerance': 0.5, 'footprint': str(footprint),
         'footprint_padding': 0.02, 'plugins': plugins,
         'obstacle_layer': obstacle_layer(),
@@ -462,7 +462,7 @@ def hateb_plugin(limits, footprint, semantic, goal_tolerance, personal_space):
 
 
 def prepare(description, wrapper, target, experiment_config=None, headless=False,
-            scenario='cafe', scenario_config=None, seed=1,
+            scenario='cafe', scenario_config=None, seed=1, controller='fixed_dwal',
             require_intended_user_support=False):
     description, wrapper, target = Path(description), Path(wrapper), Path(target)
     try:
@@ -483,7 +483,10 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
             'this project currently provides local-planner evaluation only')
     runtime_agents = _materialize_random_agents(agents_document, seed)
     evaluation = scenario_data['evaluation']
+    navigation_envelope = yaml.safe_load(config_path.read_text())['experiment']['dwal']
     target.mkdir(parents=True, exist_ok=True)
+    # Shared synthetic LiDAR sits on the padded navigation-envelope front, outside the 0.01 m self-filter box.
+    laser_x = 0.885 if controller == 'dynamic_dwal' else 0.85
     robot = ET.fromstring(xacro.process_file(str(description/'urdf/iwalk.urdf.xacro')).toxml())
     # Preserve all physical transforms; reroot only the runtime copy at the rear axle projection.
     original = robot.find("joint[@name='base_footprint_joint']")
@@ -503,7 +506,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     add(add(vis, 'geometry'), 'box', size='0.03 0.03 0.03')
     lj = add(robot, 'joint', name='laser_joint', type='fixed')
     add(lj, 'parent', link='sim_base'); add(lj, 'child', link='laser_frame')
-    add(lj, 'origin', xyz='0.85 0 0.35', rpy='0 0 0')
+    add(lj, 'origin', xyz=f'{laser_x} 0 0.35', rpy='0 0 0')
     ET.ElementTree(robot).write(target/'robot.urdf', encoding='unicode')
     frames = {'sim_base': np.eye(4)}
     pending = list(robot.findall('joint'))
@@ -538,7 +541,8 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
             t = frames[urdf_link.get('name')] @ transform(element.find('origin'))
             g = list(element.find('geometry'))[0]
             pts = geometry_points(g, description)
-            bounds.extend((pts @ t[:3,:3].T + t[:3,3]).tolist())
+            if urdf_link.get('name') != 'laser_frame':
+                bounds.extend((pts @ t[:3,:3].T + t[:3,3]).tolist())
             if element.tag == 'visual':
                 v = add(link, 'visual', name=f'visual_{len(link)}')
                 add(v, 'pose', pose(t)); sdf_geometry(v, g, description)
@@ -547,12 +551,15 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     lo, hi = pts.min(axis=0), pts.max(axis=0)
     xmin,ymin = np.floor(lo[:2]*1000)/1000
     xmax,ymax = np.ceil(hi[:2]*1000)/1000
+    # Preserve the common conservative navigation envelope used by the fixed baseline.
+    xmin = min(xmin, -float(navigation_envelope['rear_extent']))
+    xmax = max(xmax, float(navigation_envelope['front_extent']))
     footprint = [[float(xmax),float(ymax)],[float(xmax),float(ymin)], [float(xmin),float(ymin)],[float(xmin),float(ymax)]]
     collision = add(link,'collision',name='navigation_envelope')
     add(collision,'pose',f'{(xmin+xmax)/2} {(ymin+ymax)/2} 0.5 0 0 0')
     add(add(add(collision,'geometry'),'box'),'size',f'{xmax-xmin} {ymax-ymin} 0.96')
     sensor = add(link, 'sensor', name='lidar', type='ray' if headless else 'gpu_ray')
-    add(sensor, 'pose', '0.85 0 0.35 0 0 0'); add(sensor,'always_on','true'); add(sensor,'update_rate','15')
+    add(sensor, 'pose', f'{laser_x} 0 0.35 0 0 0'); add(sensor,'always_on','true'); add(sensor,'update_rate','15')
     ray=add(sensor,'ray'); scan=add(ray,'scan'); h=add(scan,'horizontal')
     for k,v in {'samples':720,'resolution':1,'min_angle':-math.pi,'max_angle':math.pi}.items(): add(h,k,v)
     ran=add(ray,'range')
@@ -564,20 +571,65 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     for k,v in {'update_rate':50,'publish_rate':20,'odometry_frame':'odom','robot_base_frame':'sim_base', 'publish_odom':'true','publish_odom_tf':'true'}.items(): add(plugin,k,v)
     tree.write(target/'scenario.world', encoding='unicode')
     exp = yaml.safe_load(config_path.read_text())['experiment']
-    limits, timeouts, dwal_config = exp['limits'], exp['timeouts'], exp['dwal']
+    limits, timeouts = exp['limits'], exp['timeouts']
+    dwal_config, dynamic_config = exp['dwal'], exp['dynamic_dwal']
     # Geometry is authoritative from the real URDF. Keep configured values only as an audit check.
     if abs(float(dwal_config['front_extent']) - xmax) > 0.03 or abs(float(dwal_config['rear_extent']) + xmin) > 0.03:
-        raise ValueError('experiment.yaml iWalk extents disagree with the derived URDF envelope')
+        raise ValueError(f'experiment.yaml iWalk extents disagree: configured front={dwal_config["front_extent"]}, rear={dwal_config["rear_extent"]}; derived front={xmax}, rear={-xmin}')
     levels = [float(v) for v in dwal_config['fixed_levels']]
     common={'common/levels':levels,'common/odom_frame':'odom','use_sim_time':True}
     generator={**common,'dwal_generator/odometryTopic':'/odom','dwal_generator/occ_topic':'/local_costmap/costmap', 'dwal_generator/base_frame':'sim_base','dwal_generator/footprint':[v for p in footprint for v in p], 'dwal_generator/footprint_padding':0.02,'dwal_generator/acc_lim_x':limits['acceleration'],'dwal_generator/acc_lim_th':limits['angular_acceleration'],'dwal_generator/max_trans_vel':limits['max_linear'],'dwal_generator/min_trans_vel':0.05,'dwal_generator/max_vel_theta':limits['max_angular'],'dwal_generator/sim_period':0.2,'dwal_generator/DS':0.05,'dwal_generator/Kmax':4.0,'dwal_generator/alpha':0.05,'dwal_generator/Hz':10.0,
-               'dwal_generator/dynamic_radius_enabled':True,
-               'dwal_generator/dynamic_radius_topic':'/dwal/dynamic_radius',
-               'dwal_generator/dynamic_radius_min':dwal_config['dynamic_radius_min'],
-               'dwal_generator/dynamic_radius_max':dwal_config['dynamic_radius_max'],
-               'dwal_generator/dynamic_radius_min_delta':dwal_config['dynamic_min_delta']}
+               }
     clustering={**common,'dwal_clustering/postfix':['near','far'],'dwal_clustering/spin':[1,1],'dwal_clustering/min_cluster_span':0.2,'dwal_clustering/cluster_separation':5,'dwal_clustering/subsample_step':3}
     (target/'dwal.yaml').write_text(dump_yaml({'/dwal_planner/dwal_generator':{'ros__parameters':generator},'/dwal_planner/dwal_clustering':{'ros__parameters':clustering}}))
+    dynamic = {
+        'use_sim_time': True, 'global_frame': 'odom', 'base_frame': 'sim_base',
+        'odom_topic': '/odom', 'costmap_topic': '/local_costmap/costmap',
+        'scan_topic': '/scan', 'laser_frame': 'laser_frame',
+        'reference_topic': '/reference_cmd', 'tracks_topic': '/tracked_agents',
+        'diagnostics_topic': '/dynamic_dwal/diagnostics',
+        'markers_topic': '/dynamic_dwal/markers',
+        'command_topic': '/cmd_vel_selected',
+        'max_linear': limits['max_linear'], 'max_angular': limits['max_angular'],
+        'acceleration': limits['acceleration'],
+        'deceleration': limits['deceleration'],
+        'angular_acceleration': limits['angular_acceleration'],
+        'angular_deceleration': limits['angular_deceleration'],
+        'dynamic_window_dt': dynamic_config['dynamic_window_dt'],
+        'max_curvature': 4.0, 'curvature_step': dynamic_config['curvature_step'],
+        'zero_linear_epsilon': dynamic_config['zero_linear_epsilon'],
+        'wheel_separation': 0.61, 'wheel_radius': 0.095,
+        'max_wheel_angular_speed': 20.0,
+        'max_search_length': dynamic_config['max_search_length'],
+        'path_output_resolution': dynamic_config['path_output_resolution'],
+        'sweep_resolution': dynamic_config['sweep_resolution'],
+        'ineligible_sweep_resolution': dynamic_config['ineligible_sweep_resolution'],
+        'known_space_resolution': dynamic_config['known_space_resolution'],
+        # This is the exact sim_base -> laser_frame transform written above.
+        'laser_x': laser_x, 'laser_y': 0.0, 'laser_yaw': 0.0,
+        'footprint': [v for point in footprint for v in point],
+        'footprint_padding': dynamic_config['footprint_padding'],
+        'lethal_cost': dynamic_config['lethal_cost'],
+        'reaction_time': dynamic_config['reaction_time'],
+        'longitudinal_margin': dynamic_config['longitudinal_margin'],
+        'odom_timeout': timeouts['odom'], 'costmap_timeout': timeouts['odom'],
+        'scan_timeout': 0.30,
+        'reference_timeout': timeouts['reference'],
+        'tracks_timeout': timeouts['tracks'], 'publish_rate': 10.0,
+        'prediction_horizon': dynamic_config['prediction_horizon'],
+        'prediction_time_step': dynamic_config['prediction_time_step'],
+        'final_speed_resolution': dynamic_config['final_speed_resolution'],
+        'candidate_marker_width': dynamic_config['candidate_marker_width'],
+        'selected_marker_width': dynamic_config['selected_marker_width'],
+        'transition_marker_scale': dynamic_config['transition_marker_scale'],
+        'marker_labels': dynamic_config['marker_labels'],
+        'marker_label_scale': dynamic_config['marker_label_scale'],
+        'stale_marker_lifetime': dynamic_config['stale_marker_lifetime'],
+        'human_radius': dynamic_config['human_radius'],
+        'human_base_uncertainty': dynamic_config['human_base_uncertainty'],
+        'human_uncertainty_growth': dynamic_config['human_uncertainty_growth']}
+    (target/'dynamic_dwal.yaml').write_text(
+        dump_yaml(ros_params('/dynamic_dwal', dynamic)))
     costmap=costmap_parameters(footprint, False)
     (target/'costmap.yaml').write_text(dump_yaml({'/costmap/costmap':{'ros__parameters':costmap}}))
     for family in ('dwb', 'hateb'):
@@ -654,23 +706,13 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
                     'output_topic': '/crowd_context', 'output_rate': context.pop('rate')})
     (target/'context.yaml').write_text(dump_yaml(ros_params('/context_estimator', context)))
 
-    radius_base = {'use_sim_time': True, 'odom_timeout': timeouts['odom'],
-                   'context_timeout': timeouts['context'], 'fixed_radius': levels[-1],
-                   'radius_min': dwal_config['dynamic_radius_min'],
-                   'sensor_reliable_radius': dwal_config['reliable_sensor_radius'],
-                   'costmap_reliable_radius': dwal_config['reliable_costmap_radius'],
-                   'front_extent': float(xmax), 'brake_deceleration': limits['deceleration'],
-                   'base_margin': exp['profiles']['OPEN_AREA']['margin'],
-                   'base_reaction_time': exp['profiles']['OPEN_AREA']['reaction_time'],
-                   'base_preview_time': exp['profiles']['OPEN_AREA']['preview_time'],
-                   'max_speed': limits['max_linear'],
-                   'radius_decrease_rate': dwal_config['radius_decrease_rate'],
-                   'minimum_radius_delta': dwal_config['dynamic_min_delta'],
-                   'discrete_levels': [dwal_config['dynamic_radius_min'], levels[-1], 2.6,
-                                       dwal_config['dynamic_radius_max']]}
+    context_speed = {
+        'use_sim_time': True, 'context_timeout': timeouts['context'],
+        'max_speed': limits['max_linear']}
     for profile, values in exp['profiles'].items():
-        for key, value in values.items(): radius_base[f'profiles.{profile}.{key}'] = value
-    (target/'radius_policy.yaml').write_text(dump_yaml(ros_params('/dynamic_radius_policy', radius_base)))
+        context_speed[f'profiles.{profile}.max_speed'] = values['max_speed']
+    (target/'context_speed_limit.yaml').write_text(
+        dump_yaml(ros_params('/context_speed_limit', context_speed)))
 
     shared_common = {'use_sim_time': True, 'odom_topic': '/odom',
                      'near_cluster_topic': '/dwal_planner/clusters_near',
@@ -717,7 +759,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
                  'robot_frame_id': 'sim_base', 'map_frame_id': 'odom',
                  'goals_file': str(goals_file), 'publish_markers': True}
     (target/'agent_prediction.yaml').write_text(dump_yaml(ros_params('/agent_path_prediction', predictor)))
-    self_filter_padding = 0.03
+    self_filter_padding = (0.01 if controller == 'dynamic_dwal' else 0.03)
     scan_filter = {
         'use_sim_time': True,
         'filter1': {
@@ -733,7 +775,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     (target/'scan_filter.yaml').write_text(dump_yaml(ros_params('/scan_self_filter', scan_filter)))
     (target/'geometry.yaml').write_text(dump_yaml({
         'footprint':footprint, 'front_extent':float(xmax), 'rear_extent':float(-xmin),
-        'laser_xyz':[0.85,0,0.35], 'base_link_height':height,
+        'laser_xyz':[laser_x,0,0.35], 'base_link_height':height,
         'description':'URDF-derived conservative visual/collision envelope; shared by all conditions.'}))
     (target/'scenario_manifest.yaml').write_text(dump_yaml({
         'scenario': scenario_data['name'],
@@ -760,7 +802,9 @@ if __name__ == '__main__':
     p.add_argument('--scenario-config')
     p.add_argument('--seed', type=int, default=1)
     p.add_argument('--headless', action='store_true')
+    p.add_argument('--controller', default='fixed_dwal')
     p.add_argument('--require-intended-user-support', action='store_true')
     a = p.parse_args()
     prepare(a.description, a.wrapper, a.output, a.experiment_config, a.headless,
-            a.scenario, a.scenario_config, a.seed, a.require_intended_user_support)
+            a.scenario, a.scenario_config, a.seed, a.controller,
+            a.require_intended_user_support)

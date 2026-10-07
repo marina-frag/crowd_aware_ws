@@ -35,15 +35,33 @@ experiment:
     final_input: 0.30
   dwal:
     fixed_levels: [1.20, 1.80]
-    # Must stay above the fixed inner clustering level (1.20 m).
-    dynamic_radius_min: 1.40
-    dynamic_radius_max: 4.00
     front_extent: 0.865
     rear_extent: 0.103
-    reliable_sensor_radius: 8.0
-    reliable_costmap_radius: 4.0
-    dynamic_min_delta: 0.03
-    radius_decrease_rate: 0.50
+  dynamic_dwal:
+    max_search_length: 4.0
+    curvature_step: 0.10
+    dynamic_window_dt: 0.10
+    path_output_resolution: 0.05
+    sweep_resolution: 0.02
+    ineligible_sweep_resolution: 0.05
+    known_space_resolution: 0.025
+    footprint_padding: 0.02
+    lethal_cost: 100
+    reaction_time: 0.40
+    longitudinal_margin: 0.05
+    zero_linear_epsilon: 0.02
+    prediction_horizon: 2.0
+    prediction_time_step: 0.05
+    human_radius: 0.40
+    human_base_uncertainty: 0.10
+    human_uncertainty_growth: 0.10
+    final_speed_resolution: 0.025
+    candidate_marker_width: 0.005
+    selected_marker_width: 0.010
+    transition_marker_scale: 0.035
+    marker_labels: false
+    marker_label_scale: 0.055
+    stale_marker_lifetime: 0.75
   context:
     rate: 8.0
     track_stale_after: 0.50

@@ -35,20 +35,25 @@ Visualization Manager:
       Color Scheme: costmap
       Alpha: 0.6
     - Class: rviz_default_plugins/MarkerArray
-      Name: DWAL paths
-      Enabled: true
+      Name: Fixed DWAL legacy paths (fixed_dwal only)
+      Enabled: false
       Topic:
         Value: /dwal_planner/sampled_pathMarkers
     - Class: rviz_default_plugins/MarkerArray
-      Name: Near clusters
-      Enabled: true
+      Name: Fixed DWAL legacy near clusters (not dynamic clusters)
+      Enabled: false
       Topic:
         Value: /dwal_planner/cluster_markers_near
     - Class: rviz_default_plugins/MarkerArray
-      Name: Far clusters
-      Enabled: true
+      Name: Fixed DWAL legacy far clusters (not dynamic clusters)
+      Enabled: false
       Topic:
         Value: /dwal_planner/cluster_markers_far
+    - Class: rviz_default_plugins/MarkerArray
+      Name: Dynamic DWAL family, clusters, transitions and braking sweep
+      Enabled: true
+      Topic:
+        Value: /dynamic_dwal/markers
   Views:
     Current:
       Class: rviz_default_plugins/Orbit

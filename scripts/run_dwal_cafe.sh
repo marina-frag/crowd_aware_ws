@@ -5,7 +5,7 @@ mode=${1:-run}
 controller=${2:-fixed_dwal}
 semantics=${3:-off}
 seed=${4:-1}
-scenario=${SCENARIO:-cafe}
+scenario=${SCENARIO:-dense_crowd}
 extra_args=("${@:5}")
 while (( ${#extra_args[@]} )); do
   case "${extra_args[0]}" in
@@ -29,6 +29,11 @@ case "$scenario" in
   *) echo "Unknown scenario: $scenario"; exit 2;;
 esac
 if [[ "$mode" == check ]]; then
+  if [[ "$controller" == dynamic_dwal ]]; then
+    exec docker exec iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
+      /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/dynamic_dwal_check.py \
+      --semantics "$semantics" --scenario "$scenario"
+  fi
   exec docker exec iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
     /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/smoke_check.py \
     --controller "$controller" --semantics "$semantics"
@@ -43,9 +48,9 @@ if [[ "$mode" == record ]]; then
   exec docker exec -it iwalk_dwal /bin/bash /dwal_entrypoint.sh ros2 bag record \
     -o "/rosbags/${scenario}_${controller}_${semantics}_${seed}_${stamp}" \
     /odom /scan /human_states /robot_states /tracked_agents_logging /tracked_agents /agents_info \
-    /crowd_context /crowd_context/profile /experiment/dynamic_radius_state /experiment/speed_limit \
+    /crowd_context /crowd_context/profile /experiment/speed_limit \
     /experiment/task_result /experiment/command_guard_status \
-    /experiment/path /dwal_planner/sampled_paths /dwal_planner/clusters_near /dwal_planner/clusters_far \
+    /experiment/path /dynamic_dwal/diagnostics /dynamic_dwal/markers /dwal_planner/sampled_paths /dwal_planner/clusters_near /dwal_planner/clusters_far \
     /plan_time /traj_time /teb_feedback /reference_cmd /cmd_vel_selected /cmd_vel_guarded \
     /cmd_vel_smoothed /cmd_vel_safe /cmd_vel
 fi
@@ -69,13 +74,11 @@ gui=${GUI:-false}
 rviz=${RVIZ:-false}
 reference_mode=${REFERENCE_MODE:-autonomous}
 teleop_input_timeout=${TELEOP_INPUT_TIMEOUT:-0.35}
-radius_mode=${RADIUS_MODE:-continuous}
 for value in "$headless" "$gui" "$rviz"; do
   case "$value" in true|false) ;; *) echo 'HEADLESS, GUI, and RVIZ must be true or false'; exit 2;; esac
 done
 
 case "$reference_mode" in autonomous|teleop) ;; *) echo 'REFERENCE_MODE must be autonomous or teleop'; exit 2;; esac
-case "$radius_mode" in discrete|continuous) ;; *) echo 'RADIUS_MODE must be discrete or continuous'; exit 2;; esac
 mkdir -p "$repo_dir/rosbags"
 
 docker_args=(--rm -it --name iwalk_dwal -e ROS_DOMAIN_ID=73 -v "$repo_dir/rosbags:/rosbags")
@@ -95,7 +98,6 @@ args=(
   "semantics:=$semantics"
   "reference_mode:=$reference_mode"
   "teleop_input_timeout:=$teleop_input_timeout"
-  "radius_mode:=$radius_mode"
   "scenario:=$scenario"
   "seed:=$seed"
   "headless:=$headless"
@@ -105,6 +107,7 @@ args=(
 )
 
 if [[ "$mode" == shell ]]; then
+  docker_args+=(-v "$repo_dir:/workspace")
   args=(bash)
 fi
 docker run "${docker_args[@]}" iwalk_dwal:latest "${args[@]}"

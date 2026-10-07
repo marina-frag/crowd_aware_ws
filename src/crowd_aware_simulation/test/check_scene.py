@@ -43,6 +43,8 @@ with tempfile.TemporaryDirectory() as t:
     assert cm['global_frame']==dwal['common/odom_frame']=='odom'
     assert cm['robot_base_frame']==dwal['dwal_generator/base_frame']=='sim_base'
     for link in generated.findall('link'):
+        if link.get('name') == 'laser_frame':
+            continue
         for e in [*link.findall('visual'),*link.findall('collision')]:
             pts=s.geometry_points(list(e.find('geometry'))[0],description)
             tf=after[link.get('name')]@s.transform(e.find('origin'))

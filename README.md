@@ -99,13 +99,36 @@ For the separate interactive DWAL demonstration, launch with
 `REFERENCE_MODE=teleop`, then attach the keyboard:
 
 ```bash
-REFERENCE_MODE=teleop bash scripts/run_dwal_cafe.sh run fixed_dwal on 1
+SCENARIO=dense_crowd REFERENCE_MODE=teleop RVIZ=true bash scripts/run_dwal_cafe.sh run dynamic_dwal on 1
 bash scripts/run_dwal_cafe.sh teleop
 ```
 
-See [report.md](report.md) for the exact condition semantics, graph inventory,
-validation evidence, evaluation commands, and known limitations.
+`dynamic_dwal` is the single C++ executable
+`crowd_aware_simulation/dynamic_dwal_node`; Docker builds it from this checkout
+and the launch file loads the generated installed `dynamic_dwal.yaml`. It now
+publishes the full symmetric strict arc-line family on
+`/dynamic_dwal/markers`, while dynamic-window-ineligible members remain visible
+but cannot enter clusters or commands. Candidate/selected widths default to
+`0.005/0.010 m`; labels and widths are parameters in `experiment.yaml`.
 
+Run the two required environments explicitly:
+
+```bash
+SCENARIO=open_area REFERENCE_MODE=teleop RVIZ=true \
+  bash scripts/run_dwal_cafe.sh run dynamic_dwal off 1
+bash scripts/run_dwal_cafe.sh teleop dynamic_dwal off 1
+SCENARIO=open_area bash scripts/run_dwal_cafe.sh check dynamic_dwal off 1
+
+SCENARIO=dense_crowd REFERENCE_MODE=teleop RVIZ=true \
+  bash scripts/run_dwal_cafe.sh run dynamic_dwal on 1
+bash scripts/run_dwal_cafe.sh teleop dynamic_dwal on 1
+SCENARIO=dense_crowd bash scripts/run_dwal_cafe.sh check dynamic_dwal on 1
+```
+
+The precise failure taxonomy and first failing point/cell/ray are published in
+`/dynamic_dwal/diagnostics`. See [clearer_dwal_report1.md](clearer_dwal_report1.md)
+for the proven self-filter root cause, safety semantics, marker namespaces, and
+validation evidence.
 
 ---
 ## Run diff controllers different usecases
@@ -114,7 +137,7 @@ validation evidence, evaluation commands, and known limitations.
 ```
 example
 ```bash
-SCENARIO=crossing REFERENCE_MODE=teleop GUI=true HEADLESS=false RVIZ=true bash scripts/run_dwal_cafe.sh run hateb on 1
+SCENARIO=dense_crowd REFERENCE_MODE=teleop GUI=false HEADLESS=true RVIZ=true bash scripts/run_dwal_cafe.sh run dynamic_dwal on 1
 ```
 
 ```bash
