@@ -88,8 +88,15 @@ if [[ "$headless" == false || "$gui" == true || "$rviz" == true ]]; then
   if ! xhost | grep -q 'SI:localuser:root'; then xhost +si:localuser:root; granted=true; fi
   cleanup() { if [[ "$granted" == true ]]; then xhost -si:localuser:root >/dev/null; fi; }
   trap cleanup EXIT
-  docker_args+=(-e DISPLAY -e QT_X11_NO_MITSHM=1 -e LIBGL_ALWAYS_SOFTWARE=1 \
-    -v /tmp/.X11-unix:/tmp/.X11-unix:ro)
+  # docker_args+=(-e DISPLAY -e QT_X11_NO_MITSHM=1 -e LIBGL_ALWAYS_SOFTWARE=1 \
+  #   -v /tmp/.X11-unix:/tmp/.X11-unix:ro)
+    docker_args+=(--gpus all
+      -e DISPLAY
+      -e QT_X11_NO_MITSHM=1
+      -e NVIDIA_DRIVER_CAPABILITIES=graphics,display,utility,compute
+      -e __NV_PRIME_RENDER_OFFLOAD=1
+      -e __GLX_VENDOR_LIBRARY_NAME=nvidia
+      -v /tmp/.X11-unix:/tmp/.X11-unix:ro)
 fi
 
 args=(

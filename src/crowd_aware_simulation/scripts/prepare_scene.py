@@ -461,6 +461,50 @@ def hateb_plugin(limits, footprint, semantic, goal_tolerance, personal_space):
                           'publish_robot_local_plan_poses': True}}
 
 
+def robot_frames(robot, root='sim_base'):
+    """Resolve the description without changing its links or joints."""
+    names = {link.get('name') for link in robot.findall('link')}
+    children = {joint.find('child').get('link') for joint in robot.findall('joint')}
+    if names - children != {root}:
+        raise ValueError(f'Expected a single URDF root {root!r}')
+    frames = {root: np.eye(4)}
+    pending = list(robot.findall('joint'))
+    while pending:
+        ready = [j for j in pending if j.find('parent').get('link') in frames]
+        if not ready:
+            raise ValueError('URDF contains a cycle or disconnected joint')
+        for joint in ready:
+            child = joint.find('child').get('link')
+            if child in frames or child not in names:
+                raise ValueError(f'Invalid or duplicate joint child {child!r}')
+            frames[child] = frames[joint.find('parent').get('link')] @ transform(joint.find('origin'))
+            pending.remove(joint)
+    if set(frames) != names:
+        raise ValueError('URDF contains disconnected links')
+    return frames
+
+
+def append_description_geometry(link, robot, frames, description):
+    """Copy physical visual/collision shapes into the rigid simulator chassis."""
+    bounds = []
+    for urdf_link in robot.findall('link'):
+        name = urdf_link.get('name')
+        for index, element in enumerate([*urdf_link.findall('visual'), *urdf_link.findall('collision')]):
+            tf = frames[name] @ transform(element.find('origin'))
+            geometry = list(element.find('geometry'))[0]
+            if name != 'laser_frame':
+                points = geometry_points(geometry, description)
+                bounds.extend((points @ tf[:3, :3].T + tf[:3, 3]).tolist())
+            copied = add(link, element.tag, name=f'{name}_{element.tag}_{index}')
+            add(copied, 'pose', pose(tf))
+            sdf_geometry(copied, geometry, description)
+            if element.tag == 'visual':
+                material = add(copied, 'material')
+                add(material, 'ambient', '0.4 0.4 0.45 1')
+                add(material, 'diffuse', '0.4 0.4 0.45 1')
+    return np.asarray(bounds)
+
+
 def prepare(description, wrapper, target, experiment_config=None, headless=False,
             scenario='cafe', scenario_config=None, seed=1, controller='fixed_dwal',
             require_intended_user_support=False):
@@ -485,38 +529,14 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     evaluation = scenario_data['evaluation']
     navigation_envelope = yaml.safe_load(config_path.read_text())['experiment']['dwal']
     target.mkdir(parents=True, exist_ok=True)
-    # Shared synthetic LiDAR sits on the padded navigation-envelope front, outside the 0.01 m self-filter box.
-    laser_x = 0.885 if controller == 'dynamic_dwal' else 0.85
     robot = ET.fromstring(xacro.process_file(str(description/'urdf/iwalk.urdf.xacro')).toxml())
-    # Preserve all physical transforms; reroot only the runtime copy at the rear axle projection.
-    original = robot.find("joint[@name='base_footprint_joint']")
-    old = transform(original.find('origin'))
-    height = float(old[2, 3])
-    original.find('parent').set('link', 'base_link')
-    original.find('child').set('link', 'base_footprint')
-    inverse = np.linalg.inv(old)
-    original.find('origin').set('xyz', ' '.join(map(str, inverse[:3, 3])))
-    original.find('origin').set('rpy', ' '.join(pose(inverse).split()[3:]))
-    add(robot, 'link', name='sim_base')
-    joint = add(robot, 'joint', name='sim_base_joint', type='fixed')
-    add(joint, 'parent', link='sim_base'); add(joint, 'child', link='base_link')
-    add(joint, 'origin', xyz=f'0 0 {height}', rpy='0 0 0')
-    laser = add(robot, 'link', name='laser_frame')
-    vis = add(laser, 'visual'); add(vis, 'origin', xyz='0 0 0')
-    add(add(vis, 'geometry'), 'box', size='0.03 0.03 0.03')
-    lj = add(robot, 'joint', name='laser_joint', type='fixed')
-    add(lj, 'parent', link='sim_base'); add(lj, 'child', link='laser_frame')
-    add(lj, 'origin', xyz=f'{laser_x} 0 0.35', rpy='0 0 0')
+    frames = robot_frames(robot)
+    laser_tf = frames['laser_frame']
+    laser_x, laser_y, laser_z, laser_roll, laser_pitch, laser_yaw = map(float, pose(laser_tf).split())
+    if abs(laser_roll) > 1e-9 or abs(laser_pitch) > 1e-9:
+        raise ValueError('The 2D navigation stack requires a horizontal LiDAR')
+    height = float(frames['base_link'][2, 3])
     ET.ElementTree(robot).write(target/'robot.urdf', encoding='unicode')
-    frames = {'sim_base': np.eye(4)}
-    pending = list(robot.findall('joint'))
-    while pending:
-        ready = [j for j in pending if j.find('parent').get('link') in frames]
-        if not ready:
-            raise ValueError('URDF contains a cycle or disconnected joint')
-        for j in ready:
-            frames[j.find('child').get('link')] = frames[j.find('parent').get('link')] @ transform(j.find('origin'))
-            pending.remove(j)
     tree = ET.parse(scenario_data['_world_path'])
     world = tree.getroot().find('world')
     if world is None:
@@ -535,19 +555,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     inertial = add(link, 'inertial'); add(inertial, 'mass', '25')
     inertia = add(inertial, 'inertia')
     for k,v in {'ixx':2,'iyy':2,'izz':2,'ixy':0,'ixz':0,'iyz':0}.items(): add(inertia,k,v)
-    bounds = []
-    for urdf_link in robot.findall('link'):
-        for element in [*urdf_link.findall('visual'), *urdf_link.findall('collision')]:
-            t = frames[urdf_link.get('name')] @ transform(element.find('origin'))
-            g = list(element.find('geometry'))[0]
-            pts = geometry_points(g, description)
-            if urdf_link.get('name') != 'laser_frame':
-                bounds.extend((pts @ t[:3,:3].T + t[:3,3]).tolist())
-            if element.tag == 'visual':
-                v = add(link, 'visual', name=f'visual_{len(link)}')
-                add(v, 'pose', pose(t)); sdf_geometry(v, g, description)
-                mat = add(v, 'material'); add(mat, 'ambient', '0.4 0.4 0.45 1'); add(mat, 'diffuse', '0.4 0.4 0.45 1')
-    pts = np.array(bounds)
+    pts = append_description_geometry(link, robot, frames, description)
     lo, hi = pts.min(axis=0), pts.max(axis=0)
     xmin,ymin = np.floor(lo[:2]*1000)/1000
     xmax,ymax = np.ceil(hi[:2]*1000)/1000
@@ -555,11 +563,9 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     xmin = min(xmin, -float(navigation_envelope['rear_extent']))
     xmax = max(xmax, float(navigation_envelope['front_extent']))
     footprint = [[float(xmax),float(ymax)],[float(xmax),float(ymin)], [float(xmin),float(ymin)],[float(xmin),float(ymax)]]
-    collision = add(link,'collision',name='navigation_envelope')
-    add(collision,'pose',f'{(xmin+xmax)/2} {(ymin+ymax)/2} 0.5 0 0 0')
-    add(add(add(collision,'geometry'),'box'),'size',f'{xmax-xmin} {ymax-ymin} 0.96')
+    # The conservative footprint is planner data, never a physical collision box.
     sensor = add(link, 'sensor', name='lidar', type='ray' if headless else 'gpu_ray')
-    add(sensor, 'pose', f'{laser_x} 0 0.35 0 0 0'); add(sensor,'always_on','true'); add(sensor,'update_rate','15')
+    add(sensor, 'pose', pose(laser_tf)); add(sensor,'always_on','true'); add(sensor,'update_rate','15')
     ray=add(sensor,'ray'); scan=add(ray,'scan'); h=add(scan,'horizontal')
     for k,v in {'samples':720,'resolution':1,'min_angle':-math.pi,'max_angle':math.pi}.items(): add(h,k,v)
     ran=add(ray,'range')
@@ -606,7 +612,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
         'ineligible_sweep_resolution': dynamic_config['ineligible_sweep_resolution'],
         'known_space_resolution': dynamic_config['known_space_resolution'],
         # This is the exact sim_base -> laser_frame transform written above.
-        'laser_x': laser_x, 'laser_y': 0.0, 'laser_yaw': 0.0,
+        'laser_x': laser_x, 'laser_y': laser_y, 'laser_yaw': laser_yaw,
         'footprint': [v for point in footprint for v in point],
         'footprint_padding': dynamic_config['footprint_padding'],
         'lethal_cost': dynamic_config['lethal_cost'],
@@ -759,7 +765,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
                  'robot_frame_id': 'sim_base', 'map_frame_id': 'odom',
                  'goals_file': str(goals_file), 'publish_markers': True}
     (target/'agent_prediction.yaml').write_text(dump_yaml(ros_params('/agent_path_prediction', predictor)))
-    self_filter_padding = (0.01 if controller == 'dynamic_dwal' else 0.03)
+    self_filter_padding = 0.01
     scan_filter = {
         'use_sim_time': True,
         'filter1': {
@@ -775,7 +781,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     (target/'scan_filter.yaml').write_text(dump_yaml(ros_params('/scan_self_filter', scan_filter)))
     (target/'geometry.yaml').write_text(dump_yaml({
         'footprint':footprint, 'front_extent':float(xmax), 'rear_extent':float(-xmin),
-        'laser_xyz':[laser_x,0,0.35], 'base_link_height':height,
+        'laser_xyz':[laser_x,laser_y,laser_z], 'base_link_height':height,
         'description':'URDF-derived conservative visual/collision envelope; shared by all conditions.'}))
     (target/'scenario_manifest.yaml').write_text(dump_yaml({
         'scenario': scenario_data['name'],

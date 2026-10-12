@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- One sensor mount for every controller; coordinates relative to base_link. -->
+  <xacro:macro name="iwalk_lidar" params="">
+    <link name="laser_frame">
+      <visual>
+        <geometry><box size="0.03 0.03 0.03"/></geometry>
+        <material name="lidar_black"><color rgba="0.1 0.1 0.1 1"/></material>
+      </visual>
+    </link>
+    <joint name="laser_joint" type="fixed">
+      <parent link="base_link"/><child link="laser_frame"/>
+      <origin xyz="0.885 0 ${0.35 - base_link_height}" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+</robot>

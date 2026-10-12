@@ -28,7 +28,8 @@ with tempfile.TemporaryDirectory() as t:
     original=E.fromstring(xacro.process_file(str(description/'urdf/iwalk.urdf.xacro')).toxml())
     generated=E.parse(p/'robot.urdf').getroot()
     before,after=frames(original),frames(generated)
-    # Every physical relative transform must survive the reroot, including the existing footprint.
+    assert E.tostring(original) == E.tostring(generated), 'Runtime must not mutate the description'
+    # Every description transform must survive generation without rerooting.
     for name in before:
         np.testing.assert_allclose(np.linalg.inv(before['base_link'])@before[name],np.linalg.inv(after['base_link'])@after[name],atol=1e-10)
     np.testing.assert_allclose(after['base_link'][:2,3],[0,0],atol=1e-10)
@@ -53,6 +54,8 @@ with tempfile.TemporaryDirectory() as t:
     world=E.parse(p/'scenario.world').getroot().find('world')
     assert len(world.findall('include'))==len(E.parse(package/'worlds/base_cafe.world').getroot().find('world').findall('include'))
     model=world.find("model[@name='iwalk']")
+    assert model.find("link/collision[@name='navigation_envelope']") is None
+    assert len(model.findall('link/collision')) == len(generated.findall('link/collision'))
     assert model.find("plugin[@name='ideal_planar_base']/robot_base_frame").text=='sim_base'
     assert model.find("link/sensor/plugin/frame_name").text=='laser_frame'
     print('PASS: physical transforms preserved, unique TF root, shared conservative footprint, odometry/costmap frames, full map updates, cafe preserved, sensor/odom plugins.')

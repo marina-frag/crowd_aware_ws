@@ -45,6 +45,9 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_test(NAME test_robot_geometry
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_robot_geometry.py)
   find_package(ament_cmake_gtest REQUIRED)
   ament_add_gtest(test_dynamic_dwal_core test/test_dynamic_dwal_core.cpp)
   if(TARGET test_dynamic_dwal_core)

@@ -162,26 +162,15 @@
 
     </visual>
 
-    <!--
-      Για collision χρησιμοποιούμε απλή γεωμετρία.
-      Αργότερα μπορεί να αντικατασταθεί από περισσότερα boxes
-      ή από simplified collision mesh.
-    -->
+    <!-- Use the physical mesh, preserving openings instead of a solid bounding box.
+         Validate Gazebo contact performance; later replace with a simplified mesh if needed. -->
     <collision name="iwalk_body_collision">
-
-      <origin
-        xyz="${body_center_x}
-             ${body_center_y}
-             ${body_center_z}"
-        rpy="0 0 0"/>
-
+      <origin xyz="${mesh_x} ${mesh_y} ${mesh_z}"
+              rpy="${mesh_roll} ${mesh_pitch} ${mesh_yaw}"/>
       <geometry>
-        <box
-          size="${body_length}
-                ${body_width}
-                ${body_height}"/>
+        <mesh filename="package://iwalk_description/meshes/iwalk_body.STL"
+              scale="${mesh_scale} ${mesh_scale} ${mesh_scale}"/>
       </geometry>
-
     </collision>
 
     <xacro:box_inertial
@@ -195,17 +184,23 @@
 
   </link>
 
-  <!-- base_footprint βρίσκεται στο έδαφος -->
-  <joint name="base_footprint_joint" type="fixed">
-
-    <parent link="base_footprint"/>
+  <!-- Runtime-compatible root at the rear axle projection. -->
+  <link name="sim_base"/>
+  <joint name="sim_base_joint" type="fixed">
+    <parent link="sim_base"/>
     <child link="base_link"/>
-
-    <origin
-      xyz="-0.39 0 ${base_link_height}"
-      rpy="0 0 0"/>
-
+    <origin xyz="0 0 ${base_link_height}" rpy="0 0 0"/>
   </joint>
+
+  <!-- Preserve the existing footprint frame's physical position. -->
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="base_footprint"/>
+    <origin xyz="0.39 0 ${-base_link_height}" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:include filename="sensors.xacro"/>
+  <xacro:iwalk_lidar/>
 
   <!-- ==================================================== -->
   <!-- REAR DRIVEN WHEELS                                   -->
