@@ -359,7 +359,8 @@ def common_controller(limits, goal_tolerance):
                              'movement_time_allowance': 8.0},
         'general_goal_checker': {'plugin': 'nav2_controller::SimpleGoalChecker',
                                  'stateful': True, 'xy_goal_tolerance': goal_tolerance,
-                                 'yaw_goal_tolerance': 0.25}}
+                                 'yaw_goal_tolerance': 0.25},
+        'odom_topic': '/odom'}
 
 
 def dwb_plugin(limits, goal_tolerance):

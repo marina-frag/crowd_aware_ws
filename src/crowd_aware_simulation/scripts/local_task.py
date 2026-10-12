@@ -15,6 +15,29 @@ from std_msgs.msg import String
 from std_srvs.srv import Empty
 
 
+def densify_path(points, resolution):
+    """Keep the polyline and corners, with segment spacing at most resolution."""
+    if not math.isfinite(resolution) or resolution <= 0.0:
+        raise ValueError('path_resolution must be positive and finite')
+    if len(points) < 2 or not all(math.isfinite(v) for point in points for v in point):
+        raise ValueError('path requires at least two finite x,y points')
+    dense = [points[0]]
+    for endpoint in points[1:]:
+        start = dense[-1]
+        dx, dy = endpoint[0] - start[0], endpoint[1] - start[1]
+        length = math.hypot(dx, dy)
+        if length == 0.0:
+            continue
+        count = max(1, math.ceil(length / resolution))
+        for index in range(1, count):
+            ratio = index / count
+            dense.append((start[0] + ratio * dx, start[1] + ratio * dy))
+        dense.append(endpoint)
+    if len(dense) < 2:
+        raise ValueError('path must contain a non-zero-length segment')
+    return dense
+
+
 class LocalTask(Node):
     def __init__(self):
         super().__init__('local_task')
@@ -23,6 +46,7 @@ class LocalTask(Node):
         self.declare_parameter('odom_topic', '/odom')
         self.declare_parameter('path_xy', [0.0, 0.0, 1.0, 0.0])
         self.declare_parameter('timeout', 90.0)
+        self.declare_parameter('path_resolution', 0.05)
         self.declare_parameter('controller_id', 'FollowPath')
         self.declare_parameter('goal_checker_id', 'general_goal_checker')
         self.declare_parameter('controller_lifecycle_node', '/controller_server')
@@ -36,7 +60,8 @@ class LocalTask(Node):
         self.timeout = float(self.get_parameter('timeout').value)
         if not math.isfinite(self.timeout) or self.timeout <= 0.0:
             raise ValueError('timeout must be positive and finite')
-        self.points = list(zip(xy[0::2], xy[1::2]))
+        resolution = float(self.get_parameter('path_resolution').value)
+        self.points = densify_path(list(zip(xy[0::2], xy[1::2])), resolution)
         self.client = ActionClient(self, FollowPath, self.get_parameter('action_name').value)
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.path_pub = self.create_publisher(Path, self.get_parameter('path_topic').value, qos)
