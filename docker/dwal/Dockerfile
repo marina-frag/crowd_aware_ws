@@ -1,6 +1,9 @@
 # Reuse the existing HuNavSim environment; do not mix host Jazzy and Humble DDS.
 ARG BASE_IMAGE=pmb2_hunav_simulation:latest
 FROM ${BASE_IMAGE}
+ARG SOURCE_SHA=unknown
+LABEL org.iwalk.source-sha256=${SOURCE_SHA}
+LABEL org.iwalk.dwal-revision="95b1aa5e1f0259ae8a467c731bf994fc0ebc4f6d"
 USER root
 SHELL ["/bin/bash", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -18,8 +21,10 @@ RUN git clone https://github.com/gmoustri/dwal_planner.git src/dwal_planner && \
 RUN git clone https://github.com/gmoustri/bayesian_shared_control.git src/bayesian_shared_control && \
     git -C src/bayesian_shared_control checkout 9d0df25f8a966db449ec94c073349d09e328d517
 COPY patches /tmp/crowd_aware_patches
-# Keep the pinned DWAL generator/clustering checkout unmodified for fixed_dwal.
-# The shared-controller patch is a documented ROS/safety integration delta.
+# One upstream implementation: fixed levels by default, variable free prefixes by parameter.
+RUN git -C src/dwal_planner apply --check /tmp/crowd_aware_patches/dwal_variable_length.patch && \
+    git -C src/dwal_planner apply /tmp/crowd_aware_patches/dwal_variable_length.patch
+# Shared control integration and bounded prediction are a separately reviewable delta.
 RUN git -C src/bayesian_shared_control apply --check /tmp/crowd_aware_patches/bayesian_shared_control_safety_semantics.patch && \
     git -C src/bayesian_shared_control apply /tmp/crowd_aware_patches/bayesian_shared_control_safety_semantics.patch
 # The PMB2 image carries CoHAN sources but intentionally builds only messages.
@@ -61,6 +66,10 @@ RUN source /opt/ros/humble/setup.bash && source /home/kiro_ws/install/setup.bash
     colcon build --symlink-install --packages-select \
     iwalk_description crowd_aware_interfaces dwal_planner bayesian_shared_control crowd_aware_simulation \
     --cmake-args -DCMAKE_BUILD_TYPE=Release
+# Reject a build that picked an older DWAL message overlay.
+RUN source /opt/ros/humble/setup.bash && source /home/kiro_ws/install/setup.bash && \
+    source /opt/dwal_ws/install/setup.bash && \
+    python3 -c "from dwal_planner.msg import Path; p=Path(); assert hasattr(p,'available_length') and hasattr(p,'available_radius')"
 RUN source /opt/ros/humble/setup.bash && \
     python3 -c "import subprocess; p='/opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager'; s=subprocess.check_output(['ldd',p],text=True); print(s); assert 'not found' not in s, 'Missing lifecycle-manager runtime libraries'"
 COPY docker/dwal/entrypoint.sh /dwal_entrypoint.sh

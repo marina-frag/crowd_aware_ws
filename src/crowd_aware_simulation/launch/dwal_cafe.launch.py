@@ -55,7 +55,6 @@ def setup(context):
 
     semantic_on = semantics == 'on'
     is_dwal = controller in ('fixed_dwal', 'dynamic_dwal')
-    is_fixed_dwal = controller == 'fixed_dwal'
     is_dynamic_dwal = controller == 'dynamic_dwal'
     headless = truth(context, 'headless')
     share = Path(get_package_share_directory('crowd_aware_simulation'))
@@ -70,6 +69,10 @@ def setup(context):
         seed=int(seed), controller=controller, require_intended_user_support=True)
     print(f'Scenario={scenario}, experiment={controller}/{semantics}, '
           f'reference={reference_mode}, seed={seed}; runtime files={run}', flush=True)
+
+    if is_dwal:
+        print('DWAL_UPSTREAM_V4: dwal_planner/dwal_generator + dwal_clustering + '
+              f'bayesian_shared_control/shared_control_node; variable_length={is_dynamic_dwal}', flush=True)
 
     model_paths = {str(wrapper/'models'), '/usr/share/gazebo-11/models', '/opt/gazebo_models'}
     for model_name in ('cafe', 'cafe_table', 'ground_plane'):
@@ -194,60 +197,29 @@ def setup(context):
         condition_nodes += [
             costmap, lifecycle_manager(
                 'costmap_lifecycle_manager', ['/costmap/costmap'])]
-    if is_fixed_dwal:
-        clustering = Node(
-            package='dwal_planner', executable='dwal_clustering',
-            name='dwal_clustering', namespace='dwal_planner',
-            output='screen', parameters=[str(run/'dwal.yaml')])
-        generation = Node(
-            package='dwal_planner', executable='dwal_generator',
-            name='dwal_generator', namespace='dwal_planner',
-            output='screen', parameters=[str(run/'dwal.yaml')])
-        clustering_ready = ExecuteProcess(
-            cmd=[sys.executable, str(share/'scripts/wait_clustering.py')], output='screen')
-
-        def after_clustering(event, _):
-            if event.returncode:
-                return [EmitEvent(event=Shutdown(reason='DWAL clustering failed'))]
-            return [generation]
-
+    if is_dwal:
         condition_nodes += [
-            RegisterEventHandler(OnProcessExit(
-                target_action=clustering_ready, on_exit=after_clustering)),
-            clustering, clustering_ready,
+            Node(package='dwal_planner', executable='dwal_clustering',
+                 name='dwal_clustering', namespace='dwal_planner',
+                 output='screen', parameters=[str(run/'dwal.yaml')]),
+            Node(package='dwal_planner', executable='dwal_generator',
+                 name='dwal_generator', namespace='dwal_planner',
+                 output='screen', parameters=[str(run/'dwal.yaml')]),
             Node(package='bayesian_shared_control', executable='shared_control_node',
                  name='shared_controller', output='screen',
-                 parameters=[str(run/f'shared_control_{semantics}.yaml')]),
-            # Fixed baseline uses only the common physical cap, not context/radius adaptation.
+                 parameters=[str(run/f'shared_control_{semantics}.yaml'),
+                             {'reference_timeout':teleop_input_timeout}]
+                 if reference_mode == 'teleop' else [str(run/f'shared_control_{semantics}.yaml')]),
             Node(package='crowd_aware_simulation', executable='constant_speed_limit.py',
                  name='constant_speed_limit', output='screen',
-                 parameters=[{'use_sim_time': True, 'speed_limit': 0.30}])]
+                 parameters=[{'use_sim_time':True,'max_speed':0.30}])]
         if reference_mode == 'autonomous':
             condition_nodes += [
                 Node(package='nav2_controller', executable='controller_server',
                      name='controller_server', namespace='reference', output='screen',
                      parameters=[str(run/'reference.yaml')],
-                     remappings=[('cmd_vel', '/reference_cmd')]),
-                lifecycle_manager('reference_lifecycle_manager',
-                                  ['controller_server'], namespace='reference')]
-    elif is_dynamic_dwal:
-        condition_nodes += [
-            Node(package='crowd_aware_simulation',
-                 executable='dynamic_dwal_node', name='dynamic_dwal',
-                 output='screen',
-                 parameters=[str(run/'dynamic_dwal.yaml'), {'mode': semantics}]),
-            Node(package='crowd_aware_simulation',
-                 executable='constant_speed_limit.py',
-                 name='constant_speed_limit', output='screen',
-                 parameters=[{'use_sim_time': True, 'speed_limit': 0.30}])]
-        if reference_mode == 'autonomous':
-            condition_nodes += [
-                Node(package='nav2_controller', executable='controller_server',
-                     name='controller_server', namespace='reference', output='screen',
-                     parameters=[str(run/'reference.yaml')],
-                     remappings=[('cmd_vel', '/reference_cmd')]),
-                lifecycle_manager('reference_lifecycle_manager',
-                                  ['controller_server'], namespace='reference')]
+                     remappings=[('cmd_vel','/reference_cmd')]),
+                lifecycle_manager('reference_lifecycle_manager', ['controller_server'], namespace='reference')]
     else:
         controller_server = Node(
             package='nav2_controller', executable='controller_server',
@@ -274,7 +246,8 @@ def setup(context):
 
     rviz = Node(
         package='rviz2', executable='rviz2',
-        arguments=['-d', str(share/'rviz/dwal.rviz')],
+        arguments=['-d', str(share/'rviz'/('dwal_dynamic.rviz'
+                    if is_dynamic_dwal else 'dwal.rviz'))],
         parameters=[{'use_sim_time': True}],
         condition=IfCondition(LaunchConfiguration('rviz')))
     adaptation_nodes = (
@@ -306,11 +279,11 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('controller', default_value='fixed_dwal'),
         DeclareLaunchArgument('semantics', default_value='off'),
-        DeclareLaunchArgument('reference_mode', default_value='autonomous'),
+        DeclareLaunchArgument('reference_mode', default_value='teleop'),
         DeclareLaunchArgument('teleop_input_timeout', default_value='0.35'),
-        DeclareLaunchArgument('scenario', default_value='cafe'),
+        DeclareLaunchArgument('scenario', default_value='dense_crowd'),
         DeclareLaunchArgument('seed', default_value='1'),
-        DeclareLaunchArgument('headless', default_value='false'),
+        DeclareLaunchArgument('headless', default_value='true'),
         DeclareLaunchArgument('gui', default_value='false'),
         DeclareLaunchArgument('rviz', default_value='true'),
         DeclareLaunchArgument('evaluator', default_value='true'),

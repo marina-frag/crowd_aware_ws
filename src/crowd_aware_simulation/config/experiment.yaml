@@ -1,3 +1,4 @@
+# Runtime defaults are mirrored in scripts/run_dwal_cafe.sh and the launch file.
 experiment:
   frames:
     global: odom
@@ -18,69 +19,89 @@ experiment:
     collision_checked_cmd: /cmd_vel_safe
     final_cmd: /cmd_vel
   limits:
-    max_linear: 0.30
-    max_angular: 0.80
-    acceleration: 0.50
-    deceleration: 0.50
-    angular_acceleration: 1.00
-    angular_deceleration: 1.00
+    max_linear: 0.3
+    max_angular: 0.8
+    acceleration: 0.5
+    deceleration: 0.5
+    angular_acceleration: 1.0
+    angular_deceleration: 1.0
   timeouts:
-    odom: 0.50
-    clusters: 0.50
+    odom: 0.5
+    clusters: 0.5
     reference: 0.35
-    tracks: 0.50
-    context: 0.50
+    tracks: 0.5
+    context: 0.5
     selected_command: 0.35
-    speed_limit: 0.50
-    final_input: 0.30
+    speed_limit: 0.5
+    final_input: 0.3
   dwal:
-    fixed_levels: [1.20, 1.80]
+    fixed_levels:
+    - 1.2
+    - 1.8
     front_extent: 0.865
     rear_extent: 0.103
+    cluster_separation: 5
+    min_cluster_span: 0.2
   dynamic_dwal:
-    max_search_length: 4.0
-    curvature_step: 0.10
-    dynamic_window_dt: 0.10
-    path_output_resolution: 0.05
+    max_search_radius: 4.0
     sweep_resolution: 0.02
-    ineligible_sweep_resolution: 0.05
-    known_space_resolution: 0.025
-    footprint_padding: 0.02
-    lethal_cost: 100
-    reaction_time: 0.40
+    reaction_time: 0.4
     longitudinal_margin: 0.05
-    zero_linear_epsilon: 0.02
     prediction_horizon: 2.0
-    prediction_time_step: 0.05
-    human_radius: 0.40
-    human_base_uncertainty: 0.10
-    human_uncertainty_growth: 0.10
-    final_speed_resolution: 0.025
-    candidate_marker_width: 0.005
-    selected_marker_width: 0.010
-    transition_marker_scale: 0.035
-    marker_labels: false
-    marker_label_scale: 0.055
-    stale_marker_lifetime: 0.75
+    human_radius: 0.4
+    human_base_uncertainty: 0.1
+    human_uncertainty_growth: 0.1
   context:
     rate: 8.0
-    track_stale_after: 0.50
-    costmap_stale_after: 0.50
-    odom_stale_after: 0.50
-    minimum_dwell: 1.50
+    track_stale_after: 0.5
+    costmap_stale_after: 0.5
+    odom_stale_after: 0.5
+    minimum_dwell: 1.5
     switch_margin: 0.12
     crowd_radius: 3.0
     dense_count: 4
-    narrow_width: 1.50
+    narrow_width: 1.5
     doorway_width: 1.15
     open_clearance: 2.25
-    junction_clearance: 1.80
+    junction_clearance: 1.8
   profiles:
-    OPEN_AREA: {margin: 0.20, reaction_time: 0.35, preview_time: 2.5, max_speed: 0.30}
-    NARROW_CORRIDOR: {margin: 0.30, reaction_time: 0.50, preview_time: 3.0, max_speed: 0.22}
-    DOORWAY: {margin: 0.38, reaction_time: 0.60, preview_time: 3.2, max_speed: 0.16}
-    JUNCTION: {margin: 0.30, reaction_time: 0.55, preview_time: 3.2, max_speed: 0.20}
-    DENSE_CROWD: {margin: 0.48, reaction_time: 0.70, preview_time: 3.8, max_speed: 0.12}
-    OCCLUSION: {margin: 0.45, reaction_time: 0.75, preview_time: 4.0, max_speed: 0.10}
-    UNKNOWN: {margin: 0.48, reaction_time: 0.80, preview_time: 4.0, max_speed: 0.08}
-    STALE: {margin: 0.55, reaction_time: 1.00, preview_time: 4.0, max_speed: 0.0}
+    OPEN_AREA:
+      margin: 0.2
+      reaction_time: 0.35
+      preview_time: 2.5
+      max_speed: 0.3
+    NARROW_CORRIDOR:
+      margin: 0.3
+      reaction_time: 0.5
+      preview_time: 3.0
+      max_speed: 0.22
+    DOORWAY:
+      margin: 0.38
+      reaction_time: 0.6
+      preview_time: 3.2
+      max_speed: 0.16
+    JUNCTION:
+      margin: 0.3
+      reaction_time: 0.55
+      preview_time: 3.2
+      max_speed: 0.2
+    DENSE_CROWD:
+      margin: 0.48
+      reaction_time: 0.7
+      preview_time: 3.8
+      max_speed: 0.12
+    OCCLUSION:
+      margin: 0.45
+      reaction_time: 0.75
+      preview_time: 4.0
+      max_speed: 0.1
+    UNKNOWN:
+      margin: 0.48
+      reaction_time: 0.8
+      preview_time: 4.0
+      max_speed: 0.08
+    STALE:
+      margin: 0.55
+      reaction_time: 1.0
+      preview_time: 4.0
+      max_speed: 0.0

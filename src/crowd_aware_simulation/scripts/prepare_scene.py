@@ -584,59 +584,36 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
     if abs(float(dwal_config['front_extent']) - xmax) > 0.03 or abs(float(dwal_config['rear_extent']) + xmin) > 0.03:
         raise ValueError(f'experiment.yaml iWalk extents disagree: configured front={dwal_config["front_extent"]}, rear={dwal_config["rear_extent"]}; derived front={xmax}, rear={-xmin}')
     levels = [float(v) for v in dwal_config['fixed_levels']]
+    variable_dwal = controller == 'dynamic_dwal'
+    if variable_dwal:
+        # One reference level / search ceiling; each Path reports its actual extent.
+        levels = [float(dynamic_config['max_search_radius'])]
+    if not levels or any(not math.isfinite(r) or r<=0 for r in levels):
+        raise ValueError('DWAL levels must be positive and finite')
     common={'common/levels':levels,'common/odom_frame':'odom','use_sim_time':True}
-    generator={**common,'dwal_generator/odometryTopic':'/odom','dwal_generator/occ_topic':'/local_costmap/costmap', 'dwal_generator/base_frame':'sim_base','dwal_generator/footprint':[v for p in footprint for v in p], 'dwal_generator/footprint_padding':0.02,'dwal_generator/acc_lim_x':limits['acceleration'],'dwal_generator/acc_lim_th':limits['angular_acceleration'],'dwal_generator/max_trans_vel':limits['max_linear'],'dwal_generator/min_trans_vel':0.05,'dwal_generator/max_vel_theta':limits['max_angular'],'dwal_generator/sim_period':0.2,'dwal_generator/DS':0.05,'dwal_generator/Kmax':4.0,'dwal_generator/alpha':0.05,'dwal_generator/Hz':10.0,
-               }
-    clustering={**common,'dwal_clustering/postfix':['near','far'],'dwal_clustering/spin':[1,1],'dwal_clustering/min_cluster_span':0.2,'dwal_clustering/cluster_separation':5,'dwal_clustering/subsample_step':3}
-    (target/'dwal.yaml').write_text(dump_yaml({'/dwal_planner/dwal_generator':{'ros__parameters':generator},'/dwal_planner/dwal_clustering':{'ros__parameters':clustering}}))
-    dynamic = {
-        'use_sim_time': True, 'global_frame': 'odom', 'base_frame': 'sim_base',
-        'odom_topic': '/odom', 'costmap_topic': '/local_costmap/costmap',
-        'scan_topic': '/scan', 'laser_frame': 'laser_frame',
-        'reference_topic': '/reference_cmd', 'tracks_topic': '/tracked_agents',
-        'diagnostics_topic': '/dynamic_dwal/diagnostics',
-        'markers_topic': '/dynamic_dwal/markers',
-        'command_topic': '/cmd_vel_selected',
-        'max_linear': limits['max_linear'], 'max_angular': limits['max_angular'],
-        'acceleration': limits['acceleration'],
-        'deceleration': limits['deceleration'],
-        'angular_acceleration': limits['angular_acceleration'],
-        'angular_deceleration': limits['angular_deceleration'],
-        'dynamic_window_dt': dynamic_config['dynamic_window_dt'],
-        'max_curvature': 4.0, 'curvature_step': dynamic_config['curvature_step'],
-        'zero_linear_epsilon': dynamic_config['zero_linear_epsilon'],
-        'wheel_separation': 0.61, 'wheel_radius': 0.095,
-        'max_wheel_angular_speed': 20.0,
-        'max_search_length': dynamic_config['max_search_length'],
-        'path_output_resolution': dynamic_config['path_output_resolution'],
-        'sweep_resolution': dynamic_config['sweep_resolution'],
-        'ineligible_sweep_resolution': dynamic_config['ineligible_sweep_resolution'],
-        'known_space_resolution': dynamic_config['known_space_resolution'],
-        # This is the exact sim_base -> laser_frame transform written above.
-        'laser_x': laser_x, 'laser_y': laser_y, 'laser_yaw': laser_yaw,
-        'footprint': [v for point in footprint for v in point],
-        'footprint_padding': dynamic_config['footprint_padding'],
-        'lethal_cost': dynamic_config['lethal_cost'],
-        'reaction_time': dynamic_config['reaction_time'],
-        'longitudinal_margin': dynamic_config['longitudinal_margin'],
-        'odom_timeout': timeouts['odom'], 'costmap_timeout': timeouts['odom'],
-        'scan_timeout': 0.30,
-        'reference_timeout': timeouts['reference'],
-        'tracks_timeout': timeouts['tracks'], 'publish_rate': 10.0,
-        'prediction_horizon': dynamic_config['prediction_horizon'],
-        'prediction_time_step': dynamic_config['prediction_time_step'],
-        'final_speed_resolution': dynamic_config['final_speed_resolution'],
-        'candidate_marker_width': dynamic_config['candidate_marker_width'],
-        'selected_marker_width': dynamic_config['selected_marker_width'],
-        'transition_marker_scale': dynamic_config['transition_marker_scale'],
-        'marker_labels': dynamic_config['marker_labels'],
-        'marker_label_scale': dynamic_config['marker_label_scale'],
-        'stale_marker_lifetime': dynamic_config['stale_marker_lifetime'],
-        'human_radius': dynamic_config['human_radius'],
-        'human_base_uncertainty': dynamic_config['human_base_uncertainty'],
-        'human_uncertainty_growth': dynamic_config['human_uncertainty_growth']}
-    (target/'dynamic_dwal.yaml').write_text(
-        dump_yaml(ros_params('/dynamic_dwal', dynamic)))
+    generator={**common,
+        'dwal_generator/odometryTopic':'/odom', 'dwal_generator/occ_topic':'/local_costmap/costmap',
+        'dwal_generator/base_frame':'sim_base',
+        'dwal_generator/footprint':[v for point in footprint for v in point],
+        'dwal_generator/footprint_padding':0.02,
+        'dwal_generator/input_timeout':timeouts['odom'],
+        'dwal_generator/acc_lim_x':limits['acceleration'],
+        'dwal_generator/acc_lim_th':limits['angular_acceleration'],
+        'dwal_generator/max_trans_vel':limits['max_linear'],
+        'dwal_generator/min_trans_vel':0.05, 'dwal_generator/max_vel_theta':limits['max_angular'],
+        'dwal_generator/sim_period':0.2,
+        'dwal_generator/DS':float(dynamic_config['sweep_resolution']) if variable_dwal else 0.05,
+        'dwal_generator/Kmax':4.0, 'dwal_generator/alpha':0.05, 'dwal_generator/Hz':10.0}
+    clustering={**common,
+        'dwal_clustering/variable_length':variable_dwal,
+        'dwal_clustering/postfix':['far'] if variable_dwal else ['near','far'],
+        'dwal_clustering/spin':[1] if variable_dwal else [1,1],
+        'dwal_clustering/min_cluster_span':float(dwal_config['min_cluster_span']),
+        'dwal_clustering/cluster_separation':int(dwal_config['cluster_separation']),
+        'dwal_clustering/subsample_step':3}
+    (target/'dwal.yaml').write_text(dump_yaml({
+        '/dwal_planner/dwal_generator':{'ros__parameters':generator},
+        '/dwal_planner/dwal_clustering':{'ros__parameters':clustering}}))
     costmap=costmap_parameters(footprint, False)
     (target/'costmap.yaml').write_text(dump_yaml({'/costmap/costmap':{'ros__parameters':costmap}}))
     for family in ('dwb', 'hateb'):
@@ -738,6 +715,22 @@ def prepare(description, wrapper, target, experiment_config=None, headless=False
                      'intent.alpha': 0.92, 'intent.beta': 8.0,
                      'intent.eta': 0.5, 'intent.sigma_min': 0.03,
                      'intent.min_confidence': 0.0}
+
+    shared_common.update({
+        'variable_length': variable_dwal,
+        'inplace_via_collision_monitor': True,
+        'intent_reference_radius': levels[-1] if variable_dwal else 0.0,
+        'a_brake': limits['deceleration'],
+        'reaction_time': dynamic_config['reaction_time'],
+        'stop_margin': dynamic_config['longitudinal_margin'],
+        'max_linear': limits['max_linear'], 'max_angular': limits['max_angular'],
+        'prediction_horizon': dynamic_config['prediction_horizon'],
+        'human_radius': dynamic_config['human_radius'],
+        'human_uncertainty': dynamic_config['human_base_uncertainty'],
+        'human_uncertainty_growth': dynamic_config['human_uncertainty_growth'],
+        'footprint': [v for point in footprint for v in point]})
+    if variable_dwal:
+        shared_common['near_cluster_topic'] = '/dwal_planner/clusters_far'
     for semantic in (False, True):
         shared = dict(shared_common)
         shared['semantic_mode'] = semantic

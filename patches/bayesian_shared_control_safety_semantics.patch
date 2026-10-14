@@ -36,10 +36,11 @@ index 3ab5f40..e5e2ec6 100644
    dwal_planner
  )
 diff --git a/include/shared_controller/shared_controller.h b/include/shared_controller/shared_controller.h
-index 1adf62e..5e53895 100644
+index 1adf62e..ec1064b 100644
 --- a/include/shared_controller/shared_controller.h
 +++ b/include/shared_controller/shared_controller.h
-@@ -1,6 +1,7 @@
+@@ -1,6 +1,8 @@
++#include <utility>
  #pragma once
  
  #include <algorithm>
@@ -47,7 +48,7 @@ index 1adf62e..5e53895 100644
  #include <cmath>
  #include <limits>
  #include <atomic>
-@@ -13,6 +14,9 @@
+@@ -13,6 +15,9 @@
  #include <visualization_msgs/msg/marker.hpp>
  #include <visualization_msgs/msg/marker_array.hpp>
  #include <geometry_msgs/msg/point.hpp>
@@ -57,13 +58,17 @@ index 1adf62e..5e53895 100644
  
  #include "dwal_planner/msg/cluster_group.hpp"
  #include "dwal_planner/msg/path_cluster.hpp" 
-@@ -35,7 +39,13 @@ private:
+@@ -35,7 +40,17 @@ private:
    void clustersFarCallback(const dwal_planner::msg::ClusterGroup::SharedPtr msg);
    inline void publishCmd(const geometry_msgs::msg::TwistStamped& cmd);
    void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
 +  void tracksCallback(const cohan_msgs::msg::TrackedAgents::SharedPtr msg);
 +  void contextCallback(const std_msgs::msg::String::SharedPtr msg);
 +  void watchdogCallback();
++  void updateCommand();
++  double candidateSpeed(const dwal_planner::msg::Path& path, double requested) const;
++  bool humanStopSafe(const dwal_planner::msg::Path& path, double speed,
++                     const std::vector<double>& pose0) const;
    geometry_msgs::msg::TwistStamped MakeZeroTwist();
 +  double socialCost(double phi, double radius, double speed,
 +                    const std::array<double, 3>& pose0) const;
@@ -71,7 +76,7 @@ index 1adf62e..5e53895 100644
  
    // Helpers
    double scoreJ(double c_norm, double d_norm) const;
-@@ -55,6 +65,8 @@ private:
+@@ -55,6 +70,8 @@ private:
    std::string traj_viz_topic_;
    std::string traj_frame_id_;
    std::string odom_topic_;
@@ -80,8 +85,14 @@ index 1adf62e..5e53895 100644
  
    // Params
    double c_max_{255.0};
-@@ -68,6 +80,15 @@ private:
-   double phi_max_; //corresponding to Kmax and level
+@@ -64,10 +81,25 @@ private:
+   double traj_ds_{0.05};
+   double Kmax_;  //from dwal
+   double Kphi_;
+-  double level_; //from each cluster
+-  double phi_max_; //corresponding to Kmax and level
++  double level_{0.0}; //from each cluster
++  double phi_max_{0.0}; //corresponding to Kmax and level
    bool use_stamped_twist_input_{true};
    bool use_stamped_twist_output_{true}; 
 +  bool allow_reverse_{false};
@@ -93,10 +104,16 @@ index 1adf62e..5e53895 100644
 +  double tracks_timeout_{0.5};
 +  double social_weight_{0.5};
 +  double personal_space_{0.8};
++  bool variable_length_{false}, checked_rotation_{false};
++  double reference_radius_{0.0}, a_brake_{0.5}, reaction_time_{0.4}, stop_margin_{0.05};
++  double max_linear_{0.3}, max_angular_{0.8}, prediction_horizon_{2.0};
++  double human_radius_{0.4}, human_uncertainty_{0.1}, human_growth_{0.1};
++  double footprint_radius_{0.0};
++  std::vector<std::pair<double,double>> footprint_;
    double v_low_{0.25};   // hysteresis switch lower bound
    double v_high_{0.35};  // hysteresis switch upper bound
    std::string odom_frame_id_;
-@@ -81,6 +102,13 @@ private:
+@@ -81,6 +113,13 @@ private:
    dwal_planner::msg::ClusterGroup last_clusters_;
    std::string last_cluster_selected_;
    geometry_msgs::msg::Twist last_robot_vel_;
@@ -110,7 +127,7 @@ index 1adf62e..5e53895 100644
  
    // PS4 controller state
    std::atomic_bool r2_pressed_{false};
-@@ -95,6 +123,9 @@ private:
+@@ -95,6 +134,9 @@ private:
    rclcpp::Subscription<dwal_planner::msg::ClusterGroup>::SharedPtr clusters_sub_near_;
    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber_;
    rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
@@ -120,7 +137,7 @@ index 1adf62e..5e53895 100644
  
  
    using PubVariant = std::variant<
-@@ -110,4 +141,3 @@ private:
+@@ -110,4 +152,3 @@ private:
    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_human_publisher;
    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_shared_publisher;
  };
@@ -137,11 +154,67 @@ index 0a0f3eb..400ae09 100644
    <depend>trajectory_msgs</depend>
    <depend>visualization_msgs</depend>
    <depend>tf2</depend>
+diff --git a/src/helper_fcns.cpp b/src/helper_fcns.cpp
+index ceadfba..d1198ab 100644
+--- a/src/helper_fcns.cpp
++++ b/src/helper_fcns.cpp
+@@ -4,6 +4,7 @@
+ #include <shared_controller/helper_fcns.h>  
+ 
+ #include <rclcpp/rclcpp.hpp>
++#include <algorithm>
+ 
+ int sgn(double val)
+ {
+@@ -60,14 +61,9 @@ void generatePath(nav_msgs::msg::Path &path_out, double curv, double x0, double
+   path_out.header.frame_id = frame_id;
+   path_out.poses.clear();
+ 
+-  double A, sincA, x, y, theta, dxLin, dyLin, Rp2;
++  double x, y, theta, dxLin, dyLin, Rp2;
+   double dth = curv * DS;
+   double S = 0;
+-  A = dth / 2;
+-  if (curv == 0)
+-    sincA = DS;
+-  else
+-    sincA = 2 * std::sin(A) / curv;
+ 
+   geometry_msgs::msg::PoseStamped Posetmp;
+   Posetmp.header.stamp = rclcpp::Clock().now();
+@@ -99,9 +95,17 @@ void generatePath(nav_msgs::msg::Path &path_out, double curv, double x0, double
+     S += DS;
+     if (std::fabs(theta - th0) < M_PI_2)
+     {
+-      x += sincA * std::cos(theta + A);
+-      y += sincA * std::sin(theta + A);
+-      theta += dth;
++      if (std::fabs(curv)<1.e-12) {
++        x += DS*std::cos(th0); y += DS*std::sin(th0);
++      } else {
++        const double before=theta-th0;
++        const double angle=std::clamp(before+dth,-M_PI_2,M_PI_2);
++        x=x0+(std::sin(th0+angle)-std::sin(th0))/curv;
++        y=y0+(std::cos(th0)-std::cos(th0+angle))/curv;
++        theta=th0+angle;
++        const double remaining=std::max(0.0,DS-std::fabs((angle-before)/curv));
++        x+=remaining*std::cos(theta);y+=remaining*std::sin(theta);
++      }
+     }
+     else
+     {
 diff --git a/src/shared_controller.cpp b/src/shared_controller.cpp
-index 98f68fd..3533a53 100644
+index 98f68fd..a030450 100644
 --- a/src/shared_controller.cpp
 +++ b/src/shared_controller.cpp
-@@ -9,6 +9,8 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+@@ -3,12 +3,15 @@
+ #include <algorithm>
+ #include <cmath>
+ #include <limits>
++#include <cohan_msgs/msg/agent_type.hpp>
+ 
+ SharedController::SharedController(const rclcpp::NodeOptions &options)
+     : rclcpp::Node("shared_controller", options)
  {
    // Topics + frames
    cluster_topic_ = this->declare_parameter<std::string>("cluster_topic", "/dwal_planner/clusters_near");
@@ -150,7 +223,7 @@ index 98f68fd..3533a53 100644
    user_cmd_topic_ = this->declare_parameter<std::string>("user_cmd_topic", "/user_cmd");
    output_cmd_topic_ = this->declare_parameter<std::string>("output_cmd_topic", "/cmd_vel");
  
-@@ -23,6 +25,17 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+@@ -23,6 +26,45 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
    odom_topic_ = this->declare_parameter<std::string>("odom_topic", "/odom");
    r2_button_index_ = this->declare_parameter<int>("r2_button_index", 7);
    auto joy_topic   = this->declare_parameter<std::string>("joy_topic", "/joy");
@@ -165,10 +238,38 @@ index 98f68fd..3533a53 100644
 +  tracks_timeout_ = this->declare_parameter<double>("tracks_timeout", 0.5);
 +  social_weight_ = this->declare_parameter<double>("social_weight", 0.5);
 +  personal_space_ = this->declare_parameter<double>("personal_space", 0.8);
++  variable_length_ = declare_parameter<bool>("variable_length", false);
++  checked_rotation_ = declare_parameter<bool>("inplace_via_collision_monitor", false);
++  reference_radius_ = declare_parameter<double>("intent_reference_radius", 0.0);
++  a_brake_ = declare_parameter<double>("a_brake", 0.5);
++  reaction_time_ = declare_parameter<double>("reaction_time", 0.4);
++  stop_margin_ = declare_parameter<double>("stop_margin", 0.05);
++  max_linear_ = declare_parameter<double>("max_linear", 0.3);
++  max_angular_ = declare_parameter<double>("max_angular", 0.8);
++  prediction_horizon_ = declare_parameter<double>("prediction_horizon", 2.0);
++  human_radius_ = declare_parameter<double>("human_radius", 0.4);
++  human_uncertainty_ = declare_parameter<double>("human_uncertainty", 0.1);
++  human_growth_ = declare_parameter<double>("human_uncertainty_growth", 0.1);
++  const auto footprint = declare_parameter<std::vector<double>>("footprint", {});
++  if (checked_rotation_ && output_cmd_topic_ != "/cmd_vel_selected")
++    throw std::invalid_argument("Checked rotation must feed /cmd_vel_selected and the collision monitor");
++  for (double value : {a_brake_, max_linear_, max_angular_, prediction_horizon_})
++    if (!std::isfinite(value) || value <= 0) throw std::invalid_argument("Invalid motion limits");
++  for (double value : {reaction_time_, stop_margin_, human_radius_, human_uncertainty_, human_growth_})
++    if (!std::isfinite(value) || value < 0) throw std::invalid_argument("Invalid safety margin");
++  if (variable_length_ && (!std::isfinite(reference_radius_) || reference_radius_ <= 0 ||
++      prediction_horizon_ <= reaction_time_ || footprint.size()<6 || footprint.size()%2))
++    throw std::invalid_argument("Variable DWAL requires a reference radius and polygon footprint");
++  for (size_t i=0; i+1<footprint.size(); i+=2) {
++    if (!std::isfinite(footprint[i]) || !std::isfinite(footprint[i+1]))
++      throw std::invalid_argument("Nonfinite footprint");
++    footprint_.emplace_back(footprint[i], footprint[i+1]);
++    footprint_radius_ = std::max(footprint_radius_, std::hypot(footprint[i],footprint[i+1]));
++  }
  
    v_low_  = this->declare_parameter<double>("v_low", 0.25);
    v_high_ = this->declare_parameter<double>("v_high", 0.35);
-@@ -82,14 +95,22 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+@@ -82,14 +124,22 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
    auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
  
    clusters_sub_near_ = this->create_subscription<dwal_planner::msg::ClusterGroup>(
@@ -193,7 +294,7 @@ index 98f68fd..3533a53 100644
  
    intent_plot_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/shared_controller/intent_plot", rclcpp::QoS(10));
  
-@@ -113,6 +134,8 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+@@ -113,6 +163,8 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
    
    path_human_publisher = this->create_publisher<nav_msgs::msg::Path>("/shared_controller/path_human", rclcpp::QoS(1));
    path_shared_publisher = this->create_publisher<nav_msgs::msg::Path>("/shared_controller/path_shared", rclcpp::QoS(1));
@@ -202,7 +303,19 @@ index 98f68fd..3533a53 100644
  
    RCLCPP_INFO(
        get_logger(),
-@@ -130,16 +153,86 @@ void SharedController::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg
+@@ -124,22 +176,170 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+ 
+ void SharedController::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
+ {
++  // Gazebo odometry can lead the last /clock update by one 100 ms tick.
++  const double age=(this->now()-rclcpp::Time(msg->header.stamp)).seconds();
++  if (msg->header.frame_id.empty() || !std::isfinite(msg->twist.twist.linear.x) ||
++      !std::isfinite(msg->twist.twist.angular.z) || age < -0.1 || age>odom_timeout_) {
++    has_odom_=false; return;
++  }
+   if(!has_odom_) {
+     has_odom_ = true;
+     odom_frame_id_= msg->header.frame_id;
    }
  
    last_robot_vel_ = msg->twist.twist;
@@ -252,11 +365,82 @@ index 98f68fd..3533a53 100644
 +
 +void SharedController::watchdogCallback()
 +{
-+  std::string reason;
-+  if (!inputsFresh(this->now(), reason)) {
-+    publishCmd(MakeZeroTwist());
-+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "%s: controlled stop", reason.c_str());
++  updateCommand();
++}
++
++double SharedController::candidateSpeed(const dwal_planner::msg::Path& path, double requested) const
++{
++  if (!std::isfinite(requested) || requested <= 0 || !std::isfinite(path.curvature) ||
++      !std::isfinite(path.available_length) || path.available_length <= stop_margin_) return 0.0;
++  // Solve v*T + v^2/(2*a) <= available_length - margin.
++  // The upstream path becomes a tangent after a 90-degree arc. Require
++  // the complete constant-curvature braking motion to fit before that join.
++  double room = path.available_length-stop_margin_;
++  if (std::fabs(path.curvature)>1.e-9)
++    room=std::min(room,M_PI_2/std::fabs(path.curvature));
++  const double cap = std::sqrt(a_brake_*a_brake_*reaction_time_*reaction_time_+2*a_brake_*room)
++                     - a_brake_*reaction_time_;
++  const double measured = std::fabs(last_robot_vel_.linear.x);
++  if (!std::isfinite(measured) || measured > cap+1.e-6) return 0.0;
++  double speed = std::min({requested, max_linear_, cap});
++  if (std::fabs(path.curvature)>1.e-9) speed=std::min(speed,max_angular_/std::fabs(path.curvature));
++  if (semantic_mode_) speed=std::min(speed,a_brake_*(prediction_horizon_-reaction_time_));
++  const double cost = std::clamp(static_cast<double>(path.cost)/c_max_,0.0,1.0);
++  return speed*std::max(s_min_,1.0-cost);
++}
++
++bool SharedController::humanStopSafe(const dwal_planner::msg::Path& path, double command_speed,
++                                    const std::vector<double>& pose0) const
++{
++  if (!semantic_mode_) return true;
++  if (pose0.size()<3 || footprint_.size()<3 ||
++      !std::isfinite(pose0[0]) || !std::isfinite(pose0[1]) || !std::isfinite(pose0[2]) ||
++      last_tracks_.header.frame_id != odom_frame_id_) return false;
++  const double speed=std::max(std::fabs(last_robot_vel_.linear.x),command_speed);
++  const double stop_time=reaction_time_+speed/a_brake_;
++  if (!std::isfinite(stop_time) || stop_time>prediction_horizon_+1.e-9) return false;
++  const double stamp=rclcpp::Time(last_tracks_.header.stamp).seconds();
++  double track_age=stamp>0 ? this->now().seconds()-stamp : (this->now()-last_tracks_time_).seconds();
++  if (track_age < -0.1 || track_age>tracks_timeout_) return false;
++  track_age=std::max(0.0,track_age); // Same clock skew tolerance; never extrapolate tracks backwards.
++  const int steps=std::max(1,static_cast<int>(std::ceil(stop_time/0.025)));
++  const double dt=stop_time/steps;
++  for (int j=0; j<=steps; ++j) {
++    const double t=dt*j, braking=std::max(0.0,t-reaction_time_);
++    const double distance=speed*t-0.5*a_brake_*braking*braking;
++    const double angle=path.curvature*distance, yaw=pose0[2]+angle;
++    const double x=pose0[0]+(std::fabs(path.curvature)<1.e-9 ? distance*std::cos(pose0[2]) :
++      (std::sin(yaw)-std::sin(pose0[2]))/path.curvature);
++    const double y=pose0[1]+(std::fabs(path.curvature)<1.e-9 ? distance*std::sin(pose0[2]) :
++      (std::cos(pose0[2])-std::cos(yaw))/path.curvature);
++    for (const auto& agent : last_tracks_.agents) {
++      if (agent.type != cohan_msgs::msg::AgentType::HUMAN) continue;
++      const cohan_msgs::msg::TrackedSegment* torso=nullptr;
++      for (const auto& segment : agent.segments)
++        if (segment.type==cohan_msgs::msg::TrackedSegmentType::TORSO) {torso=&segment;break;}
++      if (!torso) return false;
++      const double vx=torso->twist.twist.linear.x, vy=torso->twist.twist.linear.y;
++      const double hx=torso->pose.pose.position.x+vx*(track_age+t)-x;
++      const double hy=torso->pose.pose.position.y+vy*(track_age+t)-y;
++      if (!std::isfinite(hx)||!std::isfinite(hy)||!std::isfinite(vx)||!std::isfinite(vy)) return false;
++      const double px=std::cos(yaw)*hx+std::sin(yaw)*hy;
++      const double py=-std::sin(yaw)*hx+std::cos(yaw)*hy;
++      double closest=std::numeric_limits<double>::infinity();
++      bool inside=false;
++      for (size_t k=0,l=footprint_.size()-1;k<footprint_.size();l=k++) {
++        const auto [ax,ay]=footprint_[l]; const auto [bx,by]=footprint_[k];
++        if ((ay>py)!=(by>py) && px < (bx-ax)*(py-ay)/(by-ay)+ax) inside=!inside;
++        const double dx=bx-ax,dy=by-ay,norm=dx*dx+dy*dy;
++        const double u=norm>0 ? std::clamp(((px-ax)*dx+(py-ay)*dy)/norm,0.0,1.0) : 0.0;
++        closest=std::min(closest,std::hypot(px-ax-u*dx,py-ay-u*dy));
++      }
++      // Bound travel between temporal samples, including footprint rotation.
++      const double margin=human_radius_+human_uncertainty_+human_growth_*t+
++        dt*(std::hypot(vx,vy)+speed*(1+footprint_radius_*std::fabs(path.curvature)));
++      if (inside || closest<=margin) return false;
++    }
 +  }
++  return true;
 +}
 +
 +double SharedController::socialCost(
@@ -275,6 +459,7 @@ index 98f68fd..3533a53 100644
 +  const double safe_speed = std::max(std::fabs(speed), 0.05);
 +  for (size_t i = 0; i < candidate.poses.size(); ++i) {
 +    const double t = (0.1 * static_cast<double>(i)) / safe_speed;
++    if (t > prediction_horizon_) break;
 +    const auto& point = candidate.poses[i].pose.position;
 +    for (const auto& agent : last_tracks_.agents) {
 +      for (const auto& segment : agent.segments) {
@@ -289,7 +474,7 @@ index 98f68fd..3533a53 100644
  }
  
  geometry_msgs::msg::TwistStamped SharedController::MakeZeroTwist()
-@@ -154,7 +247,7 @@ geometry_msgs::msg::TwistStamped SharedController::MakeZeroTwist()
+@@ -154,7 +352,7 @@ geometry_msgs::msg::TwistStamped SharedController::MakeZeroTwist()
    z.angular.z = 0.0;
  
    out.header.frame_id = odom_frame_id_;
@@ -298,20 +483,70 @@ index 98f68fd..3533a53 100644
    out.twist = z;
    return out;
  }
-@@ -331,6 +424,12 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
-   // Always update last user cmd
+@@ -215,7 +413,7 @@ void SharedController::publishIntentPlotAtClusterHorizonMeanPhi(
+     const double phi_l = cl.paths.back().phi;
+     const double phi_mean = 0.5 * (phi_k + phi_l);
+ 
+-    const double r = cl.r;
++    const double r = variable_length_ ? reference_radius_ : cl.r;
+ 
+     /// Local point on the horizon (robot frame at pose0)
+     const double xL = r * std::cos(phi_mean);
+@@ -307,6 +505,11 @@ inline void SharedController::publishCmd(const geometry_msgs::msg::TwistStamped&
+       pub->publish(cmd.twist);
+     }
+   }, fused_pub_);
++  if (std::fabs(cmd.twist.linear.x)<1.e-4 && path_shared_publisher) {
++    nav_msgs::msg::Path stopped;
++    stopped.header.frame_id=odom_frame_id_; stopped.header.stamp=this->now();
++    path_shared_publisher->publish(stopped);
++  }
+ }
+ 
+ // If user sends Twist (no stamp), convert to TwistStamped and call the main callback
+@@ -322,19 +525,34 @@ void SharedController::userCmdCallback( const geometry_msgs::msg::Twist::SharedP
+ // Main callback for user command (expects TwistStamped)
+ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
+ {
+-  
+-  if(!has_odom_) {
+-    RCLCPP_WARN_SKIPFIRST(this->get_logger(), "Waiting for odometry.");
+-    return;
+-  }
+-
+-  // Always update last user cmd
    last_user_cmd_ = *msg;
    have_user_cmd_ = true;
 +  last_user_time_ = this->now();
-+  std::string stale_reason;
-+  if (!inputsFresh(last_user_time_, stale_reason)) {
++  updateCommand();
++}
+ 
++void SharedController::updateCommand()
++{
++  std::string reason;
++  if (!has_odom_ || !have_user_cmd_ || !inputsFresh(this->now(), reason)) {
 +    publishCmd(MakeZeroTwist());
++    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "DWAL stop: %s",
++      reason.empty() ? "waiting for odometry/reference" : reason.c_str());
 +    return;
 +  }
- 
    // === Get user command ===
    const double v_user_raw = last_user_cmd_.twist.linear.x;
-@@ -343,19 +442,28 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+   const double wz_user_raw = last_user_cmd_.twist.angular.z;
++  if (!std::isfinite(v_user_raw) || !std::isfinite(wz_user_raw) || v_user_raw < 0) {
++    publishCmd(MakeZeroTwist()); return;
++  }
++  // Pure rotation has no forward trajectory; the existing footprint collision
++  // monitor, smoother and watchdog still validate the output.
++  if (checked_rotation_ && std::fabs(v_user_raw)<1.e-3) {
++    auto out=MakeZeroTwist();
++    out.twist.angular.z=std::clamp(wz_user_raw,-max_angular_,max_angular_);
++    publishCmd(out); return;
++  }
+ 
+   // ===== Switch cluster according to velocity ======
+   auto near = std::atomic_load(&near_ptr_);
+@@ -343,19 +561,28 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
    std::shared_ptr<const dwal_planner::msg::ClusterGroup> chosen;
  
    // helper lambdas (optional)
@@ -331,22 +566,60 @@ index 98f68fd..3533a53 100644
    {
      // Default: if clusters are missing, pass through user command if R2 held, else output zero 
 -    if (r2_pressed_.load(std::memory_order_relaxed) && have_user_cmd_) {
+-      RCLCPP_WARN_SKIPFIRST(this->get_logger(),
 +    if (allow_no_cluster_passthrough_ &&
 +        r2_pressed_.load(std::memory_order_relaxed) && have_user_cmd_) {
-       RCLCPP_WARN_SKIPFIRST(this->get_logger(),
++      RCLCPP_WARN_THROTTLE(this->get_logger(), *get_clock(), 2000,
          "No clusters received yet. R2 held -> pass-through user command.");
      } else {
-       RCLCPP_WARN_SKIPFIRST(this->get_logger(),
+-      RCLCPP_WARN_SKIPFIRST(this->get_logger(),
 -        "No clusters received yet. R2 not held. Only rotation is allowed.");
 -        last_user_cmd_.twist.linear.x = 0.0; // zero linear velocity, keep angular for rotation
++      RCLCPP_WARN_THROTTLE(this->get_logger(), *get_clock(), 2000,
 +        "No valid clusters. Outputting controlled stop.");
 +        publishCmd(MakeZeroTwist());
 +        return;
      }
      publishCmd(last_user_cmd_ );
      return;
-@@ -438,10 +546,10 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+@@ -413,10 +640,29 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+     last_cluster_selected_ = cluster_selected;
+   }
+ 
+-  const auto &clusters_msg = *chosen;
++  auto clusters_msg = *chosen;
++  size_t rejected_braking=0, rejected_prediction=0;
++  if (variable_length_) {
++    for (auto& cluster : clusters_msg.clusters) {
++      cluster.paths.erase(std::remove_if(cluster.paths.begin(),cluster.paths.end(),[&](const auto& path) {
++        const double speed=candidateSpeed(path,v_user_raw);
++        if (speed<=1.e-4) {++rejected_braking;return true;}
++        if (!humanStopSafe(path,speed,cluster.pose0)) {++rejected_prediction;return true;}
++        return false;
++      }),cluster.paths.end());
++      for (auto& path : cluster.paths) path.phi=cluster_lib::curv2phi(path.curvature,reference_radius_);
++    }
++    clusters_msg.clusters.erase(std::remove_if(clusters_msg.clusters.begin(),clusters_msg.clusters.end(),
++      [](const auto& cluster){return cluster.paths.empty();}),clusters_msg.clusters.end());
++    if (clusters_msg.clusters.empty()) {
++      RCLCPP_WARN_THROTTLE(get_logger(),*get_clock(),2000,
++        "DWAL stop: no admissible motion; braking=%zu prediction=%zu",rejected_braking,rejected_prediction);
++      publishCmd(MakeZeroTwist()); return;
++    }
++  }
+   
+   // update level to match selected cluster
+-  level_=clusters_msg.clusters[0].r; 
++  level_=variable_length_ ? reference_radius_ : clusters_msg.clusters[0].r;
+ 
+  // Update phi_max based on current level and Kmax  
+   phi_max_ = cluster_lib::curv2phi(Kmax_, level_); 
+@@ -436,12 +682,14 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+   const double th0 = clusters_msg.clusters[0].pose0[2];
+ 
    cluster_lib::generatePath(human_path, k_user, x0, y0, th0, 0.2, level_ * level_, odom_frame_id_);
++  human_path.header.stamp=this->now();
++  for (auto& pose : human_path.poses) pose.header=human_path.header;
    path_human_publisher->publish(human_path);
  
 -  if (v_user_raw < 0.0)
@@ -359,16 +632,36 @@ index 98f68fd..3533a53 100644
      return;
    }
  
-@@ -523,7 +635,7 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+@@ -453,7 +701,7 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+ 
+   if (!intent.valid || intent.cluster_index < 0)
+   {
+-    RCLCPP_WARN_SKIPFIRST(this->get_logger(), "Intent estimator could not select a cluster. Outputting zero.");
++    RCLCPP_WARN_THROTTLE(this->get_logger(), *get_clock(), 2000, "Intent estimator could not select a cluster. Outputting zero.");
+     publishCmd(MakeZeroTwist());
+     return;
+   }
+@@ -507,7 +755,7 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+   // if (best_cluster_idx < 0)
+   // {
+   //   // No usable cluster -> zero output (per spec)
+-  //   RCLCPP_WARN_SKIPFIRST(this->get_logger(), "No usable cluster found. Outputting zero command.");
++  //   RCLCPP_WARN_THROTTLE(this->get_logger(), *get_clock(), 2000, "No usable cluster found. Outputting zero command.");
+   //   fused_pub_->publish(MakeZeroTwist());
+   //   return;
+   // }
+@@ -522,8 +770,9 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+   bool found = false;
    double best_J = std::numeric_limits<double>::infinity();
    double phi_star = 0.0;
++  double selected_curvature=0.0, selected_speed=0.0, selected_radius=0.0;
    double c_star = 0.0;
 -  double phi_span = chosen_cluster.paths.back().phi - chosen_cluster.paths.front().phi;
 +  double phi_span = std::max(std::fabs(chosen_cluster.paths.back().phi - chosen_cluster.paths.front().phi), 1e-6);
  
    for (const auto &p : chosen_cluster.paths)
    {
-@@ -533,7 +645,10 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+@@ -533,12 +782,18 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
      const double dev = std::fabs(phi - phi_near);
      const double c_norm = std::clamp(c / c_max_, 0.0, 1.0); // normalize cost to [0,1]
      const double d_norm = std::clamp(dev / phi_span, 0.0, 1.0);
@@ -380,3 +673,55 @@ index 98f68fd..3533a53 100644
  
      if (J < best_J)
      {
+       best_J = J;
+       phi_star = phi;
++      selected_curvature=p.curvature;
++      selected_speed=variable_length_ ? candidateSpeed(p,v_user_raw) : 0.0;
++      selected_radius=p.available_radius;
+       c_star = c;
+       found = true;
+     }
+@@ -548,7 +803,7 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+   {
+     // No admissible after guard => output zero command (per spec)
+     publishCmd(MakeZeroTwist());
+-    RCLCPP_WARN_SKIPFIRST(this->get_logger(), "No admissible path found after curvature guard. Outputting zero command.");
++    RCLCPP_WARN_THROTTLE(this->get_logger(), *get_clock(), 2000, "No admissible path found after curvature guard. Outputting zero command.");
+     return;
+   }
+ 
+@@ -560,19 +815,29 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+   // ============================================================
+   const double c_hat = std::clamp(c_star/ c_max_, 0.0, 1.0); //normalized cost of selected path (clamped to [0,1])
+   const double scale = std::max(std::clamp(s_min_, 1e-6, 1.0), 1.0 - c_hat);
+-  double k_star = cluster_lib::phi2curv(phi_star, level_);
++  double k_star = variable_length_ ? selected_curvature : cluster_lib::phi2curv(phi_star, level_);
+ 
+   geometry_msgs::msg::TwistStamped out = last_user_cmd_;
+-  out.twist.linear.x = v_user_raw * scale;
++  out.twist.linear.x = variable_length_ ? selected_speed : v_user_raw * scale;
+ 
+-  if (std::fabs(out.twist.linear.x) < 1e-3) {
++  if (!variable_length_ && std::fabs(out.twist.linear.x) < 1e-3) {
+     out.twist.angular.z = wz_user_raw; // if very low velocity, allow inplace rotation without damping (for better usability when stopped)
+   } else {
+     out.twist.angular.z = out.twist.linear.x * k_star;
+   }
+ 
+   publishCmd(out);
+-
+-  cluster_lib::generatePath(shared_path, k_star, x0, y0, th0, 0.2, level_ * level_, odom_frame_id_);
++  RCLCPP_INFO_THROTTLE(get_logger(),*get_clock(),2000,
++    "DWAL command: variable=%s requested=(%.3f,%.3f) selected=(%.3f,%.3f) radius=%.3f rejected=(%zu,%zu)",
++    variable_length_ ? "true" : "false",v_user_raw,wz_user_raw,out.twist.linear.x,out.twist.angular.z,
++    selected_radius,rejected_braking,rejected_prediction);
++  const double draw_radius=variable_length_ ? selected_radius : level_;
++  cluster_lib::generatePath(shared_path, k_star, x0, y0, th0, 0.02, draw_radius * draw_radius, odom_frame_id_);
++  // The visual path is a reference; never draw beyond its checked member extent.
++  shared_path.poses.erase(std::remove_if(shared_path.poses.begin(),shared_path.poses.end(),[&](const auto& pose){
++    return std::hypot(pose.pose.position.x-x0,pose.pose.position.y-y0)>draw_radius+1.e-6;
++  }),shared_path.poses.end());
++  shared_path.header.stamp=this->now();
++  for (auto& pose : shared_path.poses) pose.header=shared_path.header;
+   path_shared_publisher->publish(shared_path);
+ }

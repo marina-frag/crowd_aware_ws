@@ -1,0 +1,382 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3ab5f40..e5e2ec6 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -18,6 +18,7 @@ find_package(geometry_msgs REQUIRED)
+ find_package(nav_msgs REQUIRED)
+ find_package(sensor_msgs REQUIRED)
+ find_package(std_msgs REQUIRED)
++find_package(cohan_msgs REQUIRED)
+ find_package(trajectory_msgs REQUIRED)
+ find_package(visualization_msgs REQUIRED)
+ find_package(tf2 REQUIRED)
+@@ -49,6 +50,7 @@ target_link_libraries(shared_controller_obj PUBLIC
+   ${nav_msgs_TARGETS}
+   ${sensor_msgs_TARGETS}
+   ${std_msgs_TARGETS}
++  ${cohan_msgs_TARGETS}
+   ${trajectory_msgs_TARGETS}
+   ${visualization_msgs_TARGETS}
+   ${tf2_TARGETS}
+@@ -79,6 +81,7 @@ target_link_libraries(shared_control_node PRIVATE
+   ${nav_msgs_TARGETS}
+   ${sensor_msgs_TARGETS}
+   ${std_msgs_TARGETS}
++  ${cohan_msgs_TARGETS}
+   ${trajectory_msgs_TARGETS}
+   ${visualization_msgs_TARGETS}
+   ${tf2_TARGETS}
+@@ -122,7 +125,7 @@ install(PROGRAMS
+ # ---------------------------
+ ament_export_include_directories(include)
+ ament_export_dependencies(
+-  rclcpp nav_msgs geometry_msgs sensor_msgs std_msgs trajectory_msgs visualization_msgs
++  rclcpp nav_msgs geometry_msgs sensor_msgs std_msgs cohan_msgs trajectory_msgs visualization_msgs
+   tf2 tf2_ros tf2_geometry_msgs nav2_costmap_2d
+   dwal_planner
+ )
+diff --git a/include/shared_controller/shared_controller.h b/include/shared_controller/shared_controller.h
+index 1adf62e..5e53895 100644
+--- a/include/shared_controller/shared_controller.h
++++ b/include/shared_controller/shared_controller.h
+@@ -1,6 +1,7 @@
+ #pragma once
+ 
+ #include <algorithm>
++#include <array>
+ #include <cmath>
+ #include <limits>
+ #include <atomic>
+@@ -13,6 +14,9 @@
+ #include <visualization_msgs/msg/marker.hpp>
+ #include <visualization_msgs/msg/marker_array.hpp>
+ #include <geometry_msgs/msg/point.hpp>
++#include <std_msgs/msg/string.hpp>
++#include <cohan_msgs/msg/tracked_agents.hpp>
++#include <cohan_msgs/msg/tracked_segment_type.hpp>
+ 
+ #include "dwal_planner/msg/cluster_group.hpp"
+ #include "dwal_planner/msg/path_cluster.hpp" 
+@@ -35,7 +39,13 @@ private:
+   void clustersFarCallback(const dwal_planner::msg::ClusterGroup::SharedPtr msg);
+   inline void publishCmd(const geometry_msgs::msg::TwistStamped& cmd);
+   void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
++  void tracksCallback(const cohan_msgs::msg::TrackedAgents::SharedPtr msg);
++  void contextCallback(const std_msgs::msg::String::SharedPtr msg);
++  void watchdogCallback();
+   geometry_msgs::msg::TwistStamped MakeZeroTwist();
++  double socialCost(double phi, double radius, double speed,
++                    const std::array<double, 3>& pose0) const;
++  bool inputsFresh(const rclcpp::Time& now, std::string& reason) const;
+ 
+   // Helpers
+   double scoreJ(double c_norm, double d_norm) const;
+@@ -55,6 +65,8 @@ private:
+   std::string traj_viz_topic_;
+   std::string traj_frame_id_;
+   std::string odom_topic_;
++  std::string near_cluster_topic_;
++  std::string far_cluster_topic_;
+ 
+   // Params
+   double c_max_{255.0};
+@@ -68,6 +80,15 @@ private:
+   double phi_max_; //corresponding to Kmax and level
+   bool use_stamped_twist_input_{true};
+   bool use_stamped_twist_output_{true}; 
++  bool allow_reverse_{false};
++  bool allow_no_cluster_passthrough_{false};
++  bool semantic_mode_{false};
++  double odom_timeout_{0.5};
++  double cluster_timeout_{0.5};
++  double reference_timeout_{0.35};
++  double tracks_timeout_{0.5};
++  double social_weight_{0.5};
++  double personal_space_{0.8};
+   double v_low_{0.25};   // hysteresis switch lower bound
+   double v_high_{0.35};  // hysteresis switch upper bound
+   std::string odom_frame_id_;
+@@ -81,6 +102,13 @@ private:
+   dwal_planner::msg::ClusterGroup last_clusters_;
+   std::string last_cluster_selected_;
+   geometry_msgs::msg::Twist last_robot_vel_;
++  cohan_msgs::msg::TrackedAgents last_tracks_;
++  std::string context_profile_{"UNKNOWN"};
++  rclcpp::Time last_odom_time_{0, 0, RCL_ROS_TIME};
++  rclcpp::Time last_near_time_{0, 0, RCL_ROS_TIME};
++  rclcpp::Time last_far_time_{0, 0, RCL_ROS_TIME};
++  rclcpp::Time last_user_time_{0, 0, RCL_ROS_TIME};
++  rclcpp::Time last_tracks_time_{0, 0, RCL_ROS_TIME};
+ 
+   // PS4 controller state
+   std::atomic_bool r2_pressed_{false};
+@@ -95,6 +123,9 @@ private:
+   rclcpp::Subscription<dwal_planner::msg::ClusterGroup>::SharedPtr clusters_sub_near_;
+   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber_;
+   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
++  rclcpp::Subscription<cohan_msgs::msg::TrackedAgents>::SharedPtr tracks_sub_;
++  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr context_sub_;
++  rclcpp::TimerBase::SharedPtr watchdog_timer_;
+ 
+ 
+   using PubVariant = std::variant<
+@@ -110,4 +141,3 @@ private:
+   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_human_publisher;
+   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_shared_publisher;
+ };
+-
+diff --git a/package.xml b/package.xml
+index 0a0f3eb..400ae09 100644
+--- a/package.xml
++++ b/package.xml
+@@ -19,6 +19,7 @@
+   <depend>nav_msgs</depend>
+   <depend>sensor_msgs</depend>
+   <depend>std_msgs</depend>
++  <depend>cohan_msgs</depend>
+   <depend>trajectory_msgs</depend>
+   <depend>visualization_msgs</depend>
+   <depend>tf2</depend>
+diff --git a/src/shared_controller.cpp b/src/shared_controller.cpp
+index 98f68fd..3533a53 100644
+--- a/src/shared_controller.cpp
++++ b/src/shared_controller.cpp
+@@ -9,6 +9,8 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+ {
+   // Topics + frames
+   cluster_topic_ = this->declare_parameter<std::string>("cluster_topic", "/dwal_planner/clusters_near");
++  near_cluster_topic_ = this->declare_parameter<std::string>("near_cluster_topic", cluster_topic_);
++  far_cluster_topic_ = this->declare_parameter<std::string>("far_cluster_topic", "/dwal_planner/clusters_far");
+   user_cmd_topic_ = this->declare_parameter<std::string>("user_cmd_topic", "/user_cmd");
+   output_cmd_topic_ = this->declare_parameter<std::string>("output_cmd_topic", "/cmd_vel");
+ 
+@@ -23,6 +25,17 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+   odom_topic_ = this->declare_parameter<std::string>("odom_topic", "/odom");
+   r2_button_index_ = this->declare_parameter<int>("r2_button_index", 7);
+   auto joy_topic   = this->declare_parameter<std::string>("joy_topic", "/joy");
++  const auto tracks_topic = this->declare_parameter<std::string>("tracked_agents_topic", "/tracked_agents");
++  const auto context_topic = this->declare_parameter<std::string>("context_profile_topic", "/crowd_context/profile");
++  semantic_mode_ = this->declare_parameter<bool>("semantic_mode", false);
++  allow_reverse_ = this->declare_parameter<bool>("allow_reverse", false);
++  allow_no_cluster_passthrough_ = this->declare_parameter<bool>("allow_no_cluster_passthrough", false);
++  odom_timeout_ = this->declare_parameter<double>("odom_timeout", 0.5);
++  cluster_timeout_ = this->declare_parameter<double>("cluster_timeout", 0.5);
++  reference_timeout_ = this->declare_parameter<double>("reference_timeout", 0.35);
++  tracks_timeout_ = this->declare_parameter<double>("tracks_timeout", 0.5);
++  social_weight_ = this->declare_parameter<double>("social_weight", 0.5);
++  personal_space_ = this->declare_parameter<double>("personal_space", 0.8);
+ 
+   v_low_  = this->declare_parameter<double>("v_low", 0.25);
+   v_high_ = this->declare_parameter<double>("v_high", 0.35);
+@@ -82,14 +95,22 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+   auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
+ 
+   clusters_sub_near_ = this->create_subscription<dwal_planner::msg::ClusterGroup>(
+-      "/dwal_planner/clusters_near",
++      near_cluster_topic_,
+       qos,
+       std::bind(&SharedController::clustersNearCallback, this, std::placeholders::_1));
+ 
+   clusters_sub_far_ = this->create_subscription<dwal_planner::msg::ClusterGroup>(
+-      "/dwal_planner/clusters_far",
++      far_cluster_topic_,
+       qos,
+       std::bind(&SharedController::clustersFarCallback, this, std::placeholders::_1));
++  if (semantic_mode_) {
++    tracks_sub_ = this->create_subscription<cohan_msgs::msg::TrackedAgents>(
++      tracks_topic, rclcpp::QoS(10),
++      std::bind(&SharedController::tracksCallback, this, std::placeholders::_1));
++    context_sub_ = this->create_subscription<std_msgs::msg::String>(
++      context_topic, rclcpp::QoS(10),
++      std::bind(&SharedController::contextCallback, this, std::placeholders::_1));
++  }
+ 
+   intent_plot_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/shared_controller/intent_plot", rclcpp::QoS(10));
+ 
+@@ -113,6 +134,8 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+   
+   path_human_publisher = this->create_publisher<nav_msgs::msg::Path>("/shared_controller/path_human", rclcpp::QoS(1));
+   path_shared_publisher = this->create_publisher<nav_msgs::msg::Path>("/shared_controller/path_shared", rclcpp::QoS(1));
++  watchdog_timer_ = this->create_wall_timer(
++    std::chrono::milliseconds(50), std::bind(&SharedController::watchdogCallback, this));
+ 
+   RCLCPP_INFO(
+       get_logger(),
+@@ -130,16 +153,86 @@ void SharedController::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg
+   }
+ 
+   last_robot_vel_ = msg->twist.twist;
++  last_odom_time_ = this->now();
+ }
+ 
+ void SharedController::clustersNearCallback(const dwal_planner::msg::ClusterGroup::SharedPtr msg)
+ {
+   std::atomic_store(&near_ptr_, std::shared_ptr<const dwal_planner::msg::ClusterGroup>(msg));
++  last_near_time_ = this->now();
+ }
+ 
+ void SharedController::clustersFarCallback(const dwal_planner::msg::ClusterGroup::SharedPtr msg)
+ {
+   std::atomic_store(&far_ptr_, std::shared_ptr<const dwal_planner::msg::ClusterGroup>(msg));
++  last_far_time_ = this->now();
++}
++
++void SharedController::tracksCallback(const cohan_msgs::msg::TrackedAgents::SharedPtr msg)
++{
++  last_tracks_ = *msg;
++  last_tracks_time_ = this->now();
++}
++
++void SharedController::contextCallback(const std_msgs::msg::String::SharedPtr msg)
++{
++  context_profile_ = msg->data;
++}
++
++bool SharedController::inputsFresh(const rclcpp::Time& now, std::string& reason) const
++{
++  const auto age = [&now](const rclcpp::Time& stamp) {
++    const double value = stamp.nanoseconds() == 0 ?
++      std::numeric_limits<double>::infinity() : (now - stamp).seconds();
++    return value < 0.0 ? std::numeric_limits<double>::infinity() : value;
++  };
++  if (age(last_odom_time_) > odom_timeout_) { reason = "stale odometry"; return false; }
++  if (age(last_user_time_) > reference_timeout_) { reason = "stale reference command"; return false; }
++  if (age(last_near_time_) > cluster_timeout_ && age(last_far_time_) > cluster_timeout_) {
++    reason = "stale DWAL clusters"; return false;
++  }
++  if (semantic_mode_ && age(last_tracks_time_) > tracks_timeout_) {
++    reason = "stale structured tracks"; return false;
++  }
++  return true;
++}
++
++void SharedController::watchdogCallback()
++{
++  std::string reason;
++  if (!inputsFresh(this->now(), reason)) {
++    publishCmd(MakeZeroTwist());
++    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000, "%s: controlled stop", reason.c_str());
++  }
++}
++
++double SharedController::socialCost(
++  double phi, double radius, double speed, const std::array<double, 3>& pose0) const
++{
++  if (!semantic_mode_ || last_tracks_.agents.empty()) return 0.0;
++  double margin_scale = 1.0;
++  if (context_profile_ == "DENSE_CROWD") margin_scale = 1.35;
++  else if (context_profile_ == "DOORWAY" || context_profile_ == "OCCLUSION") margin_scale = 1.2;
++  const double sigma = std::max(0.1, personal_space_ * margin_scale);
++  const double curvature = cluster_lib::phi2curv(phi, radius);
++  nav_msgs::msg::Path candidate;
++  cluster_lib::generatePath(candidate, curvature, pose0[0], pose0[1], pose0[2],
++                            0.1, radius * radius, odom_frame_id_);
++  double closest = std::numeric_limits<double>::infinity();
++  const double safe_speed = std::max(std::fabs(speed), 0.05);
++  for (size_t i = 0; i < candidate.poses.size(); ++i) {
++    const double t = (0.1 * static_cast<double>(i)) / safe_speed;
++    const auto& point = candidate.poses[i].pose.position;
++    for (const auto& agent : last_tracks_.agents) {
++      for (const auto& segment : agent.segments) {
++        if (segment.type != cohan_msgs::msg::TrackedSegmentType::TORSO) continue;
++        const double px = segment.pose.pose.position.x + segment.twist.twist.linear.x * t;
++        const double py = segment.pose.pose.position.y + segment.twist.twist.linear.y * t;
++        closest = std::min(closest, std::hypot(point.x - px, point.y - py));
++      }
++    }
++  }
++  return std::isfinite(closest) ? std::exp(-0.5 * closest * closest / (sigma * sigma)) : 0.0;
+ }
+ 
+ geometry_msgs::msg::TwistStamped SharedController::MakeZeroTwist()
+@@ -154,7 +247,7 @@ geometry_msgs::msg::TwistStamped SharedController::MakeZeroTwist()
+   z.angular.z = 0.0;
+ 
+   out.header.frame_id = odom_frame_id_;
+-  out.header.stamp = rclcpp::Clock(RCL_ROS_TIME).now();
++  out.header.stamp = this->now();
+   out.twist = z;
+   return out;
+ }
+@@ -331,6 +424,12 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+   // Always update last user cmd
+   last_user_cmd_ = *msg;
+   have_user_cmd_ = true;
++  last_user_time_ = this->now();
++  std::string stale_reason;
++  if (!inputsFresh(last_user_time_, stale_reason)) {
++    publishCmd(MakeZeroTwist());
++    return;
++  }
+ 
+   // === Get user command ===
+   const double v_user_raw = last_user_cmd_.twist.linear.x;
+@@ -343,19 +442,28 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+   std::shared_ptr<const dwal_planner::msg::ClusterGroup> chosen;
+ 
+   // helper lambdas (optional)
+-  const bool near_ok = (near && !near->clusters.empty());
+-  const bool far_ok = (far && !far->clusters.empty());
++  const auto now = this->now();
++  const bool near_fresh = last_near_time_.nanoseconds() != 0 &&
++    (now - last_near_time_).seconds() >= 0.0 &&
++    (now - last_near_time_).seconds() <= cluster_timeout_;
++  const bool far_fresh = last_far_time_.nanoseconds() != 0 &&
++    (now - last_far_time_).seconds() >= 0.0 &&
++    (now - last_far_time_).seconds() <= cluster_timeout_;
++  const bool near_ok = (near && near_fresh && !near->clusters.empty());
++  const bool far_ok = (far && far_fresh && !far->clusters.empty());
+ 
+   if (!near_ok && !far_ok)
+   {
+     // Default: if clusters are missing, pass through user command if R2 held, else output zero 
+-    if (r2_pressed_.load(std::memory_order_relaxed) && have_user_cmd_) {
++    if (allow_no_cluster_passthrough_ &&
++        r2_pressed_.load(std::memory_order_relaxed) && have_user_cmd_) {
+       RCLCPP_WARN_SKIPFIRST(this->get_logger(),
+         "No clusters received yet. R2 held -> pass-through user command.");
+     } else {
+       RCLCPP_WARN_SKIPFIRST(this->get_logger(),
+-        "No clusters received yet. R2 not held. Only rotation is allowed.");
+-        last_user_cmd_.twist.linear.x = 0.0; // zero linear velocity, keep angular for rotation
++        "No valid clusters. Outputting controlled stop.");
++        publishCmd(MakeZeroTwist());
++        return;
+     }
+     publishCmd(last_user_cmd_ );
+     return;
+@@ -438,10 +546,10 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+   cluster_lib::generatePath(human_path, k_user, x0, y0, th0, 0.2, level_ * level_, odom_frame_id_);
+   path_human_publisher->publish(human_path);
+ 
+-  if (v_user_raw < 0.0)
++  if (v_user_raw < 0.0 && !allow_reverse_)
+   {
+-    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000, "Negative velocity command received. Passing through user command.");
+-    publishCmd(last_user_cmd_);
++    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000, "Reverse disabled for this experiment. Outputting zero.");
++    publishCmd(MakeZeroTwist());
+     return;
+   }
+ 
+@@ -523,7 +635,7 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+   double best_J = std::numeric_limits<double>::infinity();
+   double phi_star = 0.0;
+   double c_star = 0.0;
+-  double phi_span = chosen_cluster.paths.back().phi - chosen_cluster.paths.front().phi;
++  double phi_span = std::max(std::fabs(chosen_cluster.paths.back().phi - chosen_cluster.paths.front().phi), 1e-6);
+ 
+   for (const auto &p : chosen_cluster.paths)
+   {
+@@ -533,7 +645,10 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+     const double dev = std::fabs(phi - phi_near);
+     const double c_norm = std::clamp(c / c_max_, 0.0, 1.0); // normalize cost to [0,1]
+     const double d_norm = std::clamp(dev / phi_span, 0.0, 1.0);
+-    const double J = scoreJ(c_norm, d_norm);
++    const std::array<double, 3> pose0{x0, y0, th0};
++    const double social = socialCost(phi, level_, v_user_raw, pose0);
++    const double sw = semantic_mode_ ? std::clamp(social_weight_, 0.0, 1.0) : 0.0;
++    const double J = (1.0 - sw) * scoreJ(c_norm, d_norm) + sw * social;
+ 
+     if (J < best_J)
+     {

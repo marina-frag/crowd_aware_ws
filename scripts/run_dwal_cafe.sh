@@ -6,6 +6,23 @@ controller=${2:-fixed_dwal}
 semantics=${3:-off}
 seed=${4:-1}
 scenario=${SCENARIO:-dense_crowd}
+[[ "$seed" =~ ^[0-9]+$ ]] || { echo 'Seed must be a nonnegative integer'; exit 2; }
+# Include untracked source files too; a successful old build must not run silently.
+source_fingerprint() {
+  python3 - "$repo_dir" <<'PYCODE'
+import hashlib, pathlib, sys
+root=pathlib.Path(sys.argv[1]); digest=hashlib.sha256()
+for relative in ['docker/dwal','patches','scripts/run_dwal_cafe.sh',
+                 'src/iwalk_description','src/crowd_aware_interfaces','src/crowd_aware_simulation']:
+    base=root/relative
+    files=[base] if base.is_file() else sorted(base.rglob('*'))
+    for path in files:
+        if not path.is_file() or '__pycache__' in path.parts or path.suffix=='.pyc': continue
+        digest.update(str(path.relative_to(root)).encode()+b'\0')
+        digest.update(path.read_bytes()+b'\0')
+print(digest.hexdigest())
+PYCODE
+}
 extra_args=("${@:5}")
 while (( ${#extra_args[@]} )); do
   case "${extra_args[0]}" in
@@ -29,10 +46,10 @@ case "$scenario" in
   *) echo "Unknown scenario: $scenario"; exit 2;;
 esac
 if [[ "$mode" == check ]]; then
-  if [[ "$controller" == dynamic_dwal ]]; then
+  if [[ "$controller" == fixed_dwal || "$controller" == dynamic_dwal ]]; then
     exec docker exec iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
       /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/dynamic_dwal_check.py \
-      --semantics "$semantics" --scenario "$scenario"
+      --semantics "$semantics" --controller "$controller"
   fi
   exec docker exec iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
     /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/smoke_check.py \
@@ -50,7 +67,7 @@ if [[ "$mode" == record ]]; then
     /odom /scan /human_states /robot_states /tracked_agents_logging /tracked_agents /agents_info \
     /crowd_context /crowd_context/profile /experiment/speed_limit \
     /experiment/task_result /experiment/command_guard_status \
-    /experiment/path /dynamic_dwal/diagnostics /dynamic_dwal/markers /dwal_planner/sampled_paths /dwal_planner/clusters_near /dwal_planner/clusters_far \
+    /experiment/path /dwal_planner/sampled_paths /dwal_planner/sampled_pathMarkers /dwal_planner/cluster_markers_far /dwal_planner/clusters_near /dwal_planner/clusters_far \
     /plan_time /traj_time /teb_feedback /reference_cmd /cmd_vel_selected /cmd_vel_guarded \
     /cmd_vel_smoothed /cmd_vel_safe /cmd_vel
 fi
@@ -66,13 +83,22 @@ if [[ "$mode" == build ]]; then
     git -C "$checkout" checkout --detach 770c5af36e860edb471fe2431eedcf6c9c3bb5d4
     docker build -t pmb2_hunav_simulation:latest "$checkout"
   fi
-  exec docker build -t iwalk_dwal:latest -f "$repo_dir/docker/dwal/Dockerfile" "$repo_dir"
+  exec docker build --build-arg "SOURCE_SHA=$(source_fingerprint)" -t iwalk_dwal:latest -f "$repo_dir/docker/dwal/Dockerfile" "$repo_dir"
 fi
 docker image inspect iwalk_dwal:latest >/dev/null 2>&1 || { echo 'First run: bash scripts/run_dwal_cafe.sh build'; exit 1; }
+if [[ "$mode" == run ]]; then
+  expected=$(source_fingerprint)
+  built=$(docker image inspect --format '{{ index .Config.Labels "org.iwalk.source-sha256" }}' iwalk_dwal:latest)
+  if [[ "$expected" != "$built" ]]; then
+    echo 'The image does not match the current sources/patches. Run: bash scripts/run_dwal_cafe.sh build'
+    exit 1
+  fi
+  echo "DWAL_UPSTREAM_V4: controller=$controller semantics=$semantics source=$built"
+fi
 headless=${HEADLESS:-true}
 gui=${GUI:-false}
-rviz=${RVIZ:-false}
-reference_mode=${REFERENCE_MODE:-autonomous}
+rviz=${RVIZ:-true}
+reference_mode=${REFERENCE_MODE:-teleop}
 teleop_input_timeout=${TELEOP_INPUT_TIMEOUT:-0.35}
 for value in "$headless" "$gui" "$rviz"; do
   case "$value" in true|false) ;; *) echo 'HEADLESS, GUI, and RVIZ must be true or false'; exit 2;; esac
