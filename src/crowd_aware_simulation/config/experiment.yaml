@@ -43,7 +43,7 @@ experiment:
     cluster_separation: 5
     min_cluster_span: 0.2
   dynamic_dwal:
-    max_search_radius: 4.0
+    max_search_radius: 1.8
     sweep_resolution: 0.02
     reaction_time: 0.4
     longitudinal_margin: 0.05
