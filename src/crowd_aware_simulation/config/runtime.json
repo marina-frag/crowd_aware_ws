@@ -7,15 +7,12 @@
   "headless": true,
   "gui": false,
   "rviz": true,
-  "evaluator": true,
   "use_sim_time": true,
   "result_directory": "/rosbags",
   "ros_domain_id": 73,
   "controllers": [
     "fixed_dwal",
-    "dynamic_dwal",
-    "dwb",
-    "hateb"
+    "dynamic_dwal"
   ],
   "semantic_modes": [
     "off",

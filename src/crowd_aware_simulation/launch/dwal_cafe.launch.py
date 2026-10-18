@@ -56,7 +56,7 @@ def setup(context):
     scenario = LaunchConfiguration('scenario').perform(context)
     share = Path(get_package_share_directory('crowd_aware_simulation'))
     runtime = json.loads((share/'config/runtime.json').read_text())
-    if controller not in runtime['controllers']:
+    if controller not in ('fixed_dwal', 'dynamic_dwal'):
         raise RuntimeError(f"controller must be one of {runtime['controllers']}, got {controller!r}")
     if semantics not in runtime['semantic_modes']:
         raise RuntimeError(f"semantics must be one of {runtime['semantic_modes']}, got {semantics!r}")
@@ -68,8 +68,7 @@ def setup(context):
     except ValueError as error:
         raise RuntimeError('seed must be an integer') from error
 
-    result_file = LaunchConfiguration('result_file').perform(context) or str(
-        Path(runtime['result_directory'])/f'metrics_{scenario}_{controller}_{semantics}_seed{seed}')
+    variant_arg = LaunchConfiguration('variant').perform(context)
     semantic_on = semantics == 'on'
     is_dwal = controller in ('fixed_dwal', 'dynamic_dwal')
     is_dynamic_dwal = controller == 'dynamic_dwal'
@@ -89,12 +88,12 @@ def setup(context):
     run = module.prepare(
         description, wrapper, Path(tempfile.mkdtemp(prefix='crowd_aware_')),
         share/'config/experiment.yaml', headless=headless, scenario=scenario,
-        seed=int(seed), controller=controller, require_intended_user_support=True)
+        seed=int(seed), controller=controller, require_intended_user_support=True, variant=variant_arg or None)
     resolved = cfg | {'selection': {'controller': controller, 'semantics': semantics,
         'reference_mode': reference_mode, 'scenario': scenario, 'seed': int(seed),
         'headless': headless, 'gui': truth(context, 'gui'), 'rviz': truth(context, 'rviz'),
-        'evaluator': truth(context, 'evaluator'), 'reference_timeout': teleop_input_timeout,
-        'result_file': result_file}}
+        'reference_timeout': teleop_input_timeout,
+        'variant': json.loads((run/'evaluation.json').read_text())['variant']}}
     (run/'resolved_config.yaml').write_text(module.dump_yaml(resolved))
     print(f'Scenario={scenario}, experiment={controller}/{semantics}, '
           f'reference={reference_mode}, seed={seed}; runtime files={run}', flush=True)
@@ -122,7 +121,7 @@ def setup(context):
         package='hunav_gazebo_wrapper', executable='hunav_gazebo_world_generator',
         output='screen', parameters=[{
             'base_world': str(run/'scenario.world'), 'use_gazebo_obs': cfg['simulation']['hunav']['use_gazebo_obs'],
-            'use_collision': is_dynamic_dwal, 'update_rate': cfg['launch']['hunav_update_rate'], 'robot_name': cfg['simulation']['robot_name'],
+            'use_collision': True, 'update_rate': cfg['launch']['hunav_update_rate'], 'robot_name': cfg['simulation']['robot_name'],
             'global_frame_to_publish': frames['global'], 'use_navgoal_to_start': cfg['simulation']['hunav']['use_navgoal_to_start'],
             'navgoal_topic': cfg['simulation']['hunav']['navgoal_topic'], 'ignore_models': cfg['simulation']['hunav']['ignore_models']}])
     manager = configured_node(exp, 
@@ -154,19 +153,7 @@ def setup(context):
         package='crowd_aware_simulation', executable='hunav_to_cohan_bridge.py',
         name='hunav_to_cohan_bridge', output='screen', parameters=[{
             'use_sim_time': runtime['use_sim_time'], 'publish_controller_output': semantic_on}])
-    context_estimator = configured_node(exp, 
-        package='crowd_aware_simulation', executable='context_estimator.py',
-        name='context_estimator', output='screen', parameters=[str(run/'context.yaml')])
-    context_speed_limit = configured_node(exp, 
-        package='crowd_aware_simulation', executable='context_speed_limit.py',
-        name='context_speed_limit', output='screen',
-        parameters=[str(run/'context_speed_limit.yaml'), {
-            'semantic_mode': semantic_on}])
     guard_parameters = [str(run/'command_pipeline.yaml')]
-    if reference_mode == 'teleop' and not is_dwal:
-        guard_parameters.append({
-            'reference_gate_enabled': True,
-            'reference_gate_timeout': teleop_input_timeout})
     guard = configured_node(exp, 
         package='crowd_aware_simulation', executable='command_guard.py',
         name='command_guard', output='screen', parameters=guard_parameters)
@@ -182,37 +169,15 @@ def setup(context):
         package='crowd_aware_simulation', executable='final_cmd_watchdog.py',
         name='final_cmd_watchdog', output='screen',
         parameters=[str(run/'command_pipeline.yaml')])
-    evaluator = configured_node(exp, 
-        package='hunav_evaluator', executable='hunav_evaluator_node',
-        name='hunav_evaluator_node', output='screen',
-        parameters=[{'use_sim_time': runtime['use_sim_time'], 'frequency': cfg['launch']['evaluator_frequency'],
-                     'result_file': result_file}],
-        remappings=[('human_states', topics['human_states']),
-                    ('robot_states', topics['robot_states'])],
-        condition=IfCondition(LaunchConfiguration('evaluator')))
     pipeline_manager = lifecycle_manager(
         'command_pipeline_lifecycle_manager', ['velocity_smoother', 'collision_monitor'], cfg=cfg)
 
-    task_action = '/reference/follow_path' if is_dwal else '/follow_path'
-    task_lifecycle_node = '/reference/controller_server' if is_dwal else '/controller_server'
-    if reference_mode == 'teleop' and not is_dwal:
-        task_nodes = [configured_node(exp, 
-            package='crowd_aware_simulation', executable='teleop_path_adapter.py',
-            name='teleop_path_adapter', output='screen', parameters=[{
-                'use_sim_time': runtime['use_sim_time'],
-                'action_name': task_action,
-                'controller_lifecycle_node': task_lifecycle_node,
-                'input_timeout': teleop_input_timeout}])]
-    else:
-        task_nodes = [configured_node(exp, 
-            package='crowd_aware_simulation', executable='local_task.py', name='local_task',
-            output='screen', parameters=[str(run/'task.yaml'), {
-                'evaluator_enabled': truth(context, 'evaluator'),
-                'experiment_tag': f'{scenario}_{controller}_{semantics}',
-                'run_id': int(seed),
-                'action_name': task_action,
-                'controller_lifecycle_node': task_lifecycle_node,
-                'autostart': reference_mode == 'autonomous'}])]
+    task_nodes = []
+    if reference_mode == 'autonomous':
+        task_nodes = [configured_node(exp,
+            package='crowd_aware_simulation', executable='reference_task.py',
+            name='local_task', output='screen',
+            parameters=[str(run/'task.yaml')])]
 
     condition_nodes = []
     if is_dwal:
@@ -249,42 +214,27 @@ def setup(context):
                      parameters=[str(run/'reference.yaml')],
                      remappings=[('cmd_vel',topics['reference_cmd'])]),
                 lifecycle_manager('reference_lifecycle_manager', ['controller_server'], namespace='reference', cfg=cfg)]
-    else:
-        controller_server = configured_node(exp, 
-            package='nav2_controller', executable='controller_server',
-            name='controller_server', output='screen',
-            parameters=[str(run/f'{controller}_{semantics}.yaml')],
-            remappings=[('cmd_vel', topics['selected_cmd'])])
-        condition_nodes += [
-            controller_server,
-            lifecycle_manager('controller_lifecycle_manager', ['/controller_server'], cfg=cfg)]
-        if controller == 'hateb':
-            condition_nodes.append(configured_node(exp, 
-                package='agent_path_prediction', executable='agent_path_predict',
-                name='agent_path_prediction', output='screen',
-                parameters=[str(run/'agent_prediction.yaml'), {
-                    # HATEB requires prediction reset services even in mode 0.
-                    # OFF points the service host at an intentionally empty topic.
-                    'tracked_agents_sub_topic':
-                        topics['tracked_agents_controller'] if semantic_on else topics['tracked_agents_disabled'],
-                    'publish_markers': semantic_on}]))
-        elif controller == 'dwb' and semantic_on:
-            condition_nodes.append(configured_node(exp, 
-                package='crowd_aware_simulation',
-                executable='cohan_agents_info_adapter.py', output='screen'))
-
     rviz = configured_node(exp, 
         package='rviz2', executable='rviz2',
         arguments=['-d', str(share/'rviz'/('dwal_dynamic.rviz'
                     if is_dynamic_dwal else 'dwal.rviz'))],
         parameters=[{'use_sim_time': runtime['use_sim_time']}],
         condition=IfCondition(LaunchConfiguration('rviz')))
-    adaptation_nodes = (
-        [context_estimator, context_speed_limit] if not is_dwal else [])
     runtime_nodes = [
-        server, client, rsp, jsp, scan_filter, adapter, *adaptation_nodes,
-        guard, smoother, collision, final_watchdog, evaluator, pipeline_manager,
+        server, client, rsp, jsp, scan_filter, adapter,
+        guard, smoother, collision, final_watchdog, pipeline_manager,
         *condition_nodes, *task_nodes, rviz]
+    # Same configuration and frames as this run; recorder refuses mismatched labels.
+    evaluation = json.loads((run/'evaluation.json').read_text())
+    evaluation['reference_timeout_s'] = teleop_input_timeout
+    (run/'evaluation.json').write_text(json.dumps(evaluation, indent=2))
+    active = {'run_directory': str(run), 'controller': controller, 'semantics': semantics,
+              'scenario': scenario, 'seed': int(seed), 'variant': evaluation['variant'],
+              'reference_mode': reference_mode}
+    active_file = Path('/tmp/dwal_active_run.json')
+    tmp_active = active_file.with_suffix('.tmp')
+    tmp_active.write_text(json.dumps(active, indent=2))
+    tmp_active.replace(active_file)
 
     def after_world(event, _):
         if event.returncode:
@@ -311,8 +261,8 @@ def generate_launch_description():
         DeclareLaunchArgument(name, default_value=(str(defaults[name]).lower()
             if isinstance(defaults[name], bool) else str(defaults[name])))
         for name in ('controller', 'semantics', 'reference_mode', 'scenario', 'seed',
-                     'headless', 'gui', 'rviz', 'evaluator')]
+                     'headless', 'gui', 'rviz')]
     return LaunchDescription(arguments + [
         DeclareLaunchArgument('teleop_input_timeout', default_value=''),
-        DeclareLaunchArgument('result_file', default_value=''),
+        DeclareLaunchArgument('variant', default_value=''),
         OpaqueFunction(function=setup)])

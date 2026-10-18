@@ -73,5 +73,14 @@ RUN source /opt/ros/humble/setup.bash && source /home/kiro_ws/install/setup.bash
 RUN source /opt/ros/humble/setup.bash && \
     python3 -c "import subprocess; p='/opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager'; s=subprocess.check_output(['ldd',p],text=True); print(s); assert 'not found' not in s, 'Missing lifecycle-manager runtime libraries'"
 COPY docker/dwal/entrypoint.sh /dwal_entrypoint.sh
+# BEGIN DWAL_PLOT_COMPATIBILITY_FIX
+# Parent pip NumPy 2 overrides APT NumPy and breaks Ubuntu's Matplotlib binaries.
+COPY src/crowd_aware_simulation/scripts/check_plot_backend.py /tmp/dwal_check_plot_backend.py
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip python3-tk && \
+    rm -rf /var/lib/apt/lists/* && \
+    python3 -m pip install --no-cache-dir --only-binary=:all: --force-reinstall 'numpy==1.26.4'
+RUN /bin/bash /dwal_entrypoint.sh python3 /tmp/dwal_check_plot_backend.py
+# END DWAL_PLOT_COMPATIBILITY_FIX
+
 ENTRYPOINT ["/bin/bash", "/dwal_entrypoint.sh"]
 CMD ["ros2", "launch", "crowd_aware_simulation", "dwal_cafe.launch.py"]

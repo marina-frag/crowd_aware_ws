@@ -4,7 +4,7 @@
   <description>Local-only iWalk/HuNav controller experiment and safety bringup.</description>
   <maintainer email="marina.frag3@gmail.com">Marina</maintainer><license>Apache-2.0</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <test_depend>ament_cmake_gtest</test_depend>
+  
   <exec_depend>iwalk_description</exec_depend><depend>dwal_planner</depend>
   <depend>nav2_costmap_2d</depend><exec_depend>nav2_lifecycle_manager</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend><exec_depend>joint_state_publisher</exec_depend>
@@ -19,11 +19,13 @@
   <exec_depend>std_srvs</exec_depend>
   <exec_depend>nav2_msgs</exec_depend><exec_depend>lifecycle_msgs</exec_depend><depend>cohan_msgs</depend><exec_depend>hunav_msgs</exec_depend>
   <depend>crowd_aware_interfaces</depend>
-  <exec_depend>nav2_controller</exec_depend><exec_depend>nav2_dwb_controller</exec_depend>
+  <exec_depend>nav2_controller</exec_depend>
   <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
-  <exec_depend>agent_path_prediction</exec_depend><exec_depend>hunav_evaluator</exec_depend>
+  
   <exec_depend>nav2_velocity_smoother</exec_depend><exec_depend>nav2_collision_monitor</exec_depend>
-  <exec_depend>bayesian_shared_control</exec_depend><exec_depend>hateb_local_planner</exec_depend>
+  <exec_depend>bayesian_shared_control</exec_depend>
   <exec_depend>launch_ros</exec_depend><exec_depend>rviz2</exec_depend>
+  <exec_depend>rosbag2_py</exec_depend><exec_depend>ros2bag</exec_depend>
+  <exec_depend>gazebo_msgs</exec_depend><exec_depend>python3-matplotlib</exec_depend>
   <export><build_type>ament_cmake</build_type></export>
 </package>

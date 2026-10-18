@@ -367,102 +367,8 @@ def common_controller(limits, goal_tolerance, *, cfg):
         'odom_topic': cfg['experiment']['topics']['odom']}
 
 
-def dwb_plugin(limits, goal_tolerance, *, cfg):
-    return {
-        'plugin': cfg['dwb']['plugin'], 'debug_trajectory_details': cfg['dwb']['debug_trajectory_details'],
-        'min_vel_x': cfg['dwb']['min_vel_x'], 'min_vel_y': cfg['dwb']['min_vel_y'],
-        'max_vel_x': limits['max_linear'], 'max_vel_y': cfg['dwb']['max_vel_y'],
-        'max_vel_theta': limits['max_angular'], 'min_speed_xy': cfg['dwb']['min_speed_xy'],
-        'max_speed_xy': limits['max_linear'], 'min_speed_theta': cfg['dwb']['min_speed_theta'],
-        'acc_lim_x': limits['acceleration'], 'acc_lim_y': cfg['dwb']['acc_lim_y'],
-        'acc_lim_theta': limits['angular_acceleration'],
-        'decel_lim_x': -limits['deceleration'], 'decel_lim_y': cfg['dwb']['decel_lim_y'],
-        'decel_lim_theta': -limits['angular_deceleration'],
-        'vx_samples': cfg['dwb']['vx_samples'], 'vy_samples': cfg['dwb']['vy_samples'], 'vtheta_samples': cfg['dwb']['vtheta_samples'],
-        'sim_time': cfg['dwb']['sim_time'], 'linear_granularity': cfg['dwb']['linear_granularity'],
-        'angular_granularity': cfg['dwb']['angular_granularity'], 'transform_tolerance': cfg['dwb']['transform_tolerance'],
-        'xy_goal_tolerance': goal_tolerance, 'trans_stopped_velocity': cfg['dwb']['trans_stopped_velocity'],
-        'short_circuit_trajectory_evaluation': cfg['dwb']['short_circuit_trajectory_evaluation'], 'stateful': cfg['dwb']['stateful'],
-        'critics': cfg['dwb']['critics'],
-        'BaseObstacle.scale': cfg['dwb']['BaseObstacle.scale'], 'PathAlign.scale': cfg['dwb']['PathAlign.scale'],
-        'PathAlign.forward_point_distance': cfg['dwb']['PathAlign.forward_point_distance'], 'GoalAlign.scale': cfg['dwb']['GoalAlign.scale'],
-        'GoalAlign.forward_point_distance': cfg['dwb']['GoalAlign.forward_point_distance'], 'PathDist.scale': cfg['dwb']['PathDist.scale'],
-        'GoalDist.scale': cfg['dwb']['GoalDist.scale'], 'RotateToGoal.scale': cfg['dwb']['RotateToGoal.scale'],
-        'RotateToGoal.slowing_factor': cfg['dwb']['RotateToGoal.slowing_factor'], 'RotateToGoal.lookahead_time': cfg['dwb']['RotateToGoal.lookahead_time']}
 
 
-def hateb_plugin(limits, footprint, semantic, goal_tolerance, personal_space, *, cfg):
-    return {
-        'plugin': cfg['hateb']['plugin'],
-        'predict_srv_name': cfg['hateb']['predict_srv_name'],
-        'reset_prediction_srv_name': cfg['hateb']['reset_prediction_srv_name'],
-        'pose_prediction_reset_time': cfg['hateb']['pose_prediction_reset_time'], 'odom_topic': cfg['experiment']['topics']['odom'],
-        'map_frame': cfg['experiment']['frames']['global'], 'global_frame': cfg['experiment']['frames']['global'], 'base_frame': cfg['experiment']['frames']['base'],
-        'footprint_frame': cfg['experiment']['frames']['base'], 'planning_mode': cfg['hateb']['planning_mode']['when_true'] if semantic else cfg['hateb']['planning_mode']['when_false'],
-        'footprint_model': {'type': cfg['hateb']['footprint_model']['type'], 'vertices': str(footprint)},
-        'robot': {'max_vel_y': cfg['hateb']['robot']['max_vel_y'], 'acc_lim_y': cfg['hateb']['robot']['acc_lim_y'],
-                  'max_vel_x': limits['max_linear'], 'min_vel_x': cfg['hateb']['robot']['min_vel_x'],
-                  'max_vel_x_backwards': cfg['hateb']['robot']['max_vel_x_backwards'], 'max_vel_theta': limits['max_angular'],
-                  'min_vel_theta': cfg['hateb']['robot']['min_vel_theta'], 'acc_lim_x': limits['acceleration'],
-                  'acc_lim_theta': limits['angular_acceleration'],
-                  'min_turning_radius': cfg['hateb']['robot']['min_turning_radius']},
-        'agent': {'agent_radius': cfg['experiment']['human_model']['radius'], 'max_agent_vel_x': cfg['hateb']['agent']['max_agent_vel_x'],
-                  'max_agent_vel_y': cfg['hateb']['agent']['max_agent_vel_y'], 'max_agent_vel_x_backwards': cfg['hateb']['agent']['max_agent_vel_x_backwards'],
-                  'max_agent_vel_theta': cfg['hateb']['agent']['max_agent_vel_theta'], 'agent_acc_lim_x': cfg['hateb']['agent']['agent_acc_lim_x'],
-                  'agent_acc_lim_y': cfg['hateb']['agent']['agent_acc_lim_y'], 'agent_acc_lim_theta': cfg['hateb']['agent']['agent_acc_lim_theta']},
-        'trajectory': {'teb_autosize': cfg['hateb']['trajectory']['teb_autosize'], 'dt_ref': cfg['hateb']['trajectory']['dt_ref'], 'dt_hysteresis': cfg['hateb']['trajectory']['dt_hysteresis'],
-                       'global_plan_overwrite_orientation': cfg['hateb']['trajectory']['global_plan_overwrite_orientation'],
-                       'allow_init_with_backwards_motion': cfg['hateb']['trajectory']['allow_init_with_backwards_motion'],
-                       'max_global_plan_lookahead_dist': cfg['hateb']['trajectory']['max_global_plan_lookahead_dist'],
-                       'feasibility_check_no_poses': cfg['hateb']['trajectory']['feasibility_check_no_poses'],
-                       'global_plan_viapoint_sep': cfg['hateb']['trajectory']['global_plan_viapoint_sep'], 'shrink_horizon_backup': cfg['hateb']['trajectory']['shrink_horizon_backup']},
-        'hateb': {'use_agent_agent_safety_c': semantic,
-                  'use_agent_robot_safety_c': semantic,
-                  'use_agent_robot_rel_vel_c': semantic,
-                  'use_agent_robot_visi_c': semantic,
-                  'add_invisible_humans': cfg['hateb']['hateb']['add_invisible_humans'],
-                  'min_agent_agent_dist': cfg['hateb']['hateb']['min_agent_agent_dist'], 'min_agent_robot_dist': personal_space,
-                  'rel_vel_cost_threshold': cfg['hateb']['hateb']['rel_vel_cost_threshold'], 'visibility_cost_threshold': cfg['hateb']['hateb']['visibility_cost_threshold'],
-                  'invisible_human_threshold': cfg['hateb']['hateb']['invisible_human_threshold'], 'prediction_time_horizon': cfg['hateb']['hateb']['prediction_time_horizon']},
-        'goal': {'xy_goal_tolerance': goal_tolerance, 'yaw_goal_tolerance': cfg['experiment']['evaluation_defaults']['yaw_goal_tolerance'],
-                 'free_goal_vel': cfg['hateb']['goal']['free_goal_vel']},
-        'obstacles': {'min_obstacle_dist': cfg['hateb']['obstacles']['min_obstacle_dist'], 'include_costmap_obstacles': cfg['hateb']['obstacles']['include_costmap_obstacles'],
-                      'costmap_obstacles_behind_robot_dist': cfg['hateb']['obstacles']['costmap_obstacles_behind_robot_dist'],
-                      'obstacle_poses_affected': cfg['hateb']['obstacles']['obstacle_poses_affected'], 'costmap_converter_plugin': cfg['hateb']['obstacles']['costmap_converter_plugin'],
-                      'costmap_converter_spin_thread': cfg['hateb']['obstacles']['costmap_converter_spin_thread'],
-                      'costmap_converter_rate': cfg['hateb']['obstacles']['costmap_converter_rate'], 'obstacle_cost_mult': cfg['hateb']['obstacles']['obstacle_cost_mult'],
-                      'use_nonlinear_obstacle_penalty': cfg['hateb']['obstacles']['use_nonlinear_obstacle_penalty']},
-        'optim': {'no_inner_iterations': cfg['hateb']['optim']['no_inner_iterations'], 'no_outer_iterations': cfg['hateb']['optim']['no_outer_iterations'],
-                  'optimization_activate': cfg['hateb']['optim']['optimization_activate'], 'optimization_verbose': cfg['hateb']['optim']['optimization_verbose'],
-                  'penalty_epsilon': cfg['hateb']['optim']['penalty_epsilon'], 'weight_max_vel_x': cfg['hateb']['optim']['weight_max_vel_x'],
-                  'weight_max_vel_y': cfg['hateb']['optim']['weight_max_vel_y'], 'weight_max_agent_vel_x': cfg['hateb']['optim']['weight_max_agent_vel_x'],
-                  'weight_max_agent_vel_y': cfg['hateb']['optim']['weight_max_agent_vel_y'], 'weight_nominal_agent_vel_x': cfg['hateb']['optim']['weight_nominal_agent_vel_x'],
-                  'weight_max_vel_theta': cfg['hateb']['optim']['weight_max_vel_theta'], 'weight_max_agent_vel_theta': cfg['hateb']['optim']['weight_max_agent_vel_theta'],
-                  'weight_acc_lim_x': cfg['hateb']['optim']['weight_acc_lim_x'], 'weight_acc_lim_y': cfg['hateb']['optim']['weight_acc_lim_y'],
-                  'weight_agent_acc_lim_x': cfg['hateb']['optim']['weight_agent_acc_lim_x'], 'weight_agent_acc_lim_y': cfg['hateb']['optim']['weight_agent_acc_lim_y'],
-                  'weight_acc_lim_theta': cfg['hateb']['optim']['weight_acc_lim_theta'], 'weight_agent_acc_lim_theta': cfg['hateb']['optim']['weight_agent_acc_lim_theta'],
-                  'weight_kinematics_nh': cfg['hateb']['optim']['weight_kinematics_nh'],
-                  'weight_kinematics_forward_drive': cfg['hateb']['optim']['weight_kinematics_forward_drive'],
-                  'weight_kinematics_turning_radius': cfg['hateb']['optim']['weight_kinematics_turning_radius'],
-                  'weight_optimaltime': cfg['hateb']['optim']['weight_optimaltime'], 'weight_agent_optimaltime': cfg['hateb']['optim']['weight_agent_optimaltime'],
-                  'weight_obstacle': cfg['hateb']['optim']['weight_obstacle'], 'weight_dynamic_obstacle': cfg['hateb']['optim']['weight_dynamic_obstacle'],
-                  'weight_agent_viapoint': cfg['hateb']['optim']['weight_agent_viapoint'], 'weight_viapoint': cfg['hateb']['optim']['weight_viapoint'],
-                  'weight_shortest_path': cfg['hateb']['optim']['weight_shortest_path'],
-                  'selection_alternative_time_cost': cfg['hateb']['optim']['selection_alternative_time_cost'],
-                  'cap_optimaltime_penalty': cfg['hateb']['optim']['cap_optimaltime_penalty'],
-                  'weight_agent_robot_safety': cfg['hateb']['optim']['weight_agent_robot_safety']['when_true'] if semantic else cfg['hateb']['optim']['weight_agent_robot_safety']['when_false'],
-                  'weight_agent_agent_safety': cfg['hateb']['optim']['weight_agent_agent_safety']['when_true'] if semantic else cfg['hateb']['optim']['weight_agent_agent_safety']['when_false'],
-                  'weight_agent_robot_rel_vel': cfg['hateb']['optim']['weight_agent_robot_rel_vel']['when_true'] if semantic else cfg['hateb']['optim']['weight_agent_robot_rel_vel']['when_false'],
-                  'weight_agent_robot_visibility': cfg['hateb']['optim']['weight_agent_robot_visibility']['when_true'] if semantic else cfg['hateb']['optim']['weight_agent_robot_visibility']['when_false'],
-                  'weight_invisible_human': cfg['hateb']['optim']['weight_invisible_human'], 'disable_warm_start': cfg['hateb']['optim']['disable_warm_start']},
-        'visualization': {'publish_agents_global_plans': semantic,
-                          'publish_agents_local_plan_fp_poses': semantic,
-                          'publish_agents_local_plan_poses': semantic,
-                          'publish_agents_local_plans': semantic,
-                          'publish_robot_global_plan': cfg['hateb']['visualization']['publish_robot_global_plan'],
-                          'publish_robot_local_plan': cfg['hateb']['visualization']['publish_robot_local_plan'],
-                          'publish_robot_local_plan_fp_poses': cfg['hateb']['visualization']['publish_robot_local_plan_fp_poses'],
-                          'publish_robot_local_plan_poses': cfg['hateb']['visualization']['publish_robot_local_plan_poses']}}
 
 
 def robot_frames(robot, root):
@@ -511,15 +417,20 @@ def append_description_geometry(link, robot, frames, description, laser_frame):
 
 def prepare(description, wrapper, target, experiment_config=None, headless=None,
             scenario=None, scenario_config=None, seed=None, controller=None,
-            require_intended_user_support=False):
+            require_intended_user_support=False, variant=None):
     description, wrapper, target = Path(description), Path(wrapper), Path(target)
     config_path = (Path(experiment_config) if experiment_config else
                    Path(__file__).resolve().parents[1]/'config/experiment.yaml')
     cfg = load_configuration(config_path)
     runtime = cfg['runtime']
+    from evaluation_config import load_evaluation, resolve_variant
+    evaluation_cfg = load_evaluation(config_path.parent)
+    variant = resolve_variant(controller or runtime['controller'], variant, evaluation_cfg)
     scenario = runtime['scenario'] if scenario is None else scenario
     seed = runtime['seed'] if seed is None else seed
     controller = runtime['controller'] if controller is None else controller
+    if controller not in ('fixed_dwal', 'dynamic_dwal'):
+        raise ValueError('Only fixed_dwal and dynamic_dwal are supported')
     headless = runtime['headless'] if headless is None else headless
     try:
         seed = int(seed)
@@ -567,6 +478,16 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
     inertia = add(inertial, 'inertia')
     for k,v in {k: v for k, v in cfg['simulation']['inertial'].items() if k != 'mass'}.items(): add(inertia,k,v)
     pts = append_description_geometry(link, robot, frames, description, exp['frames']['laser'])
+    contact_sensor = add(link, 'sensor', name='evaluation_contacts', type='contact')
+    add(contact_sensor, 'always_on', 'true')
+    add(contact_sensor, 'update_rate', evaluation_cfg['contact_rate_hz'])
+    contacts = add(contact_sensor, 'contact')
+    for collision_shape in link.findall('collision'):
+        add(contacts, 'collision', collision_shape.get('name'))
+    bumper = add(contact_sensor, 'plugin', name='evaluation_contact_ros', filename='libgazebo_ros_bumper.so')
+    contact_ros = add(bumper, 'ros')
+    add(contact_ros, 'remapping', 'bumper_states:=' + evaluation_cfg['topics']['contacts'])
+    add(bumper, 'frame_name', exp['frames']['base'])
     lo, hi = pts.min(axis=0), pts.max(axis=0)
     xmin,ymin = np.floor(lo[:2]*1000)/1000
     xmax,ymax = np.ceil(hi[:2]*1000)/1000
@@ -615,45 +536,19 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         'dwal_generator/DS':float(dynamic_config['sweep_resolution']) if variable_dwal else cfg['generator']['dwal_generator/DS']['when_false'],
         'dwal_generator/Kmax':cfg['experiment']['dwal']['max_curvature'], 'dwal_generator/alpha':cfg['generator']['dwal_generator/alpha'], 'dwal_generator/Hz':cfg['generator']['dwal_generator/Hz']}
     clustering={**common,
+        'dwal_clustering/length_jump_threshold': (float(evaluation_cfg['length_jump_threshold_m'])
+            if variant != 'dynamic_no_split' else float.fromhex('0x1.fffffffffffffp+1023')),
         'dwal_clustering/variable_length':variable_dwal,
         'dwal_clustering/postfix':cfg['clustering']['dwal_clustering/postfix']['when_true'] if variable_dwal else cfg['clustering']['dwal_clustering/postfix']['when_false'],
         'dwal_clustering/spin':cfg['clustering']['dwal_clustering/spin']['when_true'] if variable_dwal else cfg['clustering']['dwal_clustering/spin']['when_false'],
         'dwal_clustering/min_cluster_span':float(dwal_config['min_cluster_span']),
         'dwal_clustering/cluster_separation':int(dwal_config['cluster_separation']),
         'dwal_clustering/subsample_step':cfg['clustering']['dwal_clustering/subsample_step']}
-    if variable_dwal:
-        clustering.update({
-            'odom_topic': cfg['experiment']['topics']['odom'],
-            'odom_timeout': float(timeouts['odom']),
-            'a_brake': float(limits['deceleration']),
-            'reaction_time': float(dynamic_config['reaction_time']),
-            'stop_margin': float(dynamic_config['longitudinal_margin']),
-    })
     (target/'dwal.yaml').write_text(dump_yaml({
         '/dwal_planner/dwal_generator':{'ros__parameters':generator},
         '/dwal_planner/dwal_clustering':{'ros__parameters':clustering}}))
     costmap=costmap_parameters(footprint, False, cfg=cfg)
     (target/'costmap.yaml').write_text(dump_yaml({'/costmap/costmap':{'ros__parameters':costmap}}))
-    for family in ('dwb', 'hateb'):
-        for semantic in (False, True):
-            controller = common_controller(limits, evaluation['goal_tolerance'], cfg=cfg)
-            if family == 'hateb':
-                # HATEB calls setGoalControl() on its concrete goal checker.
-                # The pinned implementation does not safely handle Nav2's
-                # SimpleGoalChecker here, so use the plugin it ships with.
-                controller['general_goal_checker']['plugin'] = \
-                    'hateb_local_planner::HATEBGoalChecker'
-            controller['FollowPath'] = (
-                dwb_plugin(limits, evaluation['goal_tolerance'], cfg=cfg) if family == 'dwb'
-                else hateb_plugin(limits, footprint, semantic,
-                                  evaluation['goal_tolerance'],
-                                  evaluation['personal_space'], cfg=cfg))
-            params = {}
-            params.update(ros_params('/controller_server', controller))
-            params.update(ros_params('/local_costmap/local_costmap',
-                                     costmap_parameters(footprint, semantic and family == 'dwb', cfg=cfg)))
-            (target/f'{family}_{"on" if semantic else "off"}.yaml').write_text(dump_yaml(params))
-
     reference = common_controller(limits, evaluation['goal_tolerance'], cfg=cfg)
     reference['FollowPath'] = {
         'plugin': cfg['reference']['plugin'],
@@ -702,20 +597,6 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         'use_sim_time': cfg['runtime']['use_sim_time'], 'input_timeout': timeouts['final_input'], 'output_rate': cfg['final_cmd_watchdog']['output_rate']}))
     (target/'command_pipeline.yaml').write_text(dump_yaml(pipeline))
 
-    context = dict(exp['context'])
-    context.update({'use_sim_time': cfg['runtime']['use_sim_time'], 'tracks_topic': cfg['experiment']['topics']['tracked_agents_logging'],
-                    'costmap_topic': cfg['experiment']['topics']['costmap'], 'odom_topic': cfg['experiment']['topics']['odom'],
-                    'output_topic': cfg['experiment']['topics']['context'], 'output_rate': context.pop('rate')})
-    (target/'context.yaml').write_text(dump_yaml(ros_params('/context_estimator', context)))
-
-    context_speed = {
-        'use_sim_time': cfg['runtime']['use_sim_time'], 'context_timeout': timeouts['context'],
-        'max_speed': limits['max_linear']}
-    for profile, values in exp['profiles'].items():
-        context_speed[f'profiles.{profile}.max_speed'] = values['max_speed']
-    (target/'context_speed_limit.yaml').write_text(
-        dump_yaml(ros_params('/context_speed_limit', context_speed)))
-
     shared_common = {'use_sim_time': cfg['runtime']['use_sim_time'], 'odom_topic': cfg['experiment']['topics']['odom'],
                      'near_cluster_topic': cfg['experiment']['topics']['clusters_near'],
                      'far_cluster_topic': cfg['experiment']['topics']['clusters_far'],
@@ -756,27 +637,12 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
             dump_yaml(ros_params('/shared_controller', shared)))
 
     path_xy = [value for point in scenario_data['robot']['path_xy'] for value in point]
-    task = {'use_sim_time': cfg['runtime']['use_sim_time'], 'path_xy': path_xy,
+    task = {'global_frame': exp['frames']['global'], 'use_sim_time': cfg['runtime']['use_sim_time'], 'path_xy': path_xy,
             'timeout': evaluation['timeout'],
             'odom_topic': cfg['experiment']['topics']['odom'], 'path_topic': cfg['experiment']['topics']['path']}
     (target/'task.yaml').write_text(dump_yaml(ros_params('/local_task', task)))
 
     (target/'agents.yaml').write_text(dump_yaml(runtime_agents))
-    agent_parameters = runtime_agents['hunav_loader']['ros__parameters']
-    prediction_goals = []
-    for agent_name in agent_parameters['agents']:
-        agent = agent_parameters[agent_name]
-        for goal_name in agent['goals']:
-            goal = agent[goal_name]
-            prediction_goals.append({
-                'name': f'{agent_name}_{goal_name}',
-                'goal': [float(goal['x']), float(goal['y'])]})
-    goals_file = target/'agent_goals.yaml'
-    goals_file.write_text(dump_yaml({'window_size': cfg['predictor']['window_size'], 'goals': prediction_goals}))
-    predictor = {'use_sim_time': cfg['runtime']['use_sim_time'], 'tracked_agents_sub_topic': cfg['experiment']['topics']['tracked_agents_controller'],
-                 'robot_frame_id': cfg['experiment']['frames']['base'], 'map_frame_id': cfg['experiment']['frames']['global'],
-                 'goals_file': str(goals_file), 'publish_markers': cfg['predictor']['publish_markers']}
-    (target/'agent_prediction.yaml').write_text(dump_yaml(ros_params('/agent_path_prediction', predictor)))
     self_filter_padding = cfg['scan_filter']['padding']
     scan_filter = {
         'use_sim_time': cfg['runtime']['use_sim_time'],
@@ -806,7 +672,18 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         'evaluation': evaluation,
         'runtime_world': str(target/'scenario.world'),
         'runtime_agents': str(target/'agents.yaml')}))
-    (target/'resolved_config.yaml').write_text(dump_yaml({**cfg, 'selection': {'controller': 'dynamic_dwal' if variable_dwal else controller_name, 'scenario': scenario_data['name'], 'seed': seed, 'headless': headless}}))
+    (target/'evaluation.json').write_text(__import__('json').dumps({
+        **evaluation_cfg, 'variant': variant,
+        'exit_xy': scenario_data['robot']['path_xy'][-1],
+        'duration_s': float(evaluation['timeout']),
+        'controller': controller_name, 'seed': seed,
+        'topics': {**evaluation_cfg['topics'], **exp['topics']},
+        'reference_timeout_s': float(timeouts['reference']),
+        'odom_timeout_s': float(timeouts['odom']),
+        'global_frame': exp['frames']['global'],
+        'reference_radius_m': float(evaluation_cfg['reference_radius_m']),
+    }, indent=2))
+    (target/'resolved_config.yaml').write_text(dump_yaml({**cfg, 'selection': {'controller': 'dynamic_dwal' if variable_dwal else controller_name, 'scenario': scenario_data['name'], 'seed': seed, 'headless': headless, 'variant': variant}}))
     return target
 
 

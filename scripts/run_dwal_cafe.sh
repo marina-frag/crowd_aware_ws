@@ -37,25 +37,19 @@ while (( ${#extra_args[@]} )); do
   esac
 done
 case "$mode" in run|build|shell|teleop|check|record) ;;
-  *) echo 'Usage: run_dwal_cafe.sh [run|build|shell|teleop|check|record] [fixed_dwal|dwb|hateb|dynamic_dwal] [off|on] [seed] [--scenario NAME]'; exit 2;;
+  *) echo 'Usage: run_dwal_cafe.sh [run|build|shell|teleop|check|record] [fixed_dwal|dynamic_dwal] [off|on] [seed] [--scenario NAME]'; exit 2;;
 esac
 contains_runtime_value() {
   local allowed
   while IFS= read -r allowed; do [[ "$allowed" == "$2" ]] && return 0; done < <(runtime_default "$1")
   return 1
 }
-contains_runtime_value controllers "$controller" || { echo "Unknown controller: $controller"; exit 2; }
+[[ "$controller" == fixed_dwal || "$controller" == dynamic_dwal ]] || { echo "Unknown controller: $controller"; exit 2; }
 contains_runtime_value semantic_modes "$semantics" || { echo "Unknown semantics: $semantics"; exit 2; }
 [[ -f "$repo_dir/src/crowd_aware_simulation/config/scenarios/$scenario.yaml" && "$scenario" != *'/'* && "$scenario" != *'..'* ]] || { echo "Unknown scenario: $scenario"; exit 2; }
 if [[ "$mode" == check ]]; then
-  if [[ "$controller" == fixed_dwal || "$controller" == dynamic_dwal ]]; then
-    exec docker exec iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
-      /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/dynamic_dwal_check.py \
-      --semantics "$semantics" --controller "$controller"
-  fi
   exec docker exec iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
-    /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/smoke_check.py \
-    --controller "$controller" --semantics "$semantics"
+    /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/dwal_runtime_check.py
 fi
 if [[ "$mode" == teleop ]]; then
   exec docker exec -it iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
@@ -63,7 +57,7 @@ if [[ "$mode" == teleop ]]; then
 fi
 if [[ "$mode" == record ]]; then
   exec docker exec -it iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
-    /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/configured_tools.py \
+    /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/record_dwal.py \
     record "$scenario" "$controller" "$semantics" "$seed"
 fi
 if [[ "$mode" == build ]]; then
@@ -95,6 +89,7 @@ gui=${GUI:-$(runtime_default gui)}
 rviz=${RVIZ:-$(runtime_default rviz)}
 reference_mode=${REFERENCE_MODE:-$(runtime_default reference_mode)}
 teleop_input_timeout=${TELEOP_INPUT_TIMEOUT:-}
+variant=${DWAL_VARIANT:-}
 for value in "$headless" "$gui" "$rviz"; do
   case "$value" in true|false) ;; *) echo 'HEADLESS, GUI, and RVIZ must be true or false'; exit 2;; esac
 done
@@ -130,6 +125,7 @@ args=(
   "headless:=$headless"
   "gui:=$gui"
   "rviz:=$rviz"
+  "variant:=$variant"
 )
 
 [[ -z "$teleop_input_timeout" ]] || args+=("teleop_input_timeout:=$teleop_input_timeout")

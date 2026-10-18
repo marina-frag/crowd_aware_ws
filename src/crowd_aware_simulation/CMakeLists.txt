@@ -7,17 +7,15 @@ install(DIRECTORY launch rviz scripts config scenarios worlds
   DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS
   scripts/hunav_to_cohan_bridge.py
-  scripts/cohan_agents_info_adapter.py
+  scripts/record_dwal.py
+  scripts/plot_dwal_bag.py
+  scripts/evaluate_dwal_bag.py
+  scripts/replay_reference.py
+  scripts/dwal_runtime_check.py
+  scripts/reference_task.py
   scripts/constant_speed_limit.py
-  scripts/context_speed_limit.py
-  scripts/context_estimator.py
   scripts/command_guard.py
   scripts/final_cmd_watchdog.py
-  scripts/local_task.py
-  scripts/teleop_path_adapter.py
-  scripts/smoke_check.py
-  scripts/dynamic_dwal_check.py
-  scripts/policy_core.py
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
@@ -32,5 +30,9 @@ install(FILES scripts/setup_config.py scripts/configured_tools.py
   DESTINATION share/${PROJECT_NAME}/scripts)
 # Include nested controllers/ and runtime.json as well as the existing YAML files.
 install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
+
+# Local imports must work both from share/scripts and ros2 run's lib directory.
+install(FILES scripts/evaluation_config.py scripts/dwal_bag.py
+  DESTINATION lib/${PROJECT_NAME})
 
 ament_package()

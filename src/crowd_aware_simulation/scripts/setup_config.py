@@ -29,11 +29,7 @@ def load_configuration(experiment_path):
     path = Path(experiment_path)
     directory = path.parent
     cfg = {'runtime': load_runtime(directory)}
-    files = ['experiment.yaml', 'costmap.yaml', 'controllers/common.yaml',
-             'controllers/dwb.yaml', 'controllers/hateb.yaml',
-             'controllers/reference.yaml', 'controllers/dwal.yaml',
-             'command_pipeline.yaml',
-             'prediction.yaml', 'scan_filter.yaml', 'launch.yaml', 'recording.yaml', 'simulation.yaml']
+    files = ['experiment.yaml', 'costmap.yaml', 'controllers/common.yaml', 'controllers/reference.yaml', 'controllers/dwal.yaml', 'command_pipeline.yaml', 'scan_filter.yaml', 'launch.yaml', 'simulation.yaml']
     for relative in files:
         source = path if relative == 'experiment.yaml' else directory/relative
         data = yaml.safe_load(source.read_text())

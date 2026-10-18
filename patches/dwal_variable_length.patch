@@ -58,15 +58,17 @@ index 4fbb8bb..535b4cf 100644
 diff --git a/src/clustering.cpp b/src/clustering.cpp
 --- a/src/clustering.cpp
 +++ b/src/clustering.cpp
-@@ -1,4 +1,7 @@
+@@ -1,4 +1,9 @@
  #include <memory>
++#include <sstream>
++#include <iomanip>
 +#include <limits>
 +#include <stdexcept>
 +#include <std_msgs/msg/float64_multi_array.hpp>
  #include <string>
  #include <vector>
  #include <map>
-@@ -37,6 +40,7 @@
+@@ -37,6 +42,7 @@
  
  void setColor(visualization_msgs::msg::Marker & path_marker, int c, double cost)
  {
@@ -74,7 +76,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
    path_marker.color.r = colors[3 * c] * cost;
    path_marker.color.g = colors[3 * c + 1] * cost;
    path_marker.color.b = colors[3 * c + 2] * cost;
-@@ -57,23 +61,19 @@
+@@ -57,23 +63,19 @@
  
      node_->get_parameter("dwal_clustering/min_cluster_span", min_cluster_span);
      node_->get_parameter("dwal_clustering/cluster_separation", cluster_separation);
@@ -106,7 +108,14 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
      // Init marker template
      path_marker.header.frame_id = odom_frame;
      path_marker.header.stamp = node_->now();
-@@ -107,7 +107,7 @@
+@@ -102,12 +104,14 @@
+   {
+     markers_publisher = node_->create_publisher<visualization_msgs::msg::MarkerArray>(marker_topic, rclcpp::QoS(2));
+     group_publisher   = node_->create_publisher<dwal_planner::msg::ClusterGroup>(cluster_topic, rclcpp::QoS(2));
++    diagnostics_publisher = node_->create_publisher<std_msgs::msg::String>(
++      cluster_topic + "_diagnostics", rclcpp::QoS(2));
+   }
+ 
    int clusterIdtoIndex(const int& id, const dwal_planner::msg::ClusterGroup* cl_group)
    {
      for (int k = 0; k < static_cast<int>(cl_group->clusters.size()); k++)
@@ -115,7 +124,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
          return k;
      return -1;
    }
-@@ -132,7 +132,7 @@
+@@ -132,7 +136,7 @@
        for (auto &cl : group.clusters)
        {
          cl.id = static_cast<int>(i);
@@ -124,7 +133,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
          prev_ids.push_back(i);
          i++;
        }
-@@ -145,7 +145,7 @@
+@@ -145,7 +149,7 @@
  
      //calculate mean phis for current clusters
      for (auto &cl : group.clusters)
@@ -133,7 +142,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
  
      temp.resize(static_cast<size_t>(cluster_num)); //calculate mean phi distance between clusters
      for (int k = 0; k < prev_cluster_num; k++)
-@@ -190,6 +190,7 @@
+@@ -190,6 +194,7 @@
        for (auto &cl : group.clusters)
        {
          j = 0;
@@ -141,7 +150,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
          if (cl.id == 100)
          {
            while (it != prev_ids.end())
-@@ -210,47 +211,90 @@
+@@ -210,47 +215,99 @@
        prev_ids.push_back(static_cast<unsigned int>(group.clusters[static_cast<size_t>(i)].id));
    }
  
@@ -152,6 +161,8 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
      cluster_num = 0;
      Rcl = levels[static_cast<size_t>(level_index)];
      path_num = static_cast<int>(msg->paths.size());
++    diagnostic_codes.assign(msg->paths.size(), -1);
++    diagnostic_required = required_length;
      free_path_indexes.clear();
 +    sliced_path_indexes.clear();
      cluster_indexes.clear();
@@ -188,12 +199,19 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
 +           (std::isfinite(required_length) && std::isfinite(available_lengths[k]) &&
 +            available_lengths[k] >= required_length) :
 +           (path.colission_r > Rcl && path.level_inds.size() > static_cast<size_t>(level_index))))
++      {
          free_path_indexes.push_back(k);
 -    }
 -
 -    if (free_path_indexes.empty()) //do we have at least 1 valid path?
 -    {
-+      else if (variable_length) ++rejected_braking;
++        diagnostic_codes[static_cast<size_t>(k)] = -4;
++      }
++      else if (variable_length) {
++        ++rejected_braking;
++        if (path.poses.size() >= 2 && std::isfinite(path.curvature) &&
++            std::isfinite(available_lengths[k])) diagnostic_codes[static_cast<size_t>(k)] = -2;
++      }
 +    }
 +    if (variable_length) RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
 +      "DWAL braking: required_length=%.3f accepted=%zu rejected=%zu",
@@ -246,7 +264,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
              min_curv_slice = source_slice_group_ptr->clusters[static_cast<size_t>(source_slice_cluster_index - 1)].paths.back().curvature;
            else
              min_curv_slice = msg->paths.front().curvature;
-@@ -258,7 +302,8 @@
+@@ -258,7 +315,8 @@
  
          case true: //true = left
            min_curv_slice = source_slice_group_ptr->clusters[static_cast<size_t>(source_slice_cluster_index)].paths[0].curvature;
@@ -256,7 +274,15 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
              max_curv_slice = source_slice_group_ptr->clusters[static_cast<size_t>(source_slice_cluster_index + 1)].paths[0].curvature;
            else
              max_curv_slice = msg->paths.back().curvature;
-@@ -275,28 +320,28 @@
+@@ -270,33 +328,36 @@
+             msg->paths[static_cast<size_t>(k)].curvature <= max_curv_slice)
+           sliced_path_indexes.push_back(k);
+ 
++      for (int index : free_path_indexes)
++        if (std::find(sliced_path_indexes.begin(), sliced_path_indexes.end(), index) == sliced_path_indexes.end())
++          diagnostic_codes[static_cast<size_t>(index)] = -3;
+       free_path_indexes = sliced_path_indexes;
+       sliced_path_indexes.clear();
      }
      //////--- end slicing ----------------------------------------------------------------
  
@@ -307,7 +333,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
  
      cluster_num = static_cast<int>(cluster_vecs.size());
      //////--- end clustering -----------------------------------------------------------
-@@ -308,6 +353,10 @@
+@@ -308,6 +369,10 @@
        tmp_cluster.paths.clear(); //clear temp cluster
        tmp_cluster.id = 100; //start with id=100. Will change in correspondence matching later
        tmp_cluster.r = Rcl;
@@ -318,7 +344,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
        tmp_cluster.pose0 = msg->pose0;
        
        for (int &l : clvec)
-@@ -317,7 +366,7 @@
+@@ -317,7 +382,7 @@
            const auto & path = msg->paths[static_cast<size_t>(l)];
            const int last = std::min(
              static_cast<int>(path.poses.size()) - 1,
@@ -327,7 +353,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
  
            for (int j = 0; j <= last; j += subsample_step)
            {
-@@ -333,13 +382,19 @@
+@@ -333,14 +398,23 @@
            }
          }
          tmp_path.curvature = msg->paths[static_cast<size_t>(l)].curvature;
@@ -347,9 +373,13 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
 +      "DWAL clustering: samples=%d free_prefixes=%zu clusters=%d separation=%d min_span=%.3f width_reference=%.3f level=%.3f",
 +      path_num, free_path_indexes.size(), cluster_num, cluster_separation, min_cluster_span, levels.back(), Rcl);
      findCorrespondence(); //set cluster ids according to correspondence matching
++    for (size_t k=0; k<cluster_vecs.size(); ++k)
++      for (int index : cluster_vecs[k])
++        diagnostic_codes[static_cast<size_t>(index)] = static_cast<int>(group.clusters[k].id);
  
      if (*spin != 0)
-@@ -349,14 +404,24 @@
+     {
+@@ -349,14 +423,43 @@
          for (int l : cluster_vecs[static_cast<size_t>(k)])
            setColor(path_array_marker.markers[static_cast<size_t>(l)],
                     group.clusters[static_cast<size_t>(k)].id,
@@ -363,6 +393,22 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
 +  }
 +
 +  void publishMarkers() {
++    // codes indexed by the ORIGINAL sampled_paths index:
++    // >=0 cluster ID, -1 invalid/legacy filter, -2 braking, -3 slice, -4 min span.
++    std::ostringstream data;
++    data << std::setprecision(17) << "{\"stamp\":" << node_->now().seconds()
++         << ",\"required_length\":";
++    if (variable_length && std::isfinite(diagnostic_required)) data << diagnostic_required;
++    else data << "null";
++    data << ",\"codes\":[";
++    for (size_t i=0; i<diagnostic_codes.size(); ++i) {
++      if (i) data << ',';
++      data << diagnostic_codes[i];
++    }
++    data << "]}";
++    std_msgs::msg::String diagnostic;
++    diagnostic.data = data.str();
++    if (diagnostics_publisher) diagnostics_publisher->publish(diagnostic);
 +    for (auto& marker : path_array_marker.markers) {
 +      marker.header.stamp = node_->now();
 +      marker.action = marker.points.size() >= 2 ? visualization_msgs::msg::Marker::ADD :
@@ -371,12 +417,15 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
      markers_publisher->publish(path_array_marker);
    }
 -
++  std::vector<int> diagnostic_codes;
++  double diagnostic_required{0.0};
++  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr diagnostics_publisher;
 +  bool variable_length{false};
 +  double length_jump_threshold{0.0};
    std::vector<int>::iterator spin;
    int level_index{0};
    std::vector<double> levels;
-@@ -409,6 +474,33 @@
+@@ -409,6 +512,33 @@
      ros_node->declare_parameter<std::vector<std::string>>("dwal_clustering/postfix", {});
      ros_node->declare_parameter<std::vector<double>>("common/levels", {});
      ros_node->declare_parameter<std::vector<int64_t>>("dwal_clustering/spin", {});
@@ -410,7 +459,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
      ros_node->declare_parameter<double>("dwal_clustering/min_cluster_span", 0.5);
      ros_node->declare_parameter<int>("dwal_clustering/cluster_separation", 5);
      ros_node->declare_parameter<int>("dwal_clustering/Marker_num", -1);
-@@ -434,7 +526,11 @@
+@@ -434,7 +564,11 @@
        return;
      }
      RCLCPP_INFO(ros_node->get_logger(), "Cluster groups to be created: %zu", group_num);
@@ -423,7 +472,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
  
      do_slice = false;
      group_objects.reserve(group_num);
-@@ -447,6 +543,8 @@
+@@ -447,6 +581,8 @@
        const std::string marker_topic  = markerTopic  + postfixes[k];
        const std::string clusters_topic = clusterTopic + postfixes[k];
        group_objects[k].set_publishers(marker_topic, clusters_topic);
@@ -432,7 +481,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
      }
  
      // Subscriber
-@@ -470,6 +568,24 @@
+@@ -470,6 +606,24 @@
        [this](const std::shared_ptr<dwal_planner::srv::ToggleSlice::Request> req,
               std::shared_ptr<dwal_planner::srv::ToggleSlice::Response> res)
        {
@@ -457,7 +506,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
          clustering_order.clear();
          clustering_order.push_back(req->source_group_index);
          clustering_order.push_back(req->target_group_index);
-@@ -494,39 +610,41 @@
+@@ -494,39 +648,41 @@
  
    void sampledClusterHandler(const dwal_planner::msg::SampledCluster::SharedPtr msg)
    {
