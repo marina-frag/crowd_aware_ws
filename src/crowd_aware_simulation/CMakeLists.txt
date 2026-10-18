@@ -25,4 +25,12 @@ if(BUILD_TESTING)
   add_test(NAME test_robot_geometry
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_robot_geometry.py)
 endif()
+
+# SSOT configuration helpers
+# Helpers are loaded via their share path, not as ROS executables.
+install(FILES scripts/setup_config.py scripts/configured_tools.py
+  DESTINATION share/${PROJECT_NAME}/scripts)
+# Include nested controllers/ and runtime.json as well as the existing YAML files.
+install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME}/config)
+
 ament_package()

@@ -1,0 +1,5 @@
+launch:
+  lifecycle_autostart: true
+  bond_timeout: 0.0
+  hunav_update_rate: 20.0
+  evaluator_frequency: 10.0

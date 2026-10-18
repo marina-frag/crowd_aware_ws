@@ -1,0 +1,104 @@
+hateb:
+  plugin: hateb_local_planner::HATebLocalPlannerROS
+  predict_srv_name: /agent_path_prediction/predict_agent_poses
+  reset_prediction_srv_name: /agent_path_prediction/reset_prediction_services
+  pose_prediction_reset_time: 10.0
+  planning_mode:
+    when_true: 1
+    when_false: 0
+  footprint_model:
+    type: polygon
+  robot:
+    max_vel_y: 0.0
+    acc_lim_y: 0.0
+    min_vel_x: 0.0
+    max_vel_x_backwards: 0.05
+    min_vel_theta: 0.0
+    min_turning_radius: 0.0
+  agent:
+    max_agent_vel_x: 1.5
+    max_agent_vel_y: 1.5
+    max_agent_vel_x_backwards: 1.5
+    max_agent_vel_theta: 1.2
+    agent_acc_lim_x: 0.8
+    agent_acc_lim_y: 0.8
+    agent_acc_lim_theta: 1.0
+  trajectory:
+    teb_autosize: true
+    dt_ref: 0.2
+    dt_hysteresis: 0.02
+    global_plan_overwrite_orientation: true
+    allow_init_with_backwards_motion: false
+    max_global_plan_lookahead_dist: 4.0
+    feasibility_check_no_poses: 5
+    global_plan_viapoint_sep: 0.2
+    shrink_horizon_backup: true
+  hateb:
+    add_invisible_humans: false
+    min_agent_agent_dist: 0.4
+    rel_vel_cost_threshold: 1.5
+    visibility_cost_threshold: 2.5
+    invisible_human_threshold: 1.0
+    prediction_time_horizon: 5.0
+  goal:
+    free_goal_vel: false
+  obstacles:
+    min_obstacle_dist: 0.05
+    include_costmap_obstacles: true
+    costmap_obstacles_behind_robot_dist: 0.5
+    obstacle_poses_affected: 15
+    costmap_converter_plugin: ''
+    costmap_converter_spin_thread: true
+    costmap_converter_rate: 10
+    obstacle_cost_mult: 1.0
+    use_nonlinear_obstacle_penalty: true
+  optim:
+    no_inner_iterations: 5
+    no_outer_iterations: 4
+    optimization_activate: true
+    optimization_verbose: false
+    penalty_epsilon: 0.01
+    weight_max_vel_x: 2.0
+    weight_max_vel_y: 2.0
+    weight_max_agent_vel_x: 4.0
+    weight_max_agent_vel_y: 4.0
+    weight_nominal_agent_vel_x: 2.0
+    weight_max_vel_theta: 1.0
+    weight_max_agent_vel_theta: 2.0
+    weight_acc_lim_x: 1.0
+    weight_acc_lim_y: 1.0
+    weight_agent_acc_lim_x: 2.0
+    weight_agent_acc_lim_y: 2.0
+    weight_acc_lim_theta: 1.0
+    weight_agent_acc_lim_theta: 2.0
+    weight_kinematics_nh: 1000.0
+    weight_kinematics_forward_drive: 100.0
+    weight_kinematics_turning_radius: 0.0
+    weight_optimaltime: 1.0
+    weight_agent_optimaltime: 3.0
+    weight_obstacle: 50.0
+    weight_dynamic_obstacle: 50.0
+    weight_agent_viapoint: 0.5
+    weight_viapoint: 1.0
+    weight_shortest_path: 0.5
+    selection_alternative_time_cost: false
+    cap_optimaltime_penalty: true
+    weight_agent_robot_safety:
+      when_true: 5.0
+      when_false: 0.0
+    weight_agent_agent_safety:
+      when_true: 2.0
+      when_false: 0.0
+    weight_agent_robot_rel_vel:
+      when_true: 5.0
+      when_false: 0.0
+    weight_agent_robot_visibility:
+      when_true: 5.0
+      when_false: 0.0
+    weight_invisible_human: 0.0
+    disable_warm_start: true
+  visualization:
+    publish_robot_global_plan: true
+    publish_robot_local_plan: true
+    publish_robot_local_plan_fp_poses: true
+    publish_robot_local_plan_poses: true

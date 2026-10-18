@@ -1,0 +1,9 @@
+scan_filter:
+  filter1:
+    name: iwalk_self_box
+    type: laser_filters/LaserScanBoxFilter
+    params:
+      min_z: -1.0
+      max_z: 2.0
+      invert: false
+  padding: 0.01

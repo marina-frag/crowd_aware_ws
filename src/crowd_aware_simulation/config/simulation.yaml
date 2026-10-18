@@ -1,0 +1,88 @@
+simulation:
+  lidar:
+    rate: 15
+    samples: 720
+    resolution: 1
+    min_angle: -3.141592653589793
+    max_angle: 3.141592653589793
+    range_min: 0.05
+    range_max: 10
+    range_resolution: 0.01
+  planar_base:
+    update_rate: 50
+    publish_rate: 20
+    publish_odom: 'true'
+    publish_odom_tf: 'true'
+  inertial:
+    mass: 25
+    ixx: 2
+    iyy: 2
+    izz: 2
+    ixy: 0
+    ixz: 0
+    iyz: 0
+  random_agents:
+    normal_goal_force:
+    - 2.0
+    - 1.5
+    normal_obstacle_force:
+    - 10.0
+    - 4.0
+    normal_social_force:
+    - 4.0
+    - 3.5
+    normal_duration:
+    - 40.0
+    - 15.0
+    normal_velocity:
+    - 0.8
+    - 0.35
+    normal_detection_distance:
+    - 4.5
+    - 2.5
+    normal_type5_distance:
+    - 1.5
+    - 0.3
+    normal_type6_distance:
+    - 1.4
+    - 0.3
+    normal_other_force:
+    - 20.0
+    - 6.0
+    uniform_goal_force:
+    - 2.0
+    - 5.0
+    uniform_obstacle_force:
+    - 2.0
+    - 50.0
+    uniform_social_force:
+    - 4.0
+    - 20.0
+    uniform_duration:
+    - 25.0
+    - 60.0
+    uniform_velocity:
+    - 0.6
+    - 1.2
+    uniform_detection_distance:
+    - 2.0
+    - 6.0
+    uniform_type5_distance:
+    - 1.0
+    - 2.5
+    uniform_type6_distance:
+    - 0.8
+    - 1.9
+    uniform_other_force:
+    - 10.0
+    - 25.0
+    min_force: 0.5
+    min_social_force: 3.0
+    min_velocity: 0.4
+    min_detection_distance: 1.5
+  robot_name: iwalk
+  hunav:
+    use_gazebo_obs: true
+    use_navgoal_to_start: false
+    navgoal_topic: /goal_pose
+    ignore_models: ground_plane

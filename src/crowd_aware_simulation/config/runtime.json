@@ -1,0 +1,32 @@
+{
+  "controller": "fixed_dwal",
+  "semantics": "off",
+  "reference_mode": "teleop",
+  "scenario": "dense_crowd",
+  "seed": 1,
+  "headless": true,
+  "gui": false,
+  "rviz": true,
+  "evaluator": true,
+  "use_sim_time": true,
+  "result_directory": "/rosbags",
+  "ros_domain_id": 73,
+  "controllers": [
+    "fixed_dwal",
+    "dynamic_dwal",
+    "dwb",
+    "hateb"
+  ],
+  "semantic_modes": [
+    "off",
+    "on"
+  ],
+  "reference_modes": [
+    "autonomous",
+    "teleop"
+  ],
+  "teleop": {
+    "speed": 0.15,
+    "turn": 0.4
+  }
+}

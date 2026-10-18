@@ -1,0 +1,8 @@
+robot:
+  initial_pose:
+  - 0.0
+  - 0.0
+  - 0.0
+intended_user:
+  enabled: false
+  agent_name: ''

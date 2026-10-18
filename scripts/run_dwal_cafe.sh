@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+runtime_reader="$repo_dir/src/crowd_aware_simulation/scripts/setup_config.py"
+runtime_default() { python3 "$runtime_reader" "$1"; }
 mode=${1:-run}
-controller=${2:-fixed_dwal}
-semantics=${3:-off}
-seed=${4:-1}
-scenario=${SCENARIO:-dense_crowd}
+controller=${2:-$(runtime_default controller)}
+semantics=${3:-$(runtime_default semantics)}
+seed=${4:-$(runtime_default seed)}
+scenario=${SCENARIO:-$(runtime_default scenario)}
 [[ "$seed" =~ ^[0-9]+$ ]] || { echo 'Seed must be a nonnegative integer'; exit 2; }
 # Include untracked source files too; a successful old build must not run silently.
 source_fingerprint() {
@@ -37,14 +39,14 @@ done
 case "$mode" in run|build|shell|teleop|check|record) ;;
   *) echo 'Usage: run_dwal_cafe.sh [run|build|shell|teleop|check|record] [fixed_dwal|dwb|hateb|dynamic_dwal] [off|on] [seed] [--scenario NAME]'; exit 2;;
 esac
-case "$controller" in fixed_dwal|dwb|hateb|dynamic_dwal) ;;
-  *) echo "Unknown controller: $controller"; exit 2;;
-esac
-case "$semantics" in off|on) ;; *) echo "Semantic mode must be off or on"; exit 2;; esac
-case "$scenario" in
-  cafe|open_area|narrow_corridor|doorway|junction|crossing|dense_crowd|occlusion|group_blocking|target_confusion) ;;
-  *) echo "Unknown scenario: $scenario"; exit 2;;
-esac
+contains_runtime_value() {
+  local allowed
+  while IFS= read -r allowed; do [[ "$allowed" == "$2" ]] && return 0; done < <(runtime_default "$1")
+  return 1
+}
+contains_runtime_value controllers "$controller" || { echo "Unknown controller: $controller"; exit 2; }
+contains_runtime_value semantic_modes "$semantics" || { echo "Unknown semantics: $semantics"; exit 2; }
+[[ -f "$repo_dir/src/crowd_aware_simulation/config/scenarios/$scenario.yaml" && "$scenario" != *'/'* && "$scenario" != *'..'* ]] || { echo "Unknown scenario: $scenario"; exit 2; }
 if [[ "$mode" == check ]]; then
   if [[ "$controller" == fixed_dwal || "$controller" == dynamic_dwal ]]; then
     exec docker exec iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
@@ -56,20 +58,13 @@ if [[ "$mode" == check ]]; then
     --controller "$controller" --semantics "$semantics"
 fi
 if [[ "$mode" == teleop ]]; then
-  exec docker exec -it iwalk_dwal /bin/bash /dwal_entrypoint.sh \
-    ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args \
-    --remap cmd_vel:=/reference_cmd -p speed:=0.15 -p turn:=0.4
+  exec docker exec -it iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
+    /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/configured_tools.py teleop
 fi
 if [[ "$mode" == record ]]; then
-  stamp=$(date -u +%Y%m%dT%H%M%SZ)
-  exec docker exec -it iwalk_dwal /bin/bash /dwal_entrypoint.sh ros2 bag record \
-    -o "/rosbags/${scenario}_${controller}_${semantics}_${seed}_${stamp}" \
-    /odom /scan /human_states /robot_states /tracked_agents_logging /tracked_agents /agents_info \
-    /crowd_context /crowd_context/profile /experiment/speed_limit \
-    /experiment/task_result /experiment/command_guard_status \
-    /experiment/path /dwal_planner/sampled_paths /dwal_planner/sampled_pathMarkers /dwal_planner/cluster_markers_far /dwal_planner/clusters_near /dwal_planner/clusters_far \
-    /plan_time /traj_time /teb_feedback /reference_cmd /cmd_vel_selected /cmd_vel_guarded \
-    /cmd_vel_smoothed /cmd_vel_safe /cmd_vel
+  exec docker exec -it iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
+    /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/configured_tools.py \
+    record "$scenario" "$controller" "$semantics" "$seed"
 fi
 if [[ "$mode" == build ]]; then
   if ! docker image inspect pmb2_hunav_simulation:latest >/dev/null 2>&1; then
@@ -95,19 +90,19 @@ if [[ "$mode" == run ]]; then
   fi
   echo "DWAL_UPSTREAM_V4: controller=$controller semantics=$semantics source=$built"
 fi
-headless=${HEADLESS:-true}
-gui=${GUI:-false}
-rviz=${RVIZ:-true}
-reference_mode=${REFERENCE_MODE:-teleop}
-teleop_input_timeout=${TELEOP_INPUT_TIMEOUT:-0.35}
+headless=${HEADLESS:-$(runtime_default headless)}
+gui=${GUI:-$(runtime_default gui)}
+rviz=${RVIZ:-$(runtime_default rviz)}
+reference_mode=${REFERENCE_MODE:-$(runtime_default reference_mode)}
+teleop_input_timeout=${TELEOP_INPUT_TIMEOUT:-}
 for value in "$headless" "$gui" "$rviz"; do
   case "$value" in true|false) ;; *) echo 'HEADLESS, GUI, and RVIZ must be true or false'; exit 2;; esac
 done
 
-case "$reference_mode" in autonomous|teleop) ;; *) echo 'REFERENCE_MODE must be autonomous or teleop'; exit 2;; esac
+contains_runtime_value reference_modes "$reference_mode" || { echo "Invalid REFERENCE_MODE: $reference_mode"; exit 2; }
 mkdir -p "$repo_dir/rosbags"
 
-docker_args=(--rm -it --name iwalk_dwal -e ROS_DOMAIN_ID=73 -v "$repo_dir/rosbags:/rosbags")
+docker_args=(--rm -it --name iwalk_dwal -e "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-$(runtime_default ros_domain_id)}" -v "$repo_dir/rosbags:/rosbags")
 granted=false
 if [[ "$headless" == false || "$gui" == true || "$rviz" == true ]]; then
   : "${DISPLAY:?DISPLAY is required when graphical mode is enabled}"
@@ -130,14 +125,14 @@ args=(
   "controller:=$controller"
   "semantics:=$semantics"
   "reference_mode:=$reference_mode"
-  "teleop_input_timeout:=$teleop_input_timeout"
   "scenario:=$scenario"
   "seed:=$seed"
   "headless:=$headless"
   "gui:=$gui"
   "rviz:=$rviz"
-  "result_file:=/rosbags/metrics_${scenario}_${controller}_${semantics}_seed${seed}"
 )
+
+[[ -z "$teleop_input_timeout" ]] || args+=("teleop_input_timeout:=$teleop_input_timeout")
 
 if [[ "$mode" == shell ]]; then
   docker_args+=(-v "$repo_dir:/workspace")

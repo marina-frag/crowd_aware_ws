@@ -1,0 +1,33 @@
+# Documentation only; deliberately not loaded. These fields were previously unused.
+OPEN_AREA:
+  margin: 0.2
+  reaction_time: 0.35
+  preview_time: 2.5
+NARROW_CORRIDOR:
+  margin: 0.3
+  reaction_time: 0.5
+  preview_time: 3.0
+DOORWAY:
+  margin: 0.38
+  reaction_time: 0.6
+  preview_time: 3.2
+JUNCTION:
+  margin: 0.3
+  reaction_time: 0.55
+  preview_time: 3.2
+DENSE_CROWD:
+  margin: 0.48
+  reaction_time: 0.7
+  preview_time: 3.8
+OCCLUSION:
+  margin: 0.45
+  reaction_time: 0.75
+  preview_time: 4.0
+UNKNOWN:
+  margin: 0.48
+  reaction_time: 0.8
+  preview_time: 4.0
+STALE:
+  margin: 0.55
+  reaction_time: 1.0
+  preview_time: 4.0

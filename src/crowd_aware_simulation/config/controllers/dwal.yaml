@@ -1,0 +1,40 @@
+generator:
+  dwal_generator/min_trans_vel: 0.05
+  dwal_generator/sim_period: 0.2
+  dwal_generator/DS:
+    when_false: 0.05
+  dwal_generator/alpha: 0.05
+  dwal_generator/Hz: 10.0
+clustering:
+  dwal_clustering/postfix:
+    when_true:
+    - far
+    when_false:
+    - near
+    - far
+  dwal_clustering/spin:
+    when_true:
+    - 1
+    when_false:
+    - 1
+    - 1
+  dwal_clustering/subsample_step: 3
+shared_common:
+  use_stamped_twist_input: false
+  use_stamped_twist_output: false
+  allow_no_cluster_passthrough: false
+  social_weight: 0.35
+  c_max: 255.0
+  alpha: 0.7
+  s_min: 0.2
+  Kphi: 1.5
+  v_low: 0.22
+  v_high: 0.28
+  intent.alpha: 0.92
+  intent.beta: 8.0
+  intent.eta: 0.5
+  intent.sigma_min: 0.03
+  intent.min_confidence: 0.0
+  inplace_via_collision_monitor: true
+  intent_reference_radius:
+    when_false: 0.0
