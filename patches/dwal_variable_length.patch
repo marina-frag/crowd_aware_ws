@@ -258,7 +258,7 @@ index 1fb1a5a..0fdaa14 100644
            setColor(path_array_marker.markers[static_cast<size_t>(l)],
                     group.clusters[static_cast<size_t>(k)].id,
 -                   0.3 + 0.7 * (static_cast<double>(msg->paths[static_cast<size_t>(l)].costs[static_cast<size_t>(level_index)]) / 128.0));
-+                   0.3 + 0.7 * (static_cast<double>(msg->paths[l].costs.empty() ? 0 : msg->paths[l].costs[variable_length ? msg->paths[l].costs.size()-1 : level_index]) / 128.0));
++                   1.0);
      }
  
      //publish markers & groups
