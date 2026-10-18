@@ -36,7 +36,7 @@ index 3ab5f40..e5e2ec6 100644
    dwal_planner
  )
 diff --git a/include/shared_controller/shared_controller.h b/include/shared_controller/shared_controller.h
-index 1adf62e..ec1064b 100644
+index 1adf62e..b2e09e6 100644
 --- a/include/shared_controller/shared_controller.h
 +++ b/include/shared_controller/shared_controller.h
 @@ -1,6 +1,8 @@
@@ -159,7 +159,7 @@ index 0a0f3eb..400ae09 100644
    <depend>visualization_msgs</depend>
    <depend>tf2</depend>
 diff --git a/src/helper_fcns.cpp b/src/helper_fcns.cpp
-index ceadfba..d1198ab 100644
+index ceadfba..278f983 100644
 --- a/src/helper_fcns.cpp
 +++ b/src/helper_fcns.cpp
 @@ -4,6 +4,7 @@
@@ -170,45 +170,121 @@ index ceadfba..d1198ab 100644
  
  int sgn(double val)
  {
-@@ -60,14 +61,9 @@ void generatePath(nav_msgs::msg::Path &path_out, double curv, double x0, double
+@@ -60,67 +61,54 @@ void generatePath(nav_msgs::msg::Path &path_out, double curv, double x0, double
    path_out.header.frame_id = frame_id;
    path_out.poses.clear();
  
 -  double A, sincA, x, y, theta, dxLin, dyLin, Rp2;
-+  double x, y, theta, dxLin, dyLin, Rp2;
-   double dth = curv * DS;
-   double S = 0;
+-  double dth = curv * DS;
+-  double S = 0;
 -  A = dth / 2;
 -  if (curv == 0)
 -    sincA = DS;
 -  else
 -    sincA = 2 * std::sin(A) / curv;
- 
-   geometry_msgs::msg::PoseStamped Posetmp;
-   Posetmp.header.stamp = rclcpp::Clock().now();
-@@ -99,9 +95,17 @@ void generatePath(nav_msgs::msg::Path &path_out, double curv, double x0, double
-     S += DS;
-     if (std::fabs(theta - th0) < M_PI_2)
-     {
+-
+-  geometry_msgs::msg::PoseStamped Posetmp;
+-  Posetmp.header.stamp = rclcpp::Clock().now();
+-  Posetmp.header.frame_id = "odom";
+-  
+-  x = x0;
+-  y = y0;
+-  theta = th0;
+-
+-  dxLin = sgn(curv) * DS * -std::sin(th0); // cos(theta0+M_PI_2);
+-  dyLin = sgn(curv) * DS *  std::cos(th0); // sin(theta0+M_PI_2);
+-
+-  // add initial point to the trajectory -- assume it's always free
+-  Posetmp.pose.position.x = x;
+-  Posetmp.pose.position.y = y;
+-
+-  {
+-    tf2::Quaternion q;
+-    q.setRPY(0.0, 0.0, theta);
+-    Posetmp.pose.orientation = tf2::toMsg(q);
+-  }
+-
+-  path_out.poses.push_back(Posetmp);
+-  Rp2 = 0;
+-
+-  // generate path
+-  while (Rp2 < Rc2)
++  // Sampling must always terminate, even for invalid inputs or roundoff at
++  // the arc/tangent boundary. The checked geometry is arc-then-tangent.
++  if (!std::isfinite(curv) || !std::isfinite(x0) || !std::isfinite(y0) ||
++      !std::isfinite(th0) || !std::isfinite(DS) || DS <= 0.0 ||
++      !std::isfinite(Rc2) || Rc2 < 0.0)
++    return;
++
++  const double radius = std::sqrt(Rc2);
++  // Arc-then-tangent reaches radius R in less than 2R of travel.
++  const double step_count = std::ceil(2.0 * radius / DS) + 2.0;
++  constexpr size_t max_points = 100000;
++  if (!std::isfinite(step_count) || step_count > max_points - 1)
++    return;
++
++  geometry_msgs::msg::PoseStamped pose;
++  pose.header = path_out.header;
++  const double cos0 = std::cos(th0), sin0 = std::sin(th0);
++  const double abs_curv = std::fabs(curv);
++  for (size_t i = 0; i <= static_cast<size_t>(step_count); ++i)
+   {
+-    S += DS;
+-    if (std::fabs(theta - th0) < M_PI_2)
+-    {
 -      x += sincA * std::cos(theta + A);
 -      y += sincA * std::sin(theta + A);
 -      theta += dth;
-+      if (std::fabs(curv)<1.e-12) {
-+        x += DS*std::cos(th0); y += DS*std::sin(th0);
-+      } else {
-+        const double before=theta-th0;
-+        const double angle=std::clamp(before+dth,-M_PI_2,M_PI_2);
-+        x=x0+(std::sin(th0+angle)-std::sin(th0))/curv;
-+        y=y0+(std::cos(th0)-std::cos(th0+angle))/curv;
-+        theta=th0+angle;
-+        const double remaining=std::max(0.0,DS-std::fabs((angle-before)/curv));
-+        x+=remaining*std::cos(theta);y+=remaining*std::sin(theta);
-+      }
-     }
-     else
+-    }
+-    else
++    const double distance = static_cast<double>(i) * DS;
++    double forward = distance, lateral = 0.0, angle = 0.0;
++    if (abs_curv >= 1.e-12)
      {
+-      x += dxLin;
+-      y += dyLin;
++      const double arc_length = std::min(distance, M_PI_2 / abs_curv);
++      angle = std::copysign(std::min(abs_curv * arc_length, M_PI_2), curv);
++      const double tangent = distance - arc_length;
++      forward = std::sin(angle) / curv + tangent * std::cos(angle);
++      // Stable for tiny angles: 1-cos(angle) = 2*sin(angle/2)^2.
++      lateral = 2.0 * std::pow(std::sin(0.5 * angle), 2) / curv +
++                tangent * std::sin(angle);
+     }
+-    Rp2 = (x - x0) * (x - x0) + (y - y0) * (y - y0);
+-
+-    Posetmp.pose.position.x = x;
+-    Posetmp.pose.position.y = y;
+-
++    pose.pose.position.x = x0 + forward * cos0 - lateral * sin0;
++    pose.pose.position.y = y0 + forward * sin0 + lateral * cos0;
++    tf2::Quaternion q;
++    q.setRPY(0.0, 0.0, th0 + angle);
++    pose.pose.orientation = tf2::toMsg(q);
++    if (!std::isfinite(pose.pose.position.x) || !std::isfinite(pose.pose.position.y))
+     {
+-      tf2::Quaternion q;
+-      q.setRPY(0.0, 0.0, theta);
+-      Posetmp.pose.orientation = tf2::toMsg(q);
++      path_out.poses.clear();
++      return;
+     }
+-
+-    path_out.poses.push_back(Posetmp);
+-  } // end path generation steps
++    path_out.poses.push_back(pose);
++    if (std::hypot(forward, lateral) >= radius)
++      return;
++  }
++  // Defensive fail-closed result if the analytical bound was not reached.
++  path_out.poses.clear();
+ }
+ 
+-} // namespace cluster_lib
+\ No newline at end of file
++} // namespace cluster_lib
 diff --git a/src/shared_controller.cpp b/src/shared_controller.cpp
-index 98f68fd..a030450 100644
+index 98f68fd..3cfacfc 100644
 --- a/src/shared_controller.cpp
 +++ b/src/shared_controller.cpp
 @@ -3,12 +3,15 @@

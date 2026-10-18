@@ -72,6 +72,18 @@ RUN source /opt/ros/humble/setup.bash && source /home/kiro_ws/install/setup.bash
     python3 -c "from dwal_planner.msg import Path; p=Path(); assert hasattr(p,'available_length') and hasattr(p,'available_radius')"
 RUN source /opt/ros/humble/setup.bash && \
     python3 -c "import subprocess; p='/opt/ros/humble/lib/nav2_lifecycle_manager/lifecycle_manager'; s=subprocess.check_output(['ldd',p],text=True); print(s); assert 'not found' not in s, 'Missing lifecycle-manager runtime libraries'"
+# BEGIN HUNAV_COLLISION_HEIGHT_FIX
+COPY patches/hunav_collision_height.patch /tmp/hunav_collision_height.patch
+RUN cd /home/hunav_gz_ws/src/hunav_gazebo_wrapper && \
+    git apply --check /tmp/hunav_collision_height.patch && \
+    git apply /tmp/hunav_collision_height.patch && \
+    source /opt/ros/humble/setup.bash && \
+    source /home/kiro_ws/install/setup.bash && \
+    source /home/hunav_gz_ws/install/setup.bash && \
+    cd /home/hunav_gz_ws && \
+    colcon build --packages-select hunav_gazebo_wrapper --cmake-args -DCMAKE_BUILD_TYPE=Release
+# END HUNAV_COLLISION_HEIGHT_FIX
+
 COPY docker/dwal/entrypoint.sh /dwal_entrypoint.sh
 # BEGIN DWAL_PLOT_COMPATIBILITY_FIX
 # Parent pip NumPy 2 overrides APT NumPy and breaks Ubuntu's Matplotlib binaries.
