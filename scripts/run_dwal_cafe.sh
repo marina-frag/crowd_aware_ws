@@ -126,6 +126,7 @@ args=(
   "gui:=$gui"
   "rviz:=$rviz"
   "variant:=$variant"
+  "reference_bag:=${REFERENCE_BAG:-}"
 )
 
 [[ -z "$teleop_input_timeout" ]] || args+=("teleop_input_timeout:=$teleop_input_timeout")

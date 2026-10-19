@@ -1,14 +1,16 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "default_dynamic_variant": "dynamic_split",
-  "length_jump_threshold_m": 0.30,
-  "reference_radius_m": 1.80,
+  "length_jump_threshold_m": 0.3,
+  "reference_radius_m": 1.8,
   "reference_motion_threshold_mps": 0.02,
   "stationary_threshold_mps": 0.01,
   "contact_rate_hz": 50.0,
-  "contact_max_gap_s": 0.20,
-  "contact_release_s": 0.20,
-  "ignored_contact_name_fragments": ["ground_plane"],
+  "contact_max_gap_s": 0.2,
+  "contact_release_s": 0.2,
+  "ignored_contact_name_fragments": [
+    "ground_plane"
+  ],
   "topics": {
     "contacts": "/experiment/contacts",
     "braking_requirement": "/dwal_planner/braking_requirement",
@@ -21,5 +23,10 @@
     "far_diagnostics": "/dwal_planner/clusters_far_diagnostics",
     "near_diagnostics": "/dwal_planner/clusters_near_diagnostics",
     "guard_status": "/experiment/command_guard_status"
-  }
+  },
+  "duration_s": 60.0,
+  "replay_start_sim_s": 120.0,
+  "replay_max_lateness_s": 0.15,
+  "minimum_coverage_fraction": 0.95,
+  "robot_model_name": "iwalk"
 }

@@ -674,8 +674,8 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         'runtime_agents': str(target/'agents.yaml')}))
     (target/'evaluation.json').write_text(__import__('json').dumps({
         **evaluation_cfg, 'variant': variant,
-        'exit_xy': scenario_data['robot']['path_xy'][-1],
-        'duration_s': float(evaluation['timeout']),
+        'duration_s': float(evaluation_cfg['duration_s']),
+        'robot_model_name': cfg['simulation']['robot_name'],
         'controller': controller_name, 'seed': seed,
         'topics': {**evaluation_cfg['topics'], **exp['topics']},
         'reference_timeout_s': float(timeouts['reference']),

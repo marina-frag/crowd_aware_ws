@@ -8,7 +8,8 @@ def load_evaluation(directory=None):
     directory = Path(directory) if directory else Path(__file__).resolve().parents[1]/'config'
     cfg = json.loads((directory/'evaluation.json').read_text())
     for key in ('length_jump_threshold_m', 'reference_radius_m', 'reference_motion_threshold_mps',
-                'stationary_threshold_mps', 'contact_rate_hz', 'contact_max_gap_s', 'contact_release_s'):
+                'duration_s', 'replay_start_sim_s', 'replay_max_lateness_s',
+                'minimum_coverage_fraction', 'stationary_threshold_mps', 'contact_rate_hz', 'contact_max_gap_s', 'contact_release_s'):
         if not math.isfinite(cfg[key]) or cfg[key] <= 0:
             raise ValueError(f'{key} must be positive and finite')
     return cfg

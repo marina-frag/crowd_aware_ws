@@ -52,6 +52,9 @@ def setup(context):
     controller = LaunchConfiguration('controller').perform(context)
     semantics = LaunchConfiguration('semantics').perform(context)
     reference_mode = LaunchConfiguration('reference_mode').perform(context)
+    reference_bag = LaunchConfiguration('reference_bag').perform(context)
+    if reference_bag and reference_mode != 'teleop':
+        raise RuntimeError('REFERENCE_BAG requires REFERENCE_MODE=teleop')
     seed = LaunchConfiguration('seed').perform(context)
     scenario = LaunchConfiguration('scenario').perform(context)
     share = Path(get_package_share_directory('crowd_aware_simulation'))
@@ -236,6 +239,18 @@ def setup(context):
     tmp_active.write_text(json.dumps(active, indent=2))
     tmp_active.replace(active_file)
 
+    experiment_handlers = []
+    if reference_bag:
+        if not Path(reference_bag).is_dir():
+            raise RuntimeError(f'Reference bag does not exist: {reference_bag}')
+        experiment = ExecuteProcess(
+            cmd=['python3', str(share/'scripts/run_recorded_experiment.py'), reference_bag],
+            output='screen')
+        runtime_nodes.append(experiment)
+        experiment_handlers.append(RegisterEventHandler(OnProcessExit(
+            target_action=experiment,
+            on_exit=[EmitEvent(event=Shutdown(reason='Recorded experiment finished; inspect replay status'))])))
+
     def after_world(event, _):
         if event.returncode:
             return [EmitEvent(event=Shutdown(reason='HuNav world generation failed'))]
@@ -251,7 +266,7 @@ def setup(context):
         RegisterEventHandler(OnProcessExit(
             target_action=server,
             on_exit=[EmitEvent(event=Shutdown(reason='Gazebo server stopped'))])),
-        loader, generator, manager, world_ready]
+        *experiment_handlers, loader, generator, manager, world_ready]
 
 
 def generate_launch_description():
@@ -265,4 +280,5 @@ def generate_launch_description():
     return LaunchDescription(arguments + [
         DeclareLaunchArgument('teleop_input_timeout', default_value=''),
         DeclareLaunchArgument('variant', default_value=''),
+        DeclareLaunchArgument('reference_bag', default_value=''),
         OpaqueFunction(function=setup)])
