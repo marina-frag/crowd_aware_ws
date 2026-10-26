@@ -1,5 +1,5 @@
 diff --git a/include/dwal_planner/libdwal_cluster.h b/include/dwal_planner/libdwal_cluster.h
-index ff845b4..e4fed6a 100644
+index ff845b4..77995da 100755
 --- a/include/dwal_planner/libdwal_cluster.h
 +++ b/include/dwal_planner/libdwal_cluster.h
 @@ -77,6 +77,12 @@ public:
@@ -15,7 +15,7 @@ index ff845b4..e4fed6a 100644
  
    // Return whatever footprint we have (possibly empty if no param provided)
    std::vector<geometry_msgs::msg::Point> getRobotFootprint() const { return footprint_; }
-@@ -94,7 +99,19 @@ private:
+@@ -94,7 +100,19 @@ private:
      const double ox  = msg.info.origin.position.x;
      const double oy  = msg.info.origin.position.y;
  
@@ -35,7 +35,7 @@ index ff845b4..e4fed6a 100644
  
      // Convert [-1, 0..100] → costmap [0..255]
      const auto& src = msg.data;
-@@ -116,6 +133,8 @@ private:
+@@ -116,6 +134,8 @@ private:
    std::string footprint_param_name_;
    rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr occ_sub_;
    nav2_costmap_2d::Costmap2D cm_;
@@ -56,6 +56,7 @@ index 4fbb8bb..535b4cf 100644
 +float64 available_length
 +float64 available_radius
 diff --git a/src/clustering.cpp b/src/clustering.cpp
+index 1fb1a5a..94fe2b1 100644
 --- a/src/clustering.cpp
 +++ b/src/clustering.cpp
 @@ -1,4 +1,9 @@
@@ -68,7 +69,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
  #include <string>
  #include <vector>
  #include <map>
-@@ -37,6 +42,7 @@
+@@ -37,6 +42,7 @@ double colors[] = {
  
  void setColor(visualization_msgs::msg::Marker & path_marker, int c, double cost)
  {
@@ -76,7 +77,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
    path_marker.color.r = colors[3 * c] * cost;
    path_marker.color.g = colors[3 * c + 1] * cost;
    path_marker.color.b = colors[3 * c + 2] * cost;
-@@ -57,23 +63,19 @@
+@@ -57,23 +63,19 @@ public:
  
      node_->get_parameter("dwal_clustering/min_cluster_span", min_cluster_span);
      node_->get_parameter("dwal_clustering/cluster_separation", cluster_separation);
@@ -108,7 +109,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
      // Init marker template
      path_marker.header.frame_id = odom_frame;
      path_marker.header.stamp = node_->now();
-@@ -102,12 +104,14 @@
+@@ -102,12 +104,14 @@ public:
    {
      markers_publisher = node_->create_publisher<visualization_msgs::msg::MarkerArray>(marker_topic, rclcpp::QoS(2));
      group_publisher   = node_->create_publisher<dwal_planner::msg::ClusterGroup>(cluster_topic, rclcpp::QoS(2));
@@ -124,7 +125,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
          return k;
      return -1;
    }
-@@ -132,7 +136,7 @@
+@@ -132,7 +136,7 @@ public:
        for (auto &cl : group.clusters)
        {
          cl.id = static_cast<int>(i);
@@ -133,7 +134,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
          prev_ids.push_back(i);
          i++;
        }
-@@ -145,7 +149,7 @@
+@@ -145,7 +149,7 @@ public:
  
      //calculate mean phis for current clusters
      for (auto &cl : group.clusters)
@@ -142,7 +143,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
  
      temp.resize(static_cast<size_t>(cluster_num)); //calculate mean phi distance between clusters
      for (int k = 0; k < prev_cluster_num; k++)
-@@ -190,6 +194,7 @@
+@@ -190,6 +194,7 @@ public:
        for (auto &cl : group.clusters)
        {
          j = 0;
@@ -150,7 +151,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
          if (cl.id == 100)
          {
            while (it != prev_ids.end())
-@@ -210,47 +215,99 @@
+@@ -210,47 +215,99 @@ public:
        prev_ids.push_back(static_cast<unsigned int>(group.clusters[static_cast<size_t>(i)].id));
    }
  
@@ -201,10 +202,6 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
 +           (path.colission_r > Rcl && path.level_inds.size() > static_cast<size_t>(level_index))))
 +      {
          free_path_indexes.push_back(k);
--    }
--
--    if (free_path_indexes.empty()) //do we have at least 1 valid path?
--    {
 +        diagnostic_codes[static_cast<size_t>(k)] = -4;
 +      }
 +      else if (variable_length) {
@@ -212,13 +209,14 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
 +        if (path.poses.size() >= 2 && std::isfinite(path.curvature) &&
 +            std::isfinite(available_lengths[k])) diagnostic_codes[static_cast<size_t>(k)] = -2;
 +      }
-+    }
+     }
 +    if (variable_length) RCLCPP_INFO_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
 +      "DWAL braking: required_length=%.3f accepted=%zu rejected=%zu",
 +      required_length, free_path_indexes.size(), rejected_braking);
-+
+ 
+-    if (free_path_indexes.empty()) //do we have at least 1 valid path?
 +    if (free_path_indexes.empty() || msg->pose0.size() < 3)
-+    {
+     {
 +      findCorrespondence();
 +      RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 2000,
 +        "DWAL clustering: samples=%d free_prefixes=%zu groups=0 (empty/invalid geometry)",
@@ -232,18 +230,16 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
      // do cluster slicing with source group, if flag is raised
      //////--- start slicing -----------------------------------------------------------
 -    if (do_slice && source_slice_group_ptr && !source_slice_group_ptr->clusters.empty())
--    {
++    if (do_slice)
+     {
 -      source_slice_cluster_index = clusterIdtoIndex(source_slice_cluster_id, source_slice_group_ptr);
 -      if (source_slice_cluster_index == -1)
--      {
--        RCLCPP_INFO(node_->get_logger(), "--- Source cluster ID not found. Skipping slicing...");
-+    if (do_slice)
-+    {
 +      source_slice_cluster_index = source_slice_group_ptr ?
 +        clusterIdtoIndex(source_slice_cluster_id, source_slice_group_ptr) : -1;
 +      if (source_slice_cluster_index < 0 ||
 +          source_slice_group_ptr->clusters[static_cast<size_t>(source_slice_cluster_index)].paths.empty())
-+      {
+       {
+-        RCLCPP_INFO(node_->get_logger(), "--- Source cluster ID not found. Skipping slicing...");
 +        // Do not publish an unsliced fallback or leave last frame's result alive.
 +        // group and marker points were cleared at the beginning of this cycle.
 +        source_slice_cluster_index = -1;
@@ -264,7 +260,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
              min_curv_slice = source_slice_group_ptr->clusters[static_cast<size_t>(source_slice_cluster_index - 1)].paths.back().curvature;
            else
              min_curv_slice = msg->paths.front().curvature;
-@@ -258,7 +315,8 @@
+@@ -258,7 +315,8 @@ public:
  
          case true: //true = left
            min_curv_slice = source_slice_group_ptr->clusters[static_cast<size_t>(source_slice_cluster_index)].paths[0].curvature;
@@ -274,7 +270,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
              max_curv_slice = source_slice_group_ptr->clusters[static_cast<size_t>(source_slice_cluster_index + 1)].paths[0].curvature;
            else
              max_curv_slice = msg->paths.back().curvature;
-@@ -270,33 +328,36 @@
+@@ -270,33 +328,36 @@ public:
              msg->paths[static_cast<size_t>(k)].curvature <= max_curv_slice)
            sliced_path_indexes.push_back(k);
  
@@ -300,14 +296,6 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
 -        cluster_indexes.clear(); //clear to begin new cluster
 -        phi0 = cluster_lib::curv2phi(msg->paths[static_cast<size_t>(free_path_indexes[static_cast<size_t>(k)])].curvature, Rcl);
 -        cluster_indexes.push_back(free_path_indexes[static_cast<size_t>(k)]); //add current path
--      }
--      else if (Dind <= 2)
--        cluster_indexes.push_back(free_path_indexes[static_cast<size_t>(k)]); //add current path
--    }
--
--    Dphip = cluster_lib::curv2phi(msg->paths[static_cast<size_t>(free_path_indexes.back())].curvature, Rcl) - phi0;
--    if (cluster_lib::clusterChord(Rcl, Dphip) >= min_cluster_span) //check last curv
--      cluster_vecs.push_back(cluster_indexes);
 +    // Group original sample indices. Width is measured at the configured far
 +    // reference level, never at the shortest member's clipped endpoint.
 +    const auto finish = [&]() {
@@ -326,14 +314,20 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
 +          std::abs(available_lengths[static_cast<size_t>(index)] -
 +                   available_lengths[static_cast<size_t>(previous)]) > length_jump_threshold;
 +        if (index_gap || length_jump) finish();
-+      }
+       }
+-      else if (Dind <= 2)
+-        cluster_indexes.push_back(free_path_indexes[static_cast<size_t>(k)]); //add current path
 +      cluster_indexes.push_back(index);
-+    }
+     }
+-
+-    Dphip = cluster_lib::curv2phi(msg->paths[static_cast<size_t>(free_path_indexes.back())].curvature, Rcl) - phi0;
+-    if (cluster_lib::clusterChord(Rcl, Dphip) >= min_cluster_span) //check last curv
+-      cluster_vecs.push_back(cluster_indexes);
 +    finish();
  
      cluster_num = static_cast<int>(cluster_vecs.size());
      //////--- end clustering -----------------------------------------------------------
-@@ -308,6 +369,10 @@
+@@ -308,8 +369,12 @@ public:
        tmp_cluster.paths.clear(); //clear temp cluster
        tmp_cluster.id = 100; //start with id=100. Will change in correspondence matching later
        tmp_cluster.r = Rcl;
@@ -342,9 +336,12 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
 +        tmp_cluster.r = std::min(tmp_cluster.r, std::hypot(end.x-msg->pose0[0], end.y-msg->pose0[1]));
 +      }
        tmp_cluster.pose0 = msg->pose0;
-       
+-      
++
        for (int &l : clvec)
-@@ -317,7 +382,7 @@
+       {
+         if (*spin != 0)
+@@ -317,7 +382,7 @@ public:
            const auto & path = msg->paths[static_cast<size_t>(l)];
            const int last = std::min(
              static_cast<int>(path.poses.size()) - 1,
@@ -353,18 +350,19 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
  
            for (int j = 0; j <= last; j += subsample_step)
            {
-@@ -333,14 +398,23 @@
+@@ -333,14 +398,23 @@ public:
            }
          }
          tmp_path.curvature = msg->paths[static_cast<size_t>(l)].curvature;
 -        tmp_path.phi = cluster_lib::curv2phi(msg->paths[static_cast<size_t>(l)].curvature, Rcl);
 -        tmp_path.cost = msg->paths[static_cast<size_t>(l)].costs[static_cast<size_t>(level_index)];
+-        tmp_cluster.paths.push_back(tmp_path); //add path to current cluster    
 +        const auto& path = msg->paths[static_cast<size_t>(l)];
 +        tmp_path.phi = cluster_lib::curv2phi(path.curvature, tmp_cluster.r);
 +        tmp_path.cost = path.costs.empty() ? 0 : path.costs[variable_length ? path.costs.size()-1 : level_index];
 +        tmp_path.available_length = available_lengths[static_cast<size_t>(l)];
 +        tmp_path.available_radius = std::hypot(path.poses.back().x-msg->pose0[0], path.poses.back().y-msg->pose0[1]);
-         tmp_cluster.paths.push_back(tmp_path); //add path to current cluster    
++        tmp_cluster.paths.push_back(tmp_path); //add path to current cluster
        }
        group.clusters.push_back(tmp_cluster);
      }
@@ -379,7 +377,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
  
      if (*spin != 0)
      {
-@@ -349,14 +423,43 @@
+@@ -349,14 +423,43 @@ public:
          for (int l : cluster_vecs[static_cast<size_t>(k)])
            setColor(path_array_marker.markers[static_cast<size_t>(l)],
                     group.clusters[static_cast<size_t>(k)].id,
@@ -389,9 +387,10 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
  
      //publish markers & groups
      group_publisher->publish(group);
+-    markers_publisher->publish(path_array_marker);
 +    publishMarkers();
-+  }
-+
+   }
+ 
 +  void publishMarkers() {
 +    // codes indexed by the ORIGINAL sampled_paths index:
 +    // >=0 cluster ID, -1 invalid/legacy filter, -2 braking, -3 slice, -4 min span.
@@ -414,9 +413,8 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
 +      marker.action = marker.points.size() >= 2 ? visualization_msgs::msg::Marker::ADD :
 +                                               visualization_msgs::msg::Marker::DELETE;
 +    }
-     markers_publisher->publish(path_array_marker);
-   }
--
++    markers_publisher->publish(path_array_marker);
++  }
 +  std::vector<int> diagnostic_codes;
 +  double diagnostic_required{0.0};
 +  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr diagnostics_publisher;
@@ -425,7 +423,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
    std::vector<int>::iterator spin;
    int level_index{0};
    std::vector<double> levels;
-@@ -409,6 +512,33 @@
+@@ -409,6 +512,33 @@ public:
      ros_node->declare_parameter<std::vector<std::string>>("dwal_clustering/postfix", {});
      ros_node->declare_parameter<std::vector<double>>("common/levels", {});
      ros_node->declare_parameter<std::vector<int64_t>>("dwal_clustering/spin", {});
@@ -459,7 +457,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
      ros_node->declare_parameter<double>("dwal_clustering/min_cluster_span", 0.5);
      ros_node->declare_parameter<int>("dwal_clustering/cluster_separation", 5);
      ros_node->declare_parameter<int>("dwal_clustering/Marker_num", -1);
-@@ -434,7 +564,11 @@
+@@ -434,7 +564,11 @@ public:
        return;
      }
      RCLCPP_INFO(ros_node->get_logger(), "Cluster groups to be created: %zu", group_num);
@@ -472,7 +470,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
  
      do_slice = false;
      group_objects.reserve(group_num);
-@@ -447,6 +581,8 @@
+@@ -447,6 +581,8 @@ public:
        const std::string marker_topic  = markerTopic  + postfixes[k];
        const std::string clusters_topic = clusterTopic + postfixes[k];
        group_objects[k].set_publishers(marker_topic, clusters_topic);
@@ -481,7 +479,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
      }
  
      // Subscriber
-@@ -470,6 +606,24 @@
+@@ -470,6 +606,24 @@ public:
        [this](const std::shared_ptr<dwal_planner::srv::ToggleSlice::Request> req,
               std::shared_ptr<dwal_planner::srv::ToggleSlice::Response> res)
        {
@@ -506,7 +504,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
          clustering_order.clear();
          clustering_order.push_back(req->source_group_index);
          clustering_order.push_back(req->target_group_index);
-@@ -494,39 +648,41 @@
+@@ -494,39 +648,41 @@ public:
  
    void sampledClusterHandler(const dwal_planner::msg::SampledCluster::SharedPtr msg)
    {
@@ -536,11 +534,10 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
 -      }
 -      else
 -        trg_cluster.source_slice_cluster_index = -1;
--
--      trg_cluster.doClustering(msg); //do target group clustering
 +      // The persistent ID is resolved against the current group inside
 +      // doClustering(). No map insertion or redundant ID rewrite is needed.
-+
+ 
+-      trg_cluster.doClustering(msg); //do target group clustering
 +      trg_cluster.doClustering(msg, required_length); //do target group clustering
  
        for (size_t k = 2; k < group_num; k++)
@@ -564,7 +561,7 @@ diff --git a/src/clustering.cpp b/src/clustering.cpp
    rclcpp::Service<dwal_planner::srv::ToggleClusters>::SharedPtr toggleSpinService;
    rclcpp::Service<dwal_planner::srv::ToggleSlice>::SharedPtr toggleSliceService;
 diff --git a/src/libdwal_cluster.cpp b/src/libdwal_cluster.cpp
-index e4e3107..7cea964 100644
+index e4e3107..e2b0272 100644
 --- a/src/libdwal_cluster.cpp
 +++ b/src/libdwal_cluster.cpp
 @@ -202,6 +202,7 @@ int SimpleTrajectoryGenerator::getTrajectories(std::vector<dwal_planner::msg::Sa
@@ -705,14 +702,15 @@ index e4e3107..7cea964 100644
  
      footprintCost = cmap_model->footprintCost(x, y, theta, costmap->getRobotFootprint());
 -    if (footprintCost != nav2_costmap_2d::NO_INFORMATION  && footprintCost > nav2_costmap_2d::MAX_NON_OBSTACLE)      
-+    if (footprintCost < 0 || footprintCost > nav2_costmap_2d::MAX_NON_OBSTACLE)
-     {    
+-    {    
 -      traj.costs.back() = nav2_costmap_2d::LETHAL_OBSTACLE; // trajectory collides.
++    if (footprintCost < 0 || footprintCost > nav2_costmap_2d::MAX_NON_OBSTACLE)
++    {
        traj.colission_r = std::sqrt(Rp2);
        stop = true;
      }
 diff --git a/src/trajectory_generator.cpp b/src/trajectory_generator.cpp
-index 768c4a0..415063a 100644
+index 768c4a0..9b44a58 100644
 --- a/src/trajectory_generator.cpp
 +++ b/src/trajectory_generator.cpp
 @@ -45,6 +45,7 @@ public:
@@ -723,12 +721,16 @@ index 768c4a0..415063a 100644
    double sim_period{}, DS{}, alpha{}, kmax{}, Hz{}, Rmax{}, Dphi{}, phi0{};
    std::vector<double> pos, vel, levels;
  
-@@ -59,6 +60,31 @@ public:
+@@ -59,6 +60,35 @@ public:
  
    void odomHandler(const nav_msgs::msg::Odometry::SharedPtr msg)
    {
 +    const double now = node_->now().seconds();
 +    const double stamp = rclcpp::Time(msg->header.stamp).seconds();
++    RCLCPP_INFO(
++    node_->get_logger(),
++    "Braking timing: now=%.6f stamp=%.6f age=%.6f s",
++    now, stamp, now - stamp);
 +    const auto& position=msg->pose.pose.position;
 +    const auto& orientation=msg->pose.pose.orientation;
 +    if (!std::isfinite(position.x) || !std::isfinite(position.y) ||
@@ -755,7 +757,7 @@ index 768c4a0..415063a 100644
      pos[0] = msg->pose.pose.position.x;
      pos[1] = msg->pose.pose.position.y;
      pos[2] = tf2::getYaw(msg->pose.pose.orientation);
-@@ -90,8 +116,12 @@ public:
+@@ -90,8 +120,12 @@ public:
  
      sampledCl_publisher->publish(cluster);
  
@@ -770,7 +772,7 @@ index 768c4a0..415063a 100644
  
      for (int l = 0; l < path_num; l++)
      {
-@@ -102,6 +132,11 @@ public:
+@@ -102,6 +136,11 @@ public:
          cluster_markers.markers[static_cast<size_t>(l)].points.push_back(p0);
        }
      }
@@ -782,7 +784,7 @@ index 768c4a0..415063a 100644
      sampledCl_markers_publisher->publish(cluster_markers);
    }
  };
-@@ -109,6 +144,9 @@ public:
+@@ -109,6 +148,9 @@ public:
  TrajectoryGenerator::TrajectoryGenerator(const std::shared_ptr<rclcpp::Node>& node)
  : node_(node), costmap(nullptr), cmap_model(nullptr)
  {
@@ -792,7 +794,7 @@ index 768c4a0..415063a 100644
    tfBuff = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
    tfBuff->setUsingDedicatedThread(true);
    tfl = std::make_unique<tf2_ros::TransformListener>(*tfBuff);
-@@ -241,6 +279,11 @@ TrajectoryGenerator::TrajectoryGenerator(const std::shared_ptr<rclcpp::Node>& no
+@@ -241,6 +283,11 @@ TrajectoryGenerator::TrajectoryGenerator(const std::shared_ptr<rclcpp::Node>& no
    RCLCPP_INFO(node_->get_logger(), " --> min_vel_trans = %f", alims.min_vel_trans);
    RCLCPP_INFO(node_->get_logger(), " --> max_vel_theta = %f", alims.max_vel_theta);
  
@@ -804,7 +806,7 @@ index 768c4a0..415063a 100644
    Rmax = levels.back();
  
    Dphi = 2 * std::asin(alpha / (2 * Rmax));
-@@ -252,8 +295,7 @@ TrajectoryGenerator::TrajectoryGenerator(const std::shared_ptr<rclcpp::Node>& no
+@@ -252,8 +299,7 @@ TrajectoryGenerator::TrajectoryGenerator(const std::shared_ptr<rclcpp::Node>& no
    marker_num = static_cast<int>(2 * std::fabs(phi0) / Dphi + 1);
    RCLCPP_INFO(node_->get_logger(), "----marker_num=  %d", marker_num);
  

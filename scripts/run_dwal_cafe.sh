@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-runtime_reader="$repo_dir/src/crowd_aware_simulation/scripts/setup_config.py"
+runtime_reader="$repo_dir/src/crowd_aware_simulation/scripts/configuration.py"
 runtime_default() { python3 "$runtime_reader" "$1"; }
 mode=${1:-run}
 controller=${2:-$(runtime_default controller)}
@@ -57,7 +57,7 @@ if [[ "$mode" == teleop ]]; then
 fi
 if [[ "$mode" == record ]]; then
   exec docker exec -it iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
-    /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/record_dwal.py \
+    /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/experiment.py record \
     record "$scenario" "$controller" "$semantics" "$seed"
 fi
 if [[ "$mode" == build ]]; then
@@ -125,14 +125,23 @@ args=(
   "headless:=$headless"
   "gui:=$gui"
   "rviz:=$rviz"
-  "variant:=$variant"
-  "reference_bag:=${REFERENCE_BAG:-}"
 )
 
-[[ -z "$teleop_input_timeout" ]] || args+=("teleop_input_timeout:=$teleop_input_timeout")
+if [[ -n "$variant" ]]; then
+  args+=("variant:=$variant")
+fi
+
+if [[ -n "${REFERENCE_BAG:-}" ]]; then
+  args+=("reference_bag:=$REFERENCE_BAG")
+fi
+
+if [[ -n "$teleop_input_timeout" ]]; then
+  args+=("teleop_input_timeout:=$teleop_input_timeout")
+fi
 
 if [[ "$mode" == shell ]]; then
   docker_args+=(-v "$repo_dir:/workspace")
   args=(bash)
 fi
+
 docker run "${docker_args[@]}" iwalk_dwal:latest "${args[@]}"

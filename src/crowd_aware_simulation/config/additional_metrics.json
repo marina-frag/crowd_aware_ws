@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "grid_step_s": 0.1,
+  "human_timeout_s": 0.3,
+  "personal_zone_center_distance_m": 1.2,
+  "smoothing_samples": 5,
+  "oscillation_omega_threshold_radps": 0.08,
+  "oscillation_min_lobe_s": 0.2,
+  "oscillation_max_reversal_s": 1.0,
+  "oscillation_reference_variation_radps": 0.1,
+  "oscillation_reference_padding_s": 0.5,
+  "cluster_max_gap_s": 0.5,
+  "cluster_jaccard_threshold": 0.7,
+  "cluster_overlap_ambiguity_threshold": 0.1
+}

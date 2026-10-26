@@ -2,6 +2,9 @@ scenario:
   name: dense_crowd
   world: open_area.world
   agents: agents_dense_crowd.yaml
+  goal_variation:
+    baseline_seed: 1
+    max_offset_m: 0.30
   robot:
     path_xy:
     - - 0.0

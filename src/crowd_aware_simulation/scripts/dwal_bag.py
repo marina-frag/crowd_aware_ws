@@ -10,7 +10,7 @@ def locate(path):
     if not (bag/'metadata.yaml').exists() and not list(bag.glob('*.db3')):
         raise ValueError(f'No bag metadata or SQLite recordings at {bag}')
     meta = next((p for p in (path/'evaluation.json', bag.parent/'evaluation.json') if p.exists()), None)
-    if meta is None: raise ValueError('Missing evaluation.json; use record_dwal.py for reproducible bags')
+    if meta is None: raise ValueError('Missing evaluation.json; use experiment.py record for reproducible bags')
     return bag, json.loads(meta.read_text())
 
 
@@ -102,7 +102,7 @@ def sqlite_events(bag, topics=None):
     from rosidl_runtime_py.utilities import get_message
     import warnings
     warnings.warn('Bag metadata missing: reading saved SQLite messages directly. '
-                  'An active recording is read as a snapshot; use plot_dwal_live.py '
+                  'An active recording is read as a snapshot; use plot.py live '
                   'for continuous live display. An interrupted recording may have lost its final messages.')
     classes = {}
     for ns, topic, kind, raw in sqlite_rows(bag, topics):

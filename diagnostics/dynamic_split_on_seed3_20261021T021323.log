@@ -1,0 +1,1377 @@
+DWAL_UPSTREAM_V4: controller=dynamic_dwal semantics=on source=7d4082430af6a5e1638d682ef243150ab8e0efd3cdc55cb103ed1c31b1cfed65
+localuser:root being added to access control list
+d[INFO] [launch]: All log files can be found below /root/.ros/log/2026-10-20-23-13-32-069815-73275f2e45fe-1
+[INFO] [launch]: Default logging verbosity is set to INFO
+Scenario=dense_crowd, experiment=dynamic_dwal/on, reference=teleop, seed=3; runtime files=/tmp/crowd_aware_p4euupz4
+DWAL_UPSTREAM_V4: dwal_planner/dwal_generator + dwal_clustering + bayesian_shared_control/shared_control_node; variable_length=True
+[INFO] [hunav_loader-1]: process started with pid [114]
+[INFO] [hunav_gazebo_world_generator-2]: process started with pid [116]
+[INFO] [hunav_agent_manager-3]: process started with pid [118]
+[INFO] [python3-4]: process started with pid [120]
+[hunav_loader-1] [INFO] [1792538012.827994737] [hunav_loader]: map params: open_area
+[hunav_loader-1] [INFO] [1792538012.828079027] [hunav_loader]: Agent name: walker1
+[hunav_loader-1] [INFO] [1792538012.828112618] [hunav_loader]: 	id: 1
+[hunav_loader-1] [INFO] [1792538012.828128453] [hunav_loader]: 	skin: 0
+[hunav_loader-1] [INFO] [1792538012.828146059] [hunav_loader]: 	group_id: -1
+[hunav_loader-1] [INFO] [1792538012.828162295] [hunav_loader]: 	max_vel: 1.00
+[hunav_loader-1] [INFO] [1792538012.828180023] [hunav_loader]: 	radius: 0.40
+[hunav_loader-1] [INFO] [1792538012.828197756] [hunav_loader]: 	behavior type: 1
+[hunav_loader-1] [INFO] [1792538012.828212228] [hunav_loader]: 	beh configuration: 1
+[hunav_loader-1] [INFO] [1792538012.828303936] [hunav_loader]: 	beh duration: 120.00
+[hunav_loader-1] [INFO] [1792538012.828315571] [hunav_loader]: 	beh vel: 0.75
+[hunav_loader-1] [INFO] [1792538012.828324174] [hunav_loader]: 	beh just_once: 1
+[hunav_loader-1] [INFO] [1792538012.828331044] [hunav_loader]: 	beh dist: 0.00
+[hunav_loader-1] [INFO] [1792538012.828338631] [hunav_loader]: 	beh goalForceFactor: 2.00
+[hunav_loader-1] [INFO] [1792538012.828343517] [hunav_loader]: 	beh obstacleForceFactor: 10.00
+[hunav_loader-1] [INFO] [1792538012.828348961] [hunav_loader]: 	beh socialForceFactor: 5.00
+[hunav_loader-1] [INFO] [1792538012.828353677] [hunav_loader]: 	beh otherForceFactor: 20.00
+[hunav_loader-1] [INFO] [1792538012.828369687] [hunav_loader]: 	posex: 2.00
+[hunav_loader-1] [INFO] [1792538012.828386002] [hunav_loader]: 	posey: -2.50
+[hunav_loader-1] [INFO] [1792538012.828398958] [hunav_loader]: 	posez: 1.25
+[hunav_loader-1] [INFO] [1792538012.828411432] [hunav_loader]: 	poseh: 1.57
+[hunav_loader-1] [INFO] [1792538012.828426062] [hunav_loader]: 	goal_radius: 0.30
+[hunav_loader-1] [INFO] [1792538012.828439794] [hunav_loader]: 	cyclic_goals: 1
+[hunav_loader-1] [INFO] [1792538012.828454802] [hunav_loader]: 	Goal: g0
+[hunav_loader-1] [INFO] [1792538012.828468177] [hunav_loader]: 		gx: 1.78
+[hunav_loader-1] [INFO] [1792538012.828481114] [hunav_loader]: 		gy: 2.50
+[hunav_loader-1] [INFO] [1792538012.828497854] [hunav_loader]: 		gh: 1.57
+[hunav_loader-1] [INFO] [1792538012.828502826] [hunav_loader]: 	Goal: g1
+[hunav_loader-1] [INFO] [1792538012.828553985] [hunav_loader]: 		gx: 2.20
+[hunav_loader-1] [INFO] [1792538012.828569127] [hunav_loader]: 		gy: -2.50
+[hunav_loader-1] [INFO] [1792538012.828583253] [hunav_loader]: 		gh: -1.57
+[hunav_loader-1] [INFO] [1792538012.828588794] [hunav_loader]: Agent name: walker2
+[hunav_loader-1] [INFO] [1792538012.828604750] [hunav_loader]: 	id: 2
+[hunav_loader-1] [INFO] [1792538012.828619642] [hunav_loader]: 	skin: 1
+[hunav_loader-1] [INFO] [1792538012.828645910] [hunav_loader]: 	group_id: -1
+[hunav_loader-1] [INFO] [1792538012.828680244] [hunav_loader]: 	max_vel: 0.90
+[hunav_loader-1] [INFO] [1792538012.828696670] [hunav_loader]: 	radius: 0.40
+[hunav_loader-1] [INFO] [1792538012.828712010] [hunav_loader]: 	behavior type: 1
+[hunav_loader-1] [INFO] [1792538012.828726728] [hunav_loader]: 	beh configuration: 1
+[hunav_loader-1] [INFO] [1792538012.828814802] [hunav_loader]: 	beh duration: 120.00
+[hunav_loader-1] [INFO] [1792538012.828820981] [hunav_loader]: 	beh vel: 0.70
+[hunav_loader-1] [INFO] [1792538012.828825710] [hunav_loader]: 	beh just_once: 1
+[hunav_loader-1] [INFO] [1792538012.828830373] [hunav_loader]: 	beh dist: 0.00
+[hunav_loader-1] [INFO] [1792538012.828843556] [hunav_loader]: 	beh goalForceFactor: 2.00
+[hunav_loader-1] [INFO] [1792538012.828848721] [hunav_loader]: 	beh obstacleForceFactor: 10.00
+[hunav_loader-1] [INFO] [1792538012.828853887] [hunav_loader]: 	beh socialForceFactor: 5.00
+[hunav_loader-1] [INFO] [1792538012.828858412] [hunav_loader]: 	beh otherForceFactor: 20.00
+[hunav_loader-1] [INFO] [1792538012.828873279] [hunav_loader]: 	posex: 3.00
+[hunav_loader-1] [INFO] [1792538012.828890147] [hunav_loader]: 	posey: 2.50
+[hunav_loader-1] [INFO] [1792538012.828918612] [hunav_loader]: 	posez: 1.25
+[hunav_loader-1] [INFO] [1792538012.828958210] [hunav_loader]: 	poseh: -1.57
+[hunav_loader-1] [INFO] [1792538012.829015907] [hunav_loader]: 	goal_radius: 0.30
+[hunav_loader-1] [INFO] [1792538012.829060297] [hunav_loader]: 	cyclic_goals: 1
+[hunav_loader-1] [INFO] [1792538012.829105020] [hunav_loader]: 	Goal: g0
+[hunav_loader-1] [INFO] [1792538012.829146249] [hunav_loader]: 		gx: 3.21
+[hunav_loader-1] [INFO] [1792538012.829225292] [hunav_loader]: 		gy: -2.50
+[hunav_loader-1] [INFO] [1792538012.829272576] [hunav_loader]: 		gh: -1.57
+[hunav_loader-1] [INFO] [1792538012.829284128] [hunav_loader]: 	Goal: g1
+[hunav_loader-1] [INFO] [1792538012.829322124] [hunav_loader]: 		gx: 3.29
+[hunav_loader-1] [INFO] [1792538012.829357466] [hunav_loader]: 		gy: 2.50
+[hunav_loader-1] [INFO] [1792538012.829392953] [hunav_loader]: 		gh: 1.57
+[hunav_loader-1] [INFO] [1792538012.829404910] [hunav_loader]: Agent name: walker3
+[hunav_loader-1] [INFO] [1792538012.829441656] [hunav_loader]: 	id: 3
+[hunav_loader-1] [INFO] [1792538012.829488222] [hunav_loader]: 	skin: 2
+[hunav_loader-1] [INFO] [1792538012.829533322] [hunav_loader]: 	group_id: -1
+[hunav_loader-1] [INFO] [1792538012.829593394] [hunav_loader]: 	max_vel: 1.00
+[hunav_loader-1] [INFO] [1792538012.829627973] [hunav_loader]: 	radius: 0.40
+[hunav_loader-1] [INFO] [1792538012.829745034] [hunav_loader]: 	behavior type: 1
+[hunav_loader-1] [INFO] [1792538012.829803514] [hunav_loader]: 	beh configuration: 1
+[hunav_loader-1] [INFO] [1792538012.830173066] [hunav_loader]: 	beh duration: 120.00
+[hunav_loader-1] [INFO] [1792538012.830195729] [hunav_loader]: 	beh vel: 0.80
+[hunav_loader-1] [INFO] [1792538012.830207744] [hunav_loader]: 	beh just_once: 1
+[hunav_loader-1] [INFO] [1792538012.830217593] [hunav_loader]: 	beh dist: 0.00
+[hunav_loader-1] [INFO] [1792538012.830228237] [hunav_loader]: 	beh goalForceFactor: 2.00
+[hunav_loader-1] [INFO] [1792538012.830239333] [hunav_loader]: 	beh obstacleForceFactor: 10.00
+[hunav_loader-1] [INFO] [1792538012.830250807] [hunav_loader]: 	beh socialForceFactor: 5.00
+[hunav_loader-1] [INFO] [1792538012.830261194] [hunav_loader]: 	beh otherForceFactor: 20.00
+[hunav_loader-1] [INFO] [1792538012.830318732] [hunav_loader]: 	posex: 4.00
+[hunav_loader-1] [INFO] [1792538012.830371457] [hunav_loader]: 	posey: -2.50
+[hunav_loader-1] [INFO] [1792538012.830450530] [hunav_loader]: 	posez: 1.25
+[hunav_loader-1] [INFO] [1792538012.830505686] [hunav_loader]: 	poseh: 1.57
+[hunav_loader-1] [INFO] [1792538012.830567048] [hunav_loader]: 	goal_radius: 0.30
+[hunav_loader-1] [INFO] [1792538012.830614664] [hunav_loader]: 	cyclic_goals: 1
+[hunav_loader-1] [INFO] [1792538012.830690897] [hunav_loader]: 	Goal: g0
+[hunav_loader-1] [INFO] [1792538012.830752507] [hunav_loader]: 		gx: 3.84
+[hunav_loader-1] [INFO] [1792538012.830791112] [hunav_loader]: 		gy: 2.50
+[hunav_loader-1] [INFO] [1792538012.830848773] [hunav_loader]: 		gh: 1.57
+[hunav_loader-1] [INFO] [1792538012.830867197] [hunav_loader]: 	Goal: g1
+[hunav_loader-1] [INFO] [1792538012.830926491] [hunav_loader]: 		gx: 3.85
+[hunav_loader-1] [INFO] [1792538012.830968212] [hunav_loader]: 		gy: -2.50
+[hunav_loader-1] [INFO] [1792538012.831009962] [hunav_loader]: 		gh: -1.57
+[hunav_loader-1] [INFO] [1792538012.831035487] [hunav_loader]: Agent name: walker4
+[hunav_loader-1] [INFO] [1792538012.831086795] [hunav_loader]: 	id: 4
+[hunav_loader-1] [INFO] [1792538012.831131530] [hunav_loader]: 	skin: 3
+[hunav_loader-1] [INFO] [1792538012.831200650] [hunav_loader]: 	group_id: -1
+[hunav_loader-1] [INFO] [1792538012.831277368] [hunav_loader]: 	max_vel: 0.90
+[hunav_loader-1] [INFO] [1792538012.831328222] [hunav_loader]: 	radius: 0.40
+[hunav_loader-1] [INFO] [1792538012.831382420] [hunav_loader]: 	behavior type: 1
+[hunav_loader-1] [INFO] [1792538012.831426721] [hunav_loader]: 	beh configuration: 1
+[hunav_loader-1] [INFO] [1792538012.831850868] [hunav_loader]: 	beh duration: 120.00
+[hunav_loader-1] [INFO] [1792538012.831881988] [hunav_loader]: 	beh vel: 0.70
+[hunav_loader-1] [INFO] [1792538012.831919733] [hunav_loader]: 	beh just_once: 1
+[hunav_loader-1] [INFO] [1792538012.831945191] [hunav_loader]: 	beh dist: 0.00
+[hunav_loader-1] [INFO] [1792538012.831963242] [hunav_loader]: 	beh goalForceFactor: 2.00
+[hunav_loader-1] [INFO] [1792538012.831978250] [hunav_loader]: 	beh obstacleForceFactor: 10.00
+[hunav_loader-1] [INFO] [1792538012.831996214] [hunav_loader]: 	beh socialForceFactor: 5.00
+[hunav_loader-1] [INFO] [1792538012.832012616] [hunav_loader]: 	beh otherForceFactor: 20.00
+[hunav_loader-1] [INFO] [1792538012.832092444] [hunav_loader]: 	posex: 5.00
+[hunav_loader-1] [INFO] [1792538012.832158786] [hunav_loader]: 	posey: 2.50
+[hunav_loader-1] [INFO] [1792538012.832256233] [hunav_loader]: 	posez: 1.25
+[hunav_loader-1] [INFO] [1792538012.832313918] [hunav_loader]: 	poseh: -1.57
+[hunav_loader-1] [INFO] [1792538012.832396416] [hunav_loader]: 	goal_radius: 0.30
+[hunav_loader-1] [INFO] [1792538012.832553301] [hunav_loader]: 	cyclic_goals: 1
+[hunav_loader-1] [INFO] [1792538012.832701039] [hunav_loader]: 	Goal: g0
+[hunav_loader-1] [INFO] [1792538012.832770826] [hunav_loader]: 		gx: 4.82
+[hunav_loader-1] [INFO] [1792538012.833033848] [hunav_loader]: 		gy: -2.50
+[hunav_gazebo_world_generator-2] [INFO] [1792538012.831731776] [hunav_gazebo_world_generator]: Robot name: iwalk
+[hunav_gazebo_world_generator-2] [INFO] [1792538012.832500138] [hunav_gazebo_world_generator]: Ignore_model: ground_plane
+[hunav_agent_manager-3] [INFO] [1792538012.831858416] [hunav_agent_manager]: Initializing hunav_agent_manager node...
+[hunav_loader-1] [INFO] [1792538012.833298858] [hunav_loader]: 		gh: -1.57
+[hunav_loader-1] [INFO] [1792538012.833383021] [hunav_loader]: 	Goal: g1
+[hunav_loader-1] [INFO] [1792538012.833576955] [hunav_loader]: 		gx: 5.26
+[hunav_agent_manager-3] [INFO] [1792538012.833452830] [hunav_agent_manager]: BT nodes registered
+[hunav_loader-1] [INFO] [1792538012.833815851] [hunav_loader]: 		gy: 2.50
+[hunav_loader-1] [INFO] [1792538012.834136486] [hunav_loader]: 		gh: 1.57
+[hunav_loader-1] [INFO] [1792538012.834176658] [hunav_loader]: Agent name: walker5
+[hunav_loader-1] [INFO] [1792538012.834448842] [hunav_loader]: 	id: 5
+[hunav_loader-1] [INFO] [1792538012.834689981] [hunav_loader]: 	skin: 4
+[hunav_loader-1] [INFO] [1792538012.834761438] [hunav_loader]: 	group_id: -1
+[hunav_loader-1] [INFO] [1792538012.834863041] [hunav_loader]: 	max_vel: 0.80
+[hunav_loader-1] [INFO] [1792538012.835014698] [hunav_loader]: 	radius: 0.40
+[hunav_loader-1] [INFO] [1792538012.835090789] [hunav_loader]: 	behavior type: 1
+[hunav_loader-1] [INFO] [1792538012.835179505] [hunav_loader]: 	beh configuration: 1
+[hunav_loader-1] [INFO] [1792538012.835549853] [hunav_loader]: 	beh duration: 120.00
+[hunav_loader-1] [INFO] [1792538012.835583154] [hunav_loader]: 	beh vel: 0.65
+[hunav_loader-1] [INFO] [1792538012.835607769] [hunav_loader]: 	beh just_once: 1
+[hunav_loader-1] [INFO] [1792538012.835685455] [hunav_loader]: 	beh dist: 0.00
+[hunav_loader-1] [INFO] [1792538012.835710138] [hunav_loader]: 	beh goalForceFactor: 2.00
+[hunav_loader-1] [INFO] [1792538012.835731555] [hunav_loader]: 	beh obstacleForceFactor: 10.00
+[hunav_loader-1] [INFO] [1792538012.835756074] [hunav_loader]: 	beh socialForceFactor: 5.00
+[hunav_loader-1] [INFO] [1792538012.835777629] [hunav_loader]: 	beh otherForceFactor: 20.00
+[hunav_loader-1] [INFO] [1792538012.835898969] [hunav_loader]: 	posex: 7.00
+[hunav_loader-1] [INFO] [1792538012.835996728] [hunav_loader]: 	posey: 0.70
+[hunav_loader-1] [INFO] [1792538012.836079518] [hunav_loader]: 	posez: 1.25
+[hunav_loader-1] [INFO] [1792538012.836179492] [hunav_loader]: 	poseh: 3.14
+[hunav_loader-1] [INFO] [1792538012.836250099] [hunav_loader]: 	goal_radius: 0.30
+[hunav_loader-1] [INFO] [1792538012.836389501] [hunav_loader]: 	cyclic_goals: 1
+[hunav_loader-1] [INFO] [1792538012.836494359] [hunav_loader]: 	Goal: g0
+[hunav_loader-1] [INFO] [1792538012.836555371] [hunav_loader]: 		gx: 1.00
+[hunav_loader-1] [INFO] [1792538012.836630448] [hunav_loader]: 		gy: 0.96
+[hunav_loader-1] [INFO] [1792538012.836714914] [hunav_loader]: 		gh: 3.14
+[hunav_loader-1] [INFO] [1792538012.836737658] [hunav_loader]: 	Goal: g1
+[hunav_loader-1] [INFO] [1792538012.836804622] [hunav_loader]: 		gx: 7.00
+[hunav_loader-1] [INFO] [1792538012.836863599] [hunav_loader]: 		gy: 1.00
+[hunav_loader-1] [INFO] [1792538012.836950291] [hunav_loader]: 		gh: 0.00
+[hunav_loader-1] [INFO] [1792538012.836975209] [hunav_loader]: Agent name: walker6
+[hunav_loader-1] [INFO] [1792538012.837057326] [hunav_loader]: 	id: 6
+[hunav_loader-1] [INFO] [1792538012.837143849] [hunav_loader]: 	skin: 0
+[hunav_loader-1] [INFO] [1792538012.837223397] [hunav_loader]: 	group_id: -1
+[hunav_loader-1] [INFO] [1792538012.837288226] [hunav_loader]: 	max_vel: 0.80
+[hunav_loader-1] [INFO] [1792538012.837352462] [hunav_loader]: 	radius: 0.40
+[hunav_loader-1] [INFO] [1792538012.837421052] [hunav_loader]: 	behavior type: 1
+[hunav_loader-1] [INFO] [1792538012.837493181] [hunav_loader]: 	beh configuration: 1
+[hunav_loader-1] [INFO] [1792538012.837921707] [hunav_loader]: 	beh duration: 120.00
+[hunav_loader-1] [INFO] [1792538012.837949842] [hunav_loader]: 	beh vel: 0.65
+[hunav_loader-1] [INFO] [1792538012.837969964] [hunav_loader]: 	beh just_once: 1
+[hunav_loader-1] [INFO] [1792538012.837988088] [hunav_loader]: 	beh dist: 0.00
+[hunav_loader-1] [INFO] [1792538012.838008421] [hunav_loader]: 	beh goalForceFactor: 2.00
+[hunav_loader-1] [INFO] [1792538012.838031077] [hunav_loader]: 	beh obstacleForceFactor: 10.00
+[hunav_loader-1] [INFO] [1792538012.838051578] [hunav_loader]: 	beh socialForceFactor: 5.00
+[hunav_loader-1] [INFO] [1792538012.838070738] [hunav_loader]: 	beh otherForceFactor: 20.00
+[hunav_loader-1] [INFO] [1792538012.838167736] [hunav_loader]: 	posex: 1.00
+[hunav_loader-1] [INFO] [1792538012.838249901] [hunav_loader]: 	posey: -0.80
+[hunav_loader-1] [INFO] [1792538012.838330654] [hunav_loader]: 	posez: 1.25
+[hunav_loader-1] [INFO] [1792538012.838406941] [hunav_loader]: 	poseh: 0.00
+[hunav_loader-1] [INFO] [1792538012.838491230] [hunav_loader]: 	goal_radius: 0.30
+[hunav_loader-1] [INFO] [1792538012.838582491] [hunav_loader]: 	cyclic_goals: 1
+[hunav_loader-1] [INFO] [1792538012.838675839] [hunav_loader]: 	Goal: g0
+[hunav_loader-1] [INFO] [1792538012.838763472] [hunav_loader]: 		gx: 7.00
+[hunav_loader-1] [INFO] [1792538012.838840196] [hunav_loader]: 		gy: -0.71
+[hunav_loader-1] [INFO] [1792538012.838957397] [hunav_loader]: 		gh: 0.00
+[hunav_loader-1] [INFO] [1792538012.838978425] [hunav_loader]: 	Goal: g1
+[hunav_loader-1] [INFO] [1792538012.839042266] [hunav_loader]: 		gx: 1.00
+[hunav_loader-1] [INFO] [1792538012.839113953] [hunav_loader]: 		gy: -0.50
+[hunav_loader-1] [INFO] [1792538012.839202291] [hunav_loader]: 		gh: 3.14
+[hunav_loader-1] [INFO] [1792538012.839223150] [hunav_loader]: Agent name: walker7
+[hunav_loader-1] [INFO] [1792538012.839334472] [hunav_loader]: 	id: 7
+[hunav_loader-1] [INFO] [1792538012.839437350] [hunav_loader]: 	skin: 1
+[hunav_loader-1] [INFO] [1792538012.839519507] [hunav_loader]: 	group_id: -1
+[hunav_loader-1] [INFO] [1792538012.839591938] [hunav_loader]: 	max_vel: 0.90
+[hunav_loader-1] [INFO] [1792538012.839660729] [hunav_loader]: 	radius: 0.40
+[hunav_loader-1] [INFO] [1792538012.839719177] [hunav_loader]: 	behavior type: 1
+[hunav_loader-1] [INFO] [1792538012.839784258] [hunav_loader]: 	beh configuration: 1
+[hunav_loader-1] [INFO] [1792538012.840235987] [hunav_loader]: 	beh duration: 120.00
+[hunav_loader-1] [INFO] [1792538012.840273725] [hunav_loader]: 	beh vel: 0.70
+[hunav_loader-1] [INFO] [1792538012.840300027] [hunav_loader]: 	beh just_once: 1
+[hunav_loader-1] [INFO] [1792538012.840321473] [hunav_loader]: 	beh dist: 0.00
+[hunav_loader-1] [INFO] [1792538012.840338989] [hunav_loader]: 	beh goalForceFactor: 2.00
+[hunav_loader-1] [INFO] [1792538012.840357388] [hunav_loader]: 	beh obstacleForceFactor: 10.00
+[hunav_loader-1] [INFO] [1792538012.840375948] [hunav_loader]: 	beh socialForceFactor: 5.00
+[hunav_loader-1] [INFO] [1792538012.840394341] [hunav_loader]: 	beh otherForceFactor: 20.00
+[hunav_loader-1] [INFO] [1792538012.840533881] [hunav_loader]: 	posex: 6.00
+[hunav_loader-1] [INFO] [1792538012.840627761] [hunav_loader]: 	posey: -2.50
+[hunav_loader-1] [INFO] [1792538012.840713272] [hunav_loader]: 	posez: 1.25
+[hunav_loader-1] [INFO] [1792538012.840796561] [hunav_loader]: 	poseh: 1.57
+[hunav_loader-1] [INFO] [1792538012.840871394] [hunav_loader]: 	goal_radius: 0.30
+[hunav_loader-1] [INFO] [1792538012.840976135] [hunav_loader]: 	cyclic_goals: 1
+[hunav_loader-1] [INFO] [1792538012.841052458] [hunav_loader]: 	Goal: g0
+[hunav_loader-1] [INFO] [1792538012.841114299] [hunav_loader]: 		gx: 5.72
+[hunav_loader-1] [INFO] [1792538012.841203000] [hunav_loader]: 		gy: 2.50
+[hunav_loader-1] [INFO] [1792538012.841299448] [hunav_loader]: 		gh: 1.57
+[hunav_loader-1] [INFO] [1792538012.841319418] [hunav_loader]: 	Goal: g1
+[hunav_loader-1] [INFO] [1792538012.841397177] [hunav_loader]: 		gx: 5.94
+[hunav_gazebo_world_generator-2] [INFO] [1792538012.840713973] [hunav_gazebo_world_generator]: Reading parameters...
+[hunav_loader-1] [INFO] [1792538012.841468441] [hunav_loader]: 		gy: -2.50
+[hunav_loader-1] [INFO] [1792538012.841541752] [hunav_loader]: 		gh: -1.57
+[hunav_loader-1] [INFO] [1792538012.841563206] [hunav_loader]: Agent name: walker8
+[hunav_loader-1] [INFO] [1792538012.841633901] [hunav_loader]: 	id: 8
+[hunav_loader-1] [INFO] [1792538012.841709602] [hunav_loader]: 	skin: 2
+[hunav_loader-1] [INFO] [1792538012.841777602] [hunav_loader]: 	group_id: -1
+[hunav_loader-1] [INFO] [1792538012.841853786] [hunav_loader]: 	max_vel: 0.90
+[hunav_loader-1] [INFO] [1792538012.841943447] [hunav_loader]: 	radius: 0.40
+[hunav_loader-1] [INFO] [1792538012.842018616] [hunav_loader]: 	behavior type: 1
+[hunav_loader-1] [INFO] [1792538012.842097190] [hunav_loader]: 	beh configuration: 1
+[hunav_loader-1] [INFO] [1792538012.842544550] [hunav_loader]: 	beh duration: 120.00
+[hunav_loader-1] [INFO] [1792538012.842574589] [hunav_loader]: 	beh vel: 0.70
+[hunav_loader-1] [INFO] [1792538012.842593463] [hunav_loader]: 	beh just_once: 1
+[hunav_loader-1] [INFO] [1792538012.842609228] [hunav_loader]: 	beh dist: 0.00
+[hunav_loader-1] [INFO] [1792538012.842625655] [hunav_loader]: 	beh goalForceFactor: 2.00
+[hunav_loader-1] [INFO] [1792538012.842644341] [hunav_loader]: 	beh obstacleForceFactor: 10.00
+[hunav_loader-1] [INFO] [1792538012.842663481] [hunav_loader]: 	beh socialForceFactor: 5.00
+[hunav_loader-1] [INFO] [1792538012.842684640] [hunav_loader]: 	beh otherForceFactor: 20.00
+[hunav_loader-1] [INFO] [1792538012.842769612] [hunav_loader]: 	posex: 7.00
+[hunav_loader-1] [INFO] [1792538012.842857672] [hunav_loader]: 	posey: 2.50
+[hunav_loader-1] [INFO] [1792538012.842949630] [hunav_loader]: 	posez: 1.25
+[hunav_loader-1] [INFO] [1792538012.843045762] [hunav_loader]: 	poseh: -1.57
+[hunav_loader-1] [INFO] [1792538012.843127166] [hunav_loader]: 	goal_radius: 0.30
+[hunav_loader-1] [INFO] [1792538012.843187541] [hunav_loader]: 	cyclic_goals: 1
+[hunav_loader-1] [INFO] [1792538012.843270766] [hunav_loader]: 	Goal: g0
+[hunav_loader-1] [INFO] [1792538012.843346390] [hunav_loader]: 		gx: 6.77
+[hunav_loader-1] [INFO] [1792538012.843421615] [hunav_loader]: 		gy: -2.50
+[hunav_loader-1] [INFO] [1792538012.843494278] [hunav_loader]: 		gh: -1.57
+[hunav_loader-1] [INFO] [1792538012.843514345] [hunav_loader]: 	Goal: g1
+[hunav_loader-1] [INFO] [1792538012.843591910] [hunav_loader]: 		gx: 6.90
+[hunav_loader-1] [INFO] [1792538012.843681397] [hunav_loader]: 		gy: 2.50
+[hunav_loader-1] [INFO] [1792538012.843768096] [hunav_loader]: 		gh: 1.57
+[hunav_gazebo_world_generator-2] map parameter: open_area
+[hunav_gazebo_world_generator-2] agent names: [walker1, walker2, walker3, walker4, walker5, walker6, walker7, walker8]
+[hunav_gazebo_world_generator-2] 
+[hunav_gazebo_world_generator-2] agent name: walker1
+[hunav_gazebo_world_generator-2] id: 1 skin:0 group_id:-1 max_vel:1 radius:0.4
+[hunav_gazebo_world_generator-2]  initpose.x:2 initpose.y:-2.5
+[hunav_gazebo_world_generator-2] Behavior:
+[hunav_gazebo_world_generator-2] type:1 configuration:1 duration:120 once:1 vel:0.75 dist:0 goal_force_factor:2 obstacle_force_factor:10 social_force_factor:5 other_force_factor:20
+[hunav_gazebo_world_generator-2] goal: g0 x:1.7785 y:2.5
+[hunav_gazebo_world_generator-2] goal: g1 x:2.20102 y:-2.5
+[hunav_gazebo_world_generator-2] agent name: walker2
+[hunav_gazebo_world_generator-2] id: 2 skin:1 group_id:-1 max_vel:0.9 radius:0.4
+[hunav_gazebo_world_generator-2]  initpose.x:3 initpose.y:2.5
+[hunav_gazebo_world_generator-2] Behavior:
+[hunav_gazebo_world_generator-2] type:1 configuration:1 duration:120 once:1 vel:0.7 dist:0 goal_force_factor:2 obstacle_force_factor:10 social_force_factor:5 other_force_factor:20
+[hunav_gazebo_world_generator-2] goal: g0 x:3.20533 y:-2.5
+[hunav_gazebo_world_generator-2] goal: g1 x:3.2876 y:2.5
+[hunav_gazebo_world_generator-2] agent name: walker3
+[hunav_gazebo_world_generator-2] id: 3 skin:2 group_id:-1 max_vel:1 radius:0.4
+[hunav_gazebo_world_generator-2]  initpose.x:4 initpose.y:-2.5
+[hunav_gazebo_world_generator-2] Behavior:
+[hunav_gazebo_world_generator-2] type:1 configuration:1 duration:120 once:1 vel:0.8 dist:0 goal_force_factor:2 obstacle_force_factor:10 social_force_factor:5 other_force_factor:20
+[hunav_gazebo_world_generator-2] goal: g0 x:3.84364 y:2.5
+[hunav_gazebo_world_generator-2] goal: g1 x:3.84928 y:-2.5
+[hunav_gazebo_world_generator-2] agent name: walker4
+[hunav_gazebo_world_generator-2] id: 4 skin:3 group_id:-1 max_vel:0.9 radius:0.4
+[hunav_gazebo_world_generator-2]  initpose.x:5 initpose.y:2.5
+[hunav_gazebo_world_generator-2] Behavior:
+[hunav_gazebo_world_generator-2] type:1 configuration:1 duration:120 once:1 vel:0.7 dist:0 goal_force_factor:2 obstacle_force_factor:10 social_force_factor:5 other_force_factor:20
+[hunav_gazebo_world_generator-2] goal: g0 x:4.81935 y:-2.5
+[hunav_gazebo_world_generator-2] goal: g1 x:5.25873 y:2.5
+[hunav_gazebo_world_generator-2] agent name: walker5
+[hunav_gazebo_world_generator-2] id: 5 skin:4 group_id:-1 max_vel:0.8 radius:0.4
+[hunav_gazebo_world_generator-2]  initpose.x:7 initpose.y:0.7
+[hunav_gazebo_world_generator-2] Behavior:
+[hunav_gazebo_world_generator-2] type:1 configuration:1 duration:120 once:1 vel:0.65 dist:0 goal_force_factor:2 obstacle_force_factor:10 social_force_factor:5 other_force_factor:20
+[hunav_gazebo_world_generator-2] goal: g0 x:1 y:0.95616
+[hunav_gazebo_world_generator-2] goal: g1 x:7 y:0.996039
+[hunav_gazebo_world_generator-2] agent name: walker6
+[hunav_gazebo_world_generator-2] id: 6 skin:0 group_id:-1 max_vel:0.8 radius:0.4
+[hunav_gazebo_world_generator-2]  initpose.x:1 initpose.y:-0.8
+[hunav_gazebo_world_generator-2] Behavior:
+[hunav_gazebo_world_generator-2] type:1 configuration:1 duration:120 once:1 vel:0.65 dist:0 goal_force_factor:2 obstacle_force_factor:10 social_force_factor:5 other_force_factor:20
+[hunav_gazebo_world_generator-2] goal: g0 x:7 y:-0.710026
+[hunav_gazebo_world_generator-2] goal: g1 x:1 y:-0.504952
+[hunav_gazebo_world_generator-2] agent name: walker7
+[hunav_gazebo_world_generator-2] id: 7 skin:1 group_id:-1 max_vel:0.9 radius:0.4
+[hunav_gazebo_world_generator-2]  initpose.x:6 initpose.y:-2.5
+[hunav_gazebo_world_generator-2] Behavior:
+[hunav_gazebo_world_generator-2] type:1 configuration:1 duration:120 once:1 vel:0.7 dist:0 goal_force_factor:2 obstacle_force_factor:10 social_force_factor:5 other_force_factor:20
+[hunav_gazebo_world_generator-2] goal: g0 x:5.71659 y:2.5
+[hunav_gazebo_world_generator-2] goal: g1 x:5.94455 y:-2.5
+[hunav_gazebo_world_generator-2] agent name: walker8
+[hunav_gazebo_world_generator-2] id: 8 skin:2 group_id:-1 max_vel:0.9 radius:0.4
+[hunav_gazebo_world_generator-2]  initpose.x:7 initpose.y:2.5
+[hunav_gazebo_world_generator-2] Behavior:
+[hunav_gazebo_world_generator-2] type:1 configuration:1 duration:120 once:1 vel:0.7 dist:0 goal_force_factor:2 obstacle_force_factor:10 social_force_factor:5 other_force_factor:20
+[hunav_gazebo_world_generator-2] goal: g0 x:6.76534 y:-2.5
+[hunav_gazebo_world_generator-2] goal: g1 x:6.9023 y:2.5
+[hunav_gazebo_world_generator-2] [INFO] [1792538012.861798124] [hunav_gazebo_world_generator]: New world file created! (/tmp/crowd_aware_p4euupz4/generatedWorld.world)
+[python3-4] HuNav world ready: /tmp/crowd_aware_p4euupz4/generatedWorld.world
+[INFO] [python3-4]: process has finished cleanly [pid 120]
+[INFO] [gzserver-5]: process started with pid [150]
+[INFO] [robot_state_publisher-6]: process started with pid [152]
+[INFO] [joint_state_publisher-7]: process started with pid [154]
+[INFO] [scan_to_scan_filter_chain-8]: process started with pid [156]
+[INFO] [hunav_to_cohan_bridge.py-9]: process started with pid [158]
+[INFO] [command_guard.py-10]: process started with pid [160]
+[INFO] [velocity_smoother-11]: process started with pid [162]
+[INFO] [collision_monitor-12]: process started with pid [164]
+[INFO] [final_cmd_watchdog.py-13]: process started with pid [166]
+[INFO] [lifecycle_manager-14]: process started with pid [168]
+[INFO] [nav2_costmap_2d-15]: process started with pid [170]
+[INFO] [lifecycle_manager-16]: process started with pid [172]
+[INFO] [dwal_clustering-17]: process started with pid [174]
+[INFO] [dwal_generator-18]: process started with pid [176]
+[INFO] [shared_control_node-19]: process started with pid [178]
+[INFO] [constant_speed_limit.py-20]: process started with pid [181]
+[INFO] [rviz2-21]: process started with pid [184]
+[INFO] [python3-22]: process started with pid [186]
+[nav2_costmap_2d-15] [INFO] [1792538013.028223006] [costmap.costmap]: 
+[nav2_costmap_2d-15] 	costmap lifecycle node launched. 
+[nav2_costmap_2d-15] 	Waiting on external lifecycle transitions to activate
+[nav2_costmap_2d-15] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[robot_state_publisher-6] [INFO] [1792538013.035684874] [robot_state_publisher]: got segment base_footprint
+[robot_state_publisher-6] [INFO] [1792538013.035836134] [robot_state_publisher]: got segment base_link
+[robot_state_publisher-6] [INFO] [1792538013.035849391] [robot_state_publisher]: got segment laser_frame
+[robot_state_publisher-6] [INFO] [1792538013.035858140] [robot_state_publisher]: got segment left_caster_swivel_link
+[robot_state_publisher-6] [INFO] [1792538013.035866846] [robot_state_publisher]: got segment left_front_wheel_link
+[robot_state_publisher-6] [INFO] [1792538013.035875106] [robot_state_publisher]: got segment left_rear_wheel_link
+[robot_state_publisher-6] [INFO] [1792538013.035883248] [robot_state_publisher]: got segment right_caster_swivel_link
+[robot_state_publisher-6] [INFO] [1792538013.035891435] [robot_state_publisher]: got segment right_front_wheel_link
+[robot_state_publisher-6] [INFO] [1792538013.035898938] [robot_state_publisher]: got segment right_rear_wheel_link
+[robot_state_publisher-6] [INFO] [1792538013.035914707] [robot_state_publisher]: got segment sim_base
+[lifecycle_manager-14] [INFO] [1792538013.043536625] [command_pipeline_lifecycle_manager]: Creating
+[nav2_costmap_2d-15] [INFO] [1792538013.052743883] [costmap.costmap]: Creating Costmap
+[lifecycle_manager-14] [INFO] [1792538013.059119109] [command_pipeline_lifecycle_manager]: [34m[1mCreating and initializing lifecycle service clients[0m[0m
+[lifecycle_manager-16] [INFO] [1792538013.060892358] [costmap_lifecycle_manager]: Creating
+[dwal_generator-18] [INFO] [1792538013.062534959] [dwal_planner.dwal_generator]: Using occupancy topic '/local_costmap/costmap'
+[dwal_generator-18] [INFO] [1792538013.062748921] [dwal_planner.dwal_generator]: Using base_frame 'sim_base' and odom_frame 'odom'
+[scan_to_scan_filter_chain-8] [WARN] [1792538013.068935205] [rcl.logging_rosout]: Publisher already registered for provided node name. If this is due to multiple nodes with the same name then all logs for that logger name will go out over the existing publisher. As soon as any node with that name is destructed it will unregister the publisher, preventing any further logs for that name from being published on the rosout topic.
+[lifecycle_manager-16] [INFO] [1792538013.070579142] [costmap_lifecycle_manager]: [34m[1mCreating and initializing lifecycle service clients[0m[0m
+[velocity_smoother-11] [INFO] [1792538013.070861516] [velocity_smoother]: 
+[velocity_smoother-11] 	velocity_smoother lifecycle node launched. 
+[velocity_smoother-11] 	Waiting on external lifecycle transitions to activate
+[velocity_smoother-11] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[lifecycle_manager-16] [INFO] [1792538013.075001309] [costmap_lifecycle_manager]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-16] [INFO] [1792538013.075060265] [costmap_lifecycle_manager]: [34m[1mConfiguring /costmap/costmap[0m[0m
+[dwal_clustering-17] [INFO] [1792538013.075660604] [dwal_planner.dwal_clustering]: Cluster groups to be created: 1
+[dwal_clustering-17] [INFO] [1792538013.076193664] [dwal_planner.dwal_clustering]: Cluster level far: reference=1.800
+[dwal_clustering-17] [INFO] [1792538013.076280163] [dwal_planner.dwal_clustering]: Using odometry frame 'odom'
+[dwal_clustering-17] [INFO] [1792538013.092248838] [dwal_planner.dwal_clustering]: DWAL_UPSTREAM_V4: variable_length=true
+[collision_monitor-12] [INFO] [1792538013.096387874] [collision_monitor]: 
+[collision_monitor-12] 	collision_monitor lifecycle node launched. 
+[collision_monitor-12] 	Waiting on external lifecycle transitions to activate
+[collision_monitor-12] 	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[shared_control_node-19] [INFO] [1792538013.126147251] [shared_controller]: 
+[shared_control_node-19]  SharedController up. 
+[shared_control_node-19]  Subscribing: clusters='/dwal_planner/clusters_near 
+[shared_control_node-19]  user_cmd='/reference_cmd' 
+[shared_control_node-19]  Publishing fused cmd to '/cmd_vel_selected'
+[shared_control_node-19]  Kmax = 4.00 
+[shared_control_node-19]  Phi max (from Kmax) = 0.00 rad (0.0 deg)
+[shared_control_node-19] [INFO] [1792538013.126277719] [shared_controller]: Cluster hysteresis: v_low=0.22, v_high=0.28
+[lifecycle_manager-14] [INFO] [1792538013.185737644] [command_pipeline_lifecycle_manager]: [34m[1mStarting managed nodes bringup...[0m[0m
+[lifecycle_manager-14] [INFO] [1792538013.185816480] [command_pipeline_lifecycle_manager]: [34m[1mConfiguring velocity_smoother[0m[0m
+[velocity_smoother-11] [INFO] [1792538013.186241674] [velocity_smoother]: Configuring velocity smoother
+[lifecycle_manager-14] [INFO] [1792538013.204079649] [command_pipeline_lifecycle_manager]: [34m[1mConfiguring collision_monitor[0m[0m
+[collision_monitor-12] [INFO] [1792538013.204434061] [collision_monitor]: Configuring
+[collision_monitor-12] [INFO] [1792538013.218026792] [collision_monitor]: [FootprintApproach]: Creating Polygon
+[collision_monitor-12] [INFO] [1792538013.226214802] [collision_monitor]: [scan]: Creating Scan
+[lifecycle_manager-14] [INFO] [1792538013.237961113] [command_pipeline_lifecycle_manager]: [34m[1mActivating velocity_smoother[0m[0m
+[velocity_smoother-11] [INFO] [1792538013.238274378] [velocity_smoother]: Activating
+[velocity_smoother-11] [INFO] [1792538013.238366777] [velocity_smoother]: Creating bond (velocity_smoother) to lifecycle manager.
+[lifecycle_manager-14] [INFO] [1792538013.244599406] [command_pipeline_lifecycle_manager]: [34m[1mActivating collision_monitor[0m[0m
+[collision_monitor-12] [INFO] [1792538013.245807471] [collision_monitor]: Activating
+[collision_monitor-12] [INFO] [1792538013.245957211] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-14] [INFO] [1792538013.252244194] [command_pipeline_lifecycle_manager]: [34m[1mManaged nodes are active[0m[0m
+[nav2_costmap_2d-15] [INFO] [1792538013.400728955] [costmap.costmap]: Configuring
+[nav2_costmap_2d-15] [INFO] [1792538013.424540357] [costmap.costmap]: Using plugin "obstacle_layer"
+[nav2_costmap_2d-15] [INFO] [1792538013.438373419] [costmap.costmap]: Subscribed to Topics: scan
+[nav2_costmap_2d-15] [INFO] [1792538013.448761055] [costmap.costmap]: Initialized plugin "obstacle_layer"
+[nav2_costmap_2d-15] [INFO] [1792538013.448816305] [costmap.costmap]: Using plugin "inflation_layer"
+[nav2_costmap_2d-15] [INFO] [1792538013.454365803] [costmap.costmap]: Initialized plugin "inflation_layer"
+[lifecycle_manager-16] [INFO] [1792538013.545135861] [costmap_lifecycle_manager]: [34m[1mActivating /costmap/costmap[0m[0m
+[nav2_costmap_2d-15] [INFO] [1792538013.545588350] [costmap.costmap]: Activating
+[nav2_costmap_2d-15] [INFO] [1792538013.545621592] [costmap.costmap]: Checking transform
+[nav2_costmap_2d-15] [INFO] [1792538013.545647907] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[python3-22] [INFO] [1792538013.547655857] [rosbag2_storage]: Opened database '/rosbags/dense_crowd_dynamic_split_off_seed1_20261019T133051612349Z/bag/bag_0.db3' for READ_ONLY.
+[hunav_to_cohan_bridge.py-9] [INFO] [1792538013.553711180] [hunav_to_cohan_bridge]: HuNav ground truth: /human_states -> /tracked_agents_logging and /tracked_agents in odom
+[joint_state_publisher-7] [INFO] [1792538013.602146291] [joint_state_publisher]: Waiting for robot_description to be published on the robot_description topic...
+[gzserver-5] Gazebo multi-robot simulator, version 11.10.2
+[gzserver-5] Copyright (C) 2012 Open Source Robotics Foundation.
+[gzserver-5] Released under the Apache 2 License.
+[gzserver-5] http://gazebosim.org
+[gzserver-5] 
+[nav2_costmap_2d-15] [INFO] [1792538014.045736081] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538014.165535000] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-21] [INFO] [1792538014.165635373] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[rviz2-21] [INFO] [1792538014.310371038] [rviz2]: Stereo is NOT SUPPORTED
+[gzserver-5] [1;33m[Wrn] [gazebo_ros_init.cpp:178] [0m[1;33m
+[gzserver-5] #     # ####### ####### ###  #####  #######
+[gzserver-5] ##    # #     #    #     #  #     # #
+[gzserver-5] # #   # #     #    #     #  #       #
+[gzserver-5] #  #  # #     #    #     #  #       #####
+[gzserver-5] #   # # #     #    #     #  #       #
+[gzserver-5] #    ## #     #    #     #  #     # #
+[gzserver-5] #     # #######    #    ###  #####  #######
+[gzserver-5] 
+[gzserver-5] This version of Gazebo, now called Gazebo classic, reaches end-of-life
+[gzserver-5] in January 2025. Users are highly encouraged to migrate to the new Gazebo
+[gzserver-5] using our migration guides (https://gazebosim.org/docs/latest/gazebo_classic_migration?utm_source=gazebo_ros_pkgs&utm_medium=cli)
+[gzserver-5] 
+[gzserver-5] [0m[1;33m
+[nav2_costmap_2d-15] [INFO] [1792538014.545733750] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538014.893575907] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538014.926748903] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538014.958898868] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538014.991053565] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.023210152] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[nav2_costmap_2d-15] [INFO] [1792538015.045842492] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538015.054491656] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.086770406] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.118873959] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.151080275] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.182596533] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.214483303] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.246745208] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.278922808] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.343150925] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.406978772] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[gzserver-5] [0m[1;33m[0m[1;33m[0mALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+[gzserver-5] ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+[gzserver-5] ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+[gzserver-5] ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+[gzserver-5] ALSA lib confmisc.c:1334:(snd_func_refer) error evaluating name
+[gzserver-5] ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+[gzserver-5] ALSA lib conf.c:5701:(snd_config_expand) Evaluate error: No such file or directory
+[gzserver-5] ALSA lib pcm.c:2664:(snd_pcm_open_noupdate) Unknown PCM default
+[gzserver-5] AL lib: (EE) ALCplaybackAlsa_open: Could not open playback device 'default': No such file or directory
+[gzserver-5] [1;31m[Err] [OpenAL.cc:84] [0m[1;31mUnable to open audio device[[0m[1;31mdefault[0m[1;31m]
+[gzserver-5]  Audio will be disabled.
+[gzserver-5] [1;32m[Msg] [0m[1;32mWaiting for master.[0m[1;32m
+[gzserver-5] [0m[1;32m[0m[1;32m[0m[1;32m[Msg] [0m[1;32mConnected to gazebo master @ [0m[1;32mhttp://127.0.0.1:11345[0m[1;32m
+[gzserver-5] [0m[1;32m[0m[1;32m[0m[1;32m[Msg] [0m[1;32mPublicized address: [0m[1;32m172.17.0.2[0m[1;32m
+[gzserver-5] [0m[1;32m[0m[1;32m[0m[1;32m[Msg] [0m[1;32mLoading world file [[0m[1;32m/tmp/crowd_aware_p4euupz4/generatedWorld.world[0m[1;32m][0m[1;32m
+[rviz2-21] [INFO] [1792538015.438963702] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.502997881] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.534911149] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[nav2_costmap_2d-15] [INFO] [1792538015.545789258] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538015.599001802] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.630745095] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.694766121] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.758465291] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.790838343] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.854717397] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[python3-22] Replay target: simulator t=120.000s. Waiting for fresh odometry, controller and recorder.
+[rviz2-21] [INFO] [1792538015.886951924] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.950708911] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538015.982567613] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[nav2_costmap_2d-15] [INFO] [1792538016.045713324] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538016.046563875] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.078215837] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.142767192] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.206916910] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.238142780] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.303003623] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.334699261] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.399052309] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.430198528] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.494269220] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[nav2_costmap_2d-15] [INFO] [1792538016.545751263] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538016.559047865] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.591068552] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.655105591] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.686278813] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.750487472] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.782607541] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.846839203] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.878267856] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538016.942203954] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.006842088] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.038272652] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[nav2_costmap_2d-15] [INFO] [1792538017.045755624] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538017.102828348] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.135031279] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.198564374] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.230581370] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.294973699] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.326746442] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.390544722] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.454731974] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.487021901] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[nav2_costmap_2d-15] [INFO] [1792538017.545752390] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538017.550590257] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.582639552] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.647059454] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.678732104] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.742385357] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.806988254] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.839006469] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.902665839] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.934986178] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538017.998623573] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.030894283] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[nav2_costmap_2d-15] [INFO] [1792538018.045723386] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538018.094645464] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.126953865] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.190292002] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.255005348] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.286457080] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.350581063] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.382377819] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.447013192] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.479081729] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.542099737] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[nav2_costmap_2d-15] [INFO] [1792538018.545807031] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538018.606424686] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.638772402] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.702281937] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.734261166] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.798630475] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.830481769] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.894920096] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.927045546] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538018.990663499] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[nav2_costmap_2d-15] [INFO] [1792538019.045718954] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[rviz2-21] [INFO] [1792538019.054319014] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538019.086346631] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538019.150345524] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[gzserver-5] [0m[INFO] [1792538019.161317065] [evaluation_contact_ros]: Publishing contact states to [/experiment/contacts]
+[rviz2-21] [INFO] [1792538019.183058556] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538019.246440961] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538019.279059970] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[gzserver-5] [INFO] [1792538019.279941180] [hunav_plugin]: Loading HuNav plugin...
+[gzserver-5] [INFO] [1792538019.280065974] [hunav_plugin]: Ignoring model: ground_plane
+[gzserver-5] [INFO] [1792538019.280131758] [hunav_plugin]: update_rate: 20.00, secs:0.0500
+[gzserver-5] [INFO] [1792538019.293238469] [hunav_plugin]: Initializing agents...
+[gzserver-5] [INFO] [1792538019.293309064] [hunav_plugin]: Initializing robot...
+[gzserver-5] [INFO] [1792538019.293329810] [hunav_plugin]: Robot iwalk detected, initializing params...
+[hunav_gazebo_world_generator-2] Sending 8 agents to agent_manager
+[hunav_gazebo_world_generator-2] Shutting down WorldGenerator...
+[gzserver-5] [INFO] [1792538019.297571685] [hunav_plugin]: Received 8 agents from service /get_agents
+[gzserver-5] [INFO] [1792538019.297987091] [hunav_plugin]: Adding agent: walker1, type: 1, id:1, beh:1, x:2.00, y:-2.50, th:1.57, dvel:1.00
+[gzserver-5] [INFO] [1792538019.298143724] [hunav_plugin]: Adding agent: walker2, type: 1, id:2, beh:1, x:3.00, y:2.50, th:-1.57, dvel:0.90
+[gzserver-5] [INFO] [1792538019.298229069] [hunav_plugin]: Adding agent: walker3, type: 1, id:3, beh:1, x:4.00, y:-2.50, th:1.57, dvel:1.00
+[gzserver-5] [INFO] [1792538019.298366151] [hunav_plugin]: Adding agent: walker4, type: 1, id:4, beh:1, x:5.00, y:2.50, th:-1.57, dvel:0.90
+[gzserver-5] [INFO] [1792538019.298515505] [hunav_plugin]: Adding agent: walker5, type: 1, id:5, beh:1, x:7.00, y:0.70, th:3.14, dvel:0.80
+[gzserver-5] [INFO] [1792538019.298667377] [hunav_plugin]: Adding agent: walker6, type: 1, id:6, beh:1, x:1.00, y:-0.80, th:0.00, dvel:0.80
+[gzserver-5] [INFO] [1792538019.298780100] [hunav_plugin]: Adding agent: walker7, type: 1, id:7, beh:1, x:6.00, y:-2.50, th:1.57, dvel:0.90
+[gzserver-5] [INFO] [1792538019.298918281] [hunav_plugin]: Adding agent: walker8, type: 1, id:8, beh:1, x:7.00, y:2.50, th:-1.57, dvel:0.90
+[gzserver-5] [INFO] [1792538019.299601539] [hunav_plugin]: Agent walker1 has animation: active
+[gzserver-5] [INFO] [1792538019.299662073] [hunav_plugin]: Agent walker1 has animation: no_active
+[gzserver-5] [INFO] [1792538019.299770123] [hunav_plugin]: Agent walker2 has animation: active
+[gzserver-5] [INFO] [1792538019.299795068] [hunav_plugin]: Agent walker2 has animation: no_active
+[gzserver-5] [INFO] [1792538019.299852063] [hunav_plugin]: Agent walker3 has animation: active
+[gzserver-5] [INFO] [1792538019.299871361] [hunav_plugin]: Agent walker3 has animation: no_active
+[gzserver-5] [INFO] [1792538019.299948223] [hunav_plugin]: Agent walker4 has animation: active
+[gzserver-5] [INFO] [1792538019.299972781] [hunav_plugin]: Agent walker4 has animation: no_active
+[gzserver-5] [INFO] [1792538019.300056845] [hunav_plugin]: Agent walker5 has animation: active
+[gzserver-5] [INFO] [1792538019.300095124] [hunav_plugin]: Agent walker5 has animation: no_active
+[gzserver-5] [INFO] [1792538019.300197148] [hunav_plugin]: Agent walker6 has animation: active
+[gzserver-5] [INFO] [1792538019.300211501] [hunav_plugin]: Agent walker6 has animation: no_active
+[gzserver-5] [INFO] [1792538019.300275068] [hunav_plugin]: Agent walker7 has animation: active
+[gzserver-5] [INFO] [1792538019.300284226] [hunav_plugin]: Agent walker7 has animation: no_active
+[gzserver-5] [INFO] [1792538019.300330176] [hunav_plugin]: Agent walker8 has animation: active
+[gzserver-5] [INFO] [1792538019.300336902] [hunav_plugin]: Agent walker8 has animation: no_active
+[rviz2-21] [INFO] [1792538019.342697316] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538019.407156940] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[gzserver-5] [INFO] [1792538019.429611299] [ideal_planar_base]: Subscribed to [/cmd_vel]
+[rviz2-21] [INFO] [1792538019.439247768] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[gzserver-5] [INFO] [1792538019.442521406] [ideal_planar_base]: Advertise odometry on [/odom]
+[INFO] [hunav_gazebo_world_generator-2]: process has finished cleanly [pid 116]
+[gzserver-5] [INFO] [1792538019.467632655] [ideal_planar_base]: Publishing odom transforms between [odom] and [sim_base]
+[rviz2-21] [INFO] [1792538019.502546540] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[rviz2-21] [INFO] [1792538019.534409843] [rviz]: Message Filter dropping message: frame '' at time 0.000 for reason 'the frame id of the message is empty'
+[hunav_agent_manager-3] [INFO] [1792538019.541424360] [hunav_agent_manager]: First service call received!
+[hunav_agent_manager-3] [INFO] [1792538019.541551476] [hunav_agent_manager]: robot pose x:-0.00, y:0.00, th:0.00
+[hunav_agent_manager-3] [INFO] [1792538019.541592943] [hunav_agent_manager]: Agents received: 8
+[hunav_agent_manager-3] [INFO] [1792538019.541616736] [hunav_agent_manager]: Initializing Behavior Trees of 8 agents...
+[hunav_agent_manager-3] [INFO] [1792538019.541645510] [hunav_agent_manager]: Initializing Behavior tree of Agent walker1, id: 1, behavior: 1
+[hunav_agent_manager-3] [INFO] [1792538019.542828066] [hunav_agent_manager]: Loading BTRegularNav.xml tree
+[nav2_costmap_2d-15] [INFO] [1792538019.545784030] [costmap.costmap]: Timed out waiting for transform from sim_base to odom to become available, tf error: Invalid frame ID "odom" passed to canTransform argument target_frame - frame does not exist
+[hunav_agent_manager-3] [INFO] [1792538019.547575651] [hunav_agent_manager]: Behavior Tree for agent walker1 [id:1] loaded!
+[hunav_agent_manager-3] 	robot 15, x:-0.00, y:0.00
+[hunav_agent_manager-3] SFM Robot initialized
+[hunav_agent_manager-3] Initializing SFM Agents...
+[hunav_agent_manager-3] 	agent walker1, x:2.00, y:-2.50, th:1.57
+[hunav_agent_manager-3] 	agent walker2, x:3.00, y:2.50, th:-1.57
+[hunav_agent_manager-3] 	agent walker3, x:4.00, y:-2.50, th:1.57
+[hunav_agent_manager-3] 	agent walker4, x:5.00, y:2.50, th:-1.57
+[hunav_agent_manager-3] 	agent walker5, x:7.00, y:0.70, th:3.14
+[hunav_agent_manager-3] 	agent walker6, x:1.00, y:-0.80, th:0.00
+[hunav_agent_manager-3] 	agent walker7, x:6.00, y:-2.50, th:1.57
+[hunav_agent_manager-3] 	agent walker8, x:7.00, y:2.50, th:-1.57
+[hunav_agent_manager-3] SFM Agents initialized
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] RegularNavFallback
+[hunav_agent_manager-3]    RegularNavigation
+[hunav_agent_manager-3]       Inverter
+[hunav_agent_manager-3]          IsGoalReached
+[hunav_agent_manager-3]       RegularNav
+[hunav_agent_manager-3]    UpdateGoal
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] [INFO] [1792538019.548047046] [hunav_agent_manager]: Initializing Behavior tree of Agent walker2, id: 2, behavior: 1
+[hunav_agent_manager-3] [INFO] [1792538019.548187665] [hunav_agent_manager]: Loading BTRegularNav.xml tree
+[hunav_agent_manager-3] [INFO] [1792538019.549433184] [hunav_agent_manager]: Behavior Tree for agent walker2 [id:2] loaded!
+[hunav_agent_manager-3] [INFO] [1792538019.549652879] [hunav_agent_manager]: Initializing Behavior tree of Agent walker3, id: 3, behavior: 1
+[hunav_agent_manager-3] [INFO] [1792538019.549753946] [hunav_agent_manager]: Loading BTRegularNav.xml tree
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] RegularNavFallback
+[hunav_agent_manager-3]    RegularNavigation
+[hunav_agent_manager-3]       Inverter
+[hunav_agent_manager-3]          IsGoalReached
+[hunav_agent_manager-3]       RegularNav
+[hunav_agent_manager-3]    UpdateGoal
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] [INFO] [1792538019.550952637] [hunav_agent_manager]: Behavior Tree for agent walker3 [id:3] loaded!
+[hunav_agent_manager-3] [INFO] [1792538019.551161782] [hunav_agent_manager]: Initializing Behavior tree of Agent walker4, id: 4, behavior: 1
+[hunav_agent_manager-3] [INFO] [1792538019.551264537] [hunav_agent_manager]: Loading BTRegularNav.xml tree
+[hunav_agent_manager-3] [INFO] [1792538019.552281729] [hunav_agent_manager]: Behavior Tree for agent walker4 [id:4] loaded!
+[hunav_agent_manager-3] [INFO] [1792538019.552486561] [hunav_agent_manager]: Initializing Behavior tree of Agent walker5, id: 5, behavior: 1
+[hunav_agent_manager-3] [INFO] [1792538019.552592332] [hunav_agent_manager]: Loading BTRegularNav.xml tree
+[hunav_agent_manager-3] [INFO] [1792538019.553576294] [hunav_agent_manager]: Behavior Tree for agent walker5 [id:5] loaded!
+[hunav_agent_manager-3] [INFO] [1792538019.553759533] [hunav_agent_manager]: Initializing Behavior tree of Agent walker6, id: 6, behavior: 1
+[hunav_agent_manager-3] [INFO] [1792538019.553854866] [hunav_agent_manager]: Loading BTRegularNav.xml tree
+[hunav_agent_manager-3] [INFO] [1792538019.554976572] [hunav_agent_manager]: Behavior Tree for agent walker6 [id:6] loaded!
+[hunav_agent_manager-3] [INFO] [1792538019.555222462] [hunav_agent_manager]: Initializing Behavior tree of Agent walker7, id: 7, behavior: 1
+[hunav_agent_manager-3] [INFO] [1792538019.555327779] [hunav_agent_manager]: Loading BTRegularNav.xml tree
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] RegularNavFallback
+[hunav_agent_manager-3]    RegularNavigation
+[hunav_agent_manager-3]       Inverter
+[hunav_agent_manager-3]          IsGoalReached
+[hunav_agent_manager-3]       RegularNav
+[hunav_agent_manager-3]    UpdateGoal
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] RegularNavFallback
+[hunav_agent_manager-3]    RegularNavigation
+[hunav_agent_manager-3]       Inverter
+[hunav_agent_manager-3]          IsGoalReached
+[hunav_agent_manager-3]       RegularNav
+[hunav_agent_manager-3]    UpdateGoal
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] RegularNavFallback
+[hunav_agent_manager-3]    RegularNavigation
+[hunav_agent_manager-3]       Inverter
+[hunav_agent_manager-3]          IsGoalReached
+[hunav_agent_manager-3]       RegularNav
+[hunav_agent_manager-3]    UpdateGoal
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] RegularNavFallback
+[hunav_agent_manager-3]    RegularNavigation
+[hunav_agent_manager-3]       Inverter
+[hunav_agent_manager-3]          IsGoalReached
+[hunav_agent_manager-3]       RegularNav
+[hunav_agent_manager-3]    UpdateGoal
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] [INFO] [1792538019.556392709] [hunav_agent_manager]: Behavior Tree for agent walker7 [id:7] loaded!
+[hunav_agent_manager-3] [INFO] [1792538019.556614980] [hunav_agent_manager]: Initializing Behavior tree of Agent walker8, id: 8, behavior: 1
+[hunav_agent_manager-3] [INFO] [1792538019.556715207] [hunav_agent_manager]: Loading BTRegularNav.xml tree
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] RegularNavFallback
+[hunav_agent_manager-3]    RegularNavigation
+[hunav_agent_manager-3]       Inverter
+[hunav_agent_manager-3]          IsGoalReached
+[hunav_agent_manager-3]       RegularNav
+[hunav_agent_manager-3]    UpdateGoal
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] [INFO] [1792538019.557658584] [hunav_agent_manager]: Behavior Tree for agent walker8 [id:8] loaded!
+[hunav_agent_manager-3] [INFO] [1792538019.557843936] [hunav_agent_manager]: Behavior trees succesfully initiated!
+[hunav_agent_manager-3] ----------------
+[hunav_agent_manager-3] RegularNavFallback
+[hunav_agent_manager-3]    RegularNavigation
+[hunav_agent_manager-3]       Inverter
+[hunav_agent_manager-3]          IsGoalReached
+[hunav_agent_manager-3]       RegularNav
+[hunav_agent_manager-3]    UpdateGoal
+[hunav_agent_manager-3] ----------------
+[nav2_costmap_2d-15] [INFO] [1792538020.046151909] [costmap.costmap]: start
+[lifecycle_manager-16] [INFO] [1792538020.155386878] [costmap_lifecycle_manager]: [34m[1mManaged nodes are active[0m[0m
+[rviz2-21] [INFO] [1792538020.182420778] [rviz2]: Trying to create a map of size 160 x 160 using 1 swatches
+[dwal_generator-18] [INFO] [1792538020.584443666] [dwal_planner.dwal_generator]: Using odometry topic '/odom'
+[dwal_generator-18] [INFO] [1792538020.584527813] [dwal_planner.dwal_generator]:  --> max_vel_trans = 0.300000
+[dwal_generator-18] [INFO] [1792538020.584556142] [dwal_planner.dwal_generator]:  --> min_vel_trans = 0.050000
+[dwal_generator-18] [INFO] [1792538020.584573239] [dwal_planner.dwal_generator]:  --> max_vel_theta = 0.800000
+[dwal_generator-18] [INFO] [1792538020.584623395] [dwal_planner.dwal_generator]: ----marker_num=  104
+[scan_to_scan_filter_chain-8] [WARN] [1792538020.969367556] [scan_self_filter]: diagnostic_updater: No HW_ID was set. This is probably a bug. Please report it. For devices that do not have a HW_ID, set this value to 'none'. This warning only occurs once all diagnostics are OK. It is okay to wait until the device is open before calling setHardwareID.
+[shared_control_node-19] [WARN] [1792538022.477048674] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538022.496722397] [dwal_planner.dwal_generator]: Spinning: T= 1.300000 passed
+[dwal_clustering-17] [INFO] [1792538022.520401521] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538022.520808019] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[python3-22] Recording /rosbags/dense_crowd_dynamic_split_on_seed3_20261020T231333327766Z; stop with Ctrl+C. Start before the reference replay.
+[python3-22] stdin is not a terminal device. Keyboard handling disabled.[INFO] [1792538023.829800560] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[python3-22] [INFO] [1792538023.851193475] [rosbag2_storage]: Opened database '/rosbags/dense_crowd_dynamic_split_on_seed3_20261020T231333327766Z/bag/bag_0.db3' for READ_WRITE.
+[python3-22] [INFO] [1792538023.865514309] [rosbag2_recorder]: Listening for topics...
+[python3-22] [INFO] [1792538023.865842088] [rosbag2_recorder]: Recording...
+[python3-22] [INFO] [1792538023.866177326] [rosbag2_recorder]: Event publisher thread: Starting
+[python3-22] [INFO] [1792538023.866541025] [rosbag2_recorder]: use_sim_time set, waiting for /clock before starting recording...
+[python3-22] [INFO] [1792538024.910188929] [rosbag2_recorder]: Sim time /clock found, starting recording.
+[python3-22] [INFO] [1792538024.949220892] [rosbag2_recorder]: Subscribed to topic '/dwal_planner/sampled_pathMarkers'
+[python3-22] [INFO] [1792538024.955184164] [rosbag2_recorder]: Subscribed to topic '/local_costmap/costmap_updates'
+[python3-22] [INFO] [1792538024.959284667] [rosbag2_recorder]: Subscribed to topic '/dwal_planner/clusters_far'
+[python3-22] [INFO] [1792538024.962535531] [rosbag2_recorder]: Subscribed to topic '/shared_controller/path_human'
+[python3-22] [INFO] [1792538024.964406169] [rosbag2_recorder]: Subscribed to topic '/dwal_planner/cluster_markers_far'
+[python3-22] [INFO] [1792538024.966834556] [rosbag2_recorder]: Subscribed to topic '/dwal_planner/braking_requirement'
+[python3-22] [INFO] [1792538024.969206671] [rosbag2_recorder]: Subscribed to topic '/dwal_planner/sampled_paths'
+[python3-22] [INFO] [1792538024.972864219] [rosbag2_recorder]: Subscribed to topic '/tracked_agents'
+[python3-22] [INFO] [1792538024.974233625] [rosbag2_recorder]: Subscribed to topic '/dwal_planner/clusters_far_diagnostics'
+[python3-22] [INFO] [1792538024.975830810] [rosbag2_recorder]: Subscribed to topic '/cmd_vel_smoothed'
+[python3-22] [INFO] [1792538024.980529856] [rosbag2_recorder]: Subscribed to topic '/cmd_vel_selected'
+[python3-22] [INFO] [1792538024.985697004] [rosbag2_recorder]: Subscribed to topic '/cmd_vel_safe'
+[python3-22] [INFO] [1792538024.991878516] [rosbag2_recorder]: Subscribed to topic '/experiment/contacts'
+[python3-22] [INFO] [1792538024.995839852] [rosbag2_recorder]: Subscribed to topic '/local_costmap/published_footprint'
+[python3-22] [INFO] [1792538024.999499583] [rosbag2_recorder]: Subscribed to topic '/robot_states'
+[python3-22] [INFO] [1792538024.999875471] [rosbag2_recorder]: Overriding subscription profile for /tf_static
+[python3-22] [INFO] [1792538025.002134856] [rosbag2_recorder]: Subscribed to topic '/tf_static'
+[python3-22] [INFO] [1792538025.006027319] [rosbag2_recorder]: Subscribed to topic '/shared_controller/path_shared'
+[python3-22] [INFO] [1792538025.014657764] [rosbag2_recorder]: Subscribed to topic '/scan'
+[python3-22] [INFO] [1792538025.016214462] [rosbag2_recorder]: Overriding subscription profile for /local_costmap/costmap
+[python3-22] [INFO] [1792538025.021543856] [rosbag2_recorder]: Subscribed to topic '/local_costmap/costmap'
+[python3-22] [INFO] [1792538025.027539253] [rosbag2_recorder]: Subscribed to topic '/human_states'
+[python3-22] [INFO] [1792538025.032864544] [rosbag2_recorder]: Subscribed to topic '/reference_cmd'
+[python3-22] Armed at t=3.800s; reference starts at 120.000s.
+[python3-22] [INFO] [1792538025.037223063] [rosbag2_recorder]: Subscribed to topic '/clock'
+[python3-22] [INFO] [1792538025.043213015] [rosbag2_recorder]: Subscribed to topic '/experiment/command_guard_status'
+[python3-22] [INFO] [1792538025.049241814] [rosbag2_recorder]: Subscribed to topic '/cmd_vel_guarded'
+[python3-22] [INFO] [1792538025.059253585] [rosbag2_recorder]: Subscribed to topic '/tf'
+[python3-22] [INFO] [1792538025.066465202] [rosbag2_recorder]: Subscribed to topic '/odom'
+[python3-22] [INFO] [1792538025.071561727] [rosbag2_recorder]: Subscribed to topic '/tracked_agents_logging'
+[python3-22] [INFO] [1792538025.080241049] [rosbag2_recorder]: Subscribed to topic '/parameter_events'
+[python3-22] [INFO] [1792538025.083286298] [rosbag2_recorder]: Subscribed to topic '/cmd_vel'
+[python3-22] [INFO] [1792538025.083330748] [rosbag2_recorder]: All requested topics are subscribed. Stopping discovery...
+[dwal_generator-18] [INFO] [1792538025.196711244] [dwal_planner.dwal_generator]: Spinning: T= 3.300000 passed
+[dwal_clustering-17] [INFO] [1792538025.222789731] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538025.223406334] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538025.226866484] [shared_controller]: DWAL stop: waiting for odometry/reference
+[shared_control_node-19] [WARN] [1792538028.227055680] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538028.296722632] [dwal_planner.dwal_generator]: Spinning: T= 5.300000 passed
+[dwal_clustering-17] [INFO] [1792538028.418409071] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538028.418600163] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538031.226784575] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538031.296727596] [dwal_planner.dwal_generator]: Spinning: T= 7.300000 passed
+[dwal_clustering-17] [INFO] [1792538031.426398234] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538031.426711265] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538034.176474195] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538034.196751095] [dwal_planner.dwal_generator]: Spinning: T= 9.300000 passed
+[dwal_clustering-17] [INFO] [1792538034.517067858] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538034.517309417] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538037.226986896] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538037.296718704] [dwal_planner.dwal_generator]: Spinning: T= 11.300000 passed
+[dwal_clustering-17] [INFO] [1792538037.524827641] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538037.525133179] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538040.196813043] [dwal_planner.dwal_generator]: Spinning: T= 13.300000 passed
+[shared_control_node-19] [WARN] [1792538040.226374142] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538040.520073832] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538040.520475933] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538043.126652181] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538043.196745767] [dwal_planner.dwal_generator]: Spinning: T= 15.300000 passed
+[dwal_clustering-17] [INFO] [1792538043.627762782] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538043.628090195] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538046.076498358] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538046.096758906] [dwal_planner.dwal_generator]: Spinning: T= 17.300000 passed
+[dwal_clustering-17] [INFO] [1792538046.520316552] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538046.520539260] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538048.926642749] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538048.996725526] [dwal_planner.dwal_generator]: Spinning: T= 19.300000 passed
+[dwal_clustering-17] [INFO] [1792538049.422230088] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538049.422616712] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538051.576378590] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538051.596783080] [dwal_planner.dwal_generator]: Spinning: T= 21.300000 passed
+[dwal_clustering-17] [INFO] [1792538052.025331082] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538052.025600464] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538054.376471153] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538054.396718664] [dwal_planner.dwal_generator]: Spinning: T= 23.300000 passed
+[dwal_clustering-17] [INFO] [1792538054.925026533] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538054.925348803] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538057.396714028] [dwal_planner.dwal_generator]: Spinning: T= 25.300000 passed
+[shared_control_node-19] [WARN] [1792538057.426651150] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538057.915058728] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538057.915489246] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538060.426379743] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538060.496822579] [dwal_planner.dwal_generator]: Spinning: T= 27.300000 passed
+[dwal_clustering-17] [INFO] [1792538060.922662798] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538060.923005413] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538063.426573766] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538063.496754784] [dwal_planner.dwal_generator]: Spinning: T= 29.300000 passed
+[dwal_clustering-17] [INFO] [1792538063.904363835] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538063.904641138] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538066.476361231] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538066.496739144] [dwal_planner.dwal_generator]: Spinning: T= 31.300000 passed
+[dwal_clustering-17] [INFO] [1792538067.114380278] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538067.114635778] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538069.526338032] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538069.596725917] [dwal_planner.dwal_generator]: Spinning: T= 33.300000 passed
+[dwal_clustering-17] [INFO] [1792538070.118358232] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538070.118655669] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538072.376460114] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538072.396749925] [dwal_planner.dwal_generator]: Spinning: T= 35.300000 passed
+[dwal_clustering-17] [INFO] [1792538072.907169771] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538072.907333874] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538075.176350003] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538075.196842252] [dwal_planner.dwal_generator]: Spinning: T= 37.300000 passed
+[dwal_clustering-17] [INFO] [1792538075.819096098] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538075.819502502] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538078.126282333] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538078.196831675] [dwal_planner.dwal_generator]: Spinning: T= 39.300000 passed
+[dwal_clustering-17] [INFO] [1792538078.802997843] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538078.803082228] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538081.026024508] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538081.096755553] [dwal_planner.dwal_generator]: Spinning: T= 41.300000 passed
+[dwal_clustering-17] [INFO] [1792538081.619680669] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538081.619997085] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538083.976375784] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538083.996772245] [dwal_planner.dwal_generator]: Spinning: T= 43.300000 passed
+[dwal_clustering-17] [INFO] [1792538084.622002995] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538084.622354608] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538086.876567315] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538086.896853256] [dwal_planner.dwal_generator]: Spinning: T= 45.300000 passed
+[dwal_clustering-17] [INFO] [1792538087.522067369] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538087.522409798] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538089.796736651] [dwal_planner.dwal_generator]: Spinning: T= 47.300000 passed
+[shared_control_node-19] [WARN] [1792538089.826164549] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538090.416839549] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538090.417177980] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538092.496946614] [dwal_planner.dwal_generator]: Spinning: T= 49.300000 passed
+[shared_control_node-19] [WARN] [1792538092.526109705] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538093.118090391] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538093.118346183] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538095.376149405] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538095.396795480] [dwal_planner.dwal_generator]: Spinning: T= 51.300000 passed
+[dwal_clustering-17] [INFO] [1792538096.015224773] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538096.015543947] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538098.296700941] [dwal_planner.dwal_generator]: Spinning: T= 53.300000 passed
+[shared_control_node-19] [WARN] [1792538098.326262110] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538098.908260195] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538098.908395940] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538101.276172031] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538101.296965609] [dwal_planner.dwal_generator]: Spinning: T= 55.300000 passed
+[dwal_clustering-17] [INFO] [1792538101.917520186] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538101.917796938] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538104.196741821] [dwal_planner.dwal_generator]: Spinning: T= 57.300000 passed
+[shared_control_node-19] [WARN] [1792538104.226481958] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538104.819298411] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538104.819615076] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538107.027176099] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538107.096728546] [dwal_planner.dwal_generator]: Spinning: T= 59.300000 passed
+[dwal_clustering-17] [INFO] [1792538107.618991869] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538107.619185988] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538109.796770891] [dwal_planner.dwal_generator]: Spinning: T= 61.300000 passed
+[shared_control_node-19] [WARN] [1792538109.825860880] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538110.308408575] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538110.308626809] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538112.576437357] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538112.596773768] [dwal_planner.dwal_generator]: Spinning: T= 63.300000 passed
+[dwal_clustering-17] [INFO] [1792538113.211278788] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538113.211522361] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538115.476198829] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538115.496714426] [dwal_planner.dwal_generator]: Spinning: T= 65.300000 passed
+[dwal_clustering-17] [INFO] [1792538116.134030970] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538116.134375644] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538118.376283368] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538118.396688432] [dwal_planner.dwal_generator]: Spinning: T= 67.300000 passed
+[dwal_clustering-17] [INFO] [1792538119.029707134] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538119.030003177] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538121.326186379] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538121.396735848] [dwal_planner.dwal_generator]: Spinning: T= 69.300000 passed
+[dwal_clustering-17] [INFO] [1792538122.020682539] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538122.021046140] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538124.276139123] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538124.296765787] [dwal_planner.dwal_generator]: Spinning: T= 71.300000 passed
+[dwal_clustering-17] [INFO] [1792538124.916977954] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538124.917266707] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538127.196711535] [dwal_planner.dwal_generator]: Spinning: T= 73.300000 passed
+[shared_control_node-19] [WARN] [1792538127.226460704] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538127.821314188] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538127.821795338] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538130.176019433] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538130.196839325] [dwal_planner.dwal_generator]: Spinning: T= 75.300000 passed
+[dwal_clustering-17] [INFO] [1792538130.698563649] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538130.698676653] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538132.875867156] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538132.896715633] [dwal_planner.dwal_generator]: Spinning: T= 77.300000 passed
+[dwal_clustering-17] [INFO] [1792538133.520826204] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538133.521139030] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538135.696698330] [dwal_planner.dwal_generator]: Spinning: T= 79.300000 passed
+[shared_control_node-19] [WARN] [1792538135.725800482] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538136.317127240] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538136.317503688] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538138.496678057] [dwal_planner.dwal_generator]: Spinning: T= 81.300000 passed
+[shared_control_node-19] [WARN] [1792538138.525784075] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538139.107703121] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538139.107837911] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538141.196741184] [dwal_planner.dwal_generator]: Spinning: T= 83.300000 passed
+[shared_control_node-19] [WARN] [1792538141.225797912] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538141.700714506] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538141.700793458] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538143.776062105] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538143.796821506] [dwal_planner.dwal_generator]: Spinning: T= 85.300000 passed
+[dwal_clustering-17] [INFO] [1792538144.420301853] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538144.420672086] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538146.676154484] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538146.696725273] [dwal_planner.dwal_generator]: Spinning: T= 87.300000 passed
+[dwal_clustering-17] [INFO] [1792538147.302014597] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538147.302151539] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538149.676121899] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538149.696723956] [dwal_planner.dwal_generator]: Spinning: T= 89.300000 passed
+[dwal_clustering-17] [INFO] [1792538150.326815959] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538150.327236096] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538152.596710288] [dwal_planner.dwal_generator]: Spinning: T= 91.300000 passed
+[shared_control_node-19] [WARN] [1792538152.626146300] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_clustering-17] [INFO] [1792538153.320426426] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538153.320793858] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538155.575960848] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538155.596768635] [dwal_planner.dwal_generator]: Spinning: T= 93.300000 passed
+[dwal_clustering-17] [INFO] [1792538156.222216927] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538156.222524728] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538158.576158013] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538158.596771616] [dwal_planner.dwal_generator]: Spinning: T= 95.300000 passed
+[dwal_clustering-17] [INFO] [1792538159.219939557] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538159.220465137] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538161.575895448] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538161.596720132] [dwal_planner.dwal_generator]: Spinning: T= 97.300000 passed
+[dwal_clustering-17] [INFO] [1792538162.214056054] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538162.214401894] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538164.576277224] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538164.596723467] [dwal_planner.dwal_generator]: Spinning: T= 99.300000 passed
+[dwal_clustering-17] [INFO] [1792538165.220223945] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538165.220715636] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538167.576084961] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538167.596757874] [dwal_planner.dwal_generator]: Spinning: T= 101.300000 passed
+[dwal_clustering-17] [INFO] [1792538168.221691062] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538168.221984478] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538170.375706277] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538170.396711528] [dwal_planner.dwal_generator]: Spinning: T= 103.300000 passed
+[dwal_clustering-17] [INFO] [1792538170.926700078] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538170.926992065] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538173.176024459] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538173.196755040] [dwal_planner.dwal_generator]: Spinning: T= 105.300000 passed
+[dwal_clustering-17] [INFO] [1792538173.808853323] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538173.809254630] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538176.126128584] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538176.196797037] [dwal_planner.dwal_generator]: Spinning: T= 107.300000 passed
+[dwal_clustering-17] [INFO] [1792538176.826280098] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538176.826674749] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538179.125862749] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538179.196706328] [dwal_planner.dwal_generator]: Spinning: T= 109.300000 passed
+[dwal_clustering-17] [INFO] [1792538179.815247357] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538179.815652442] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538182.125883270] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538182.196714648] [dwal_planner.dwal_generator]: Spinning: T= 111.300000 passed
+[dwal_clustering-17] [INFO] [1792538182.823593841] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538182.823990778] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538185.075776247] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538185.096754231] [dwal_planner.dwal_generator]: Spinning: T= 113.300000 passed
+[dwal_clustering-17] [INFO] [1792538185.724130653] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538185.724418113] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538188.076053580] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538188.096819335] [dwal_planner.dwal_generator]: Spinning: T= 115.300000 passed
+[dwal_clustering-17] [INFO] [1792538188.717593202] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538188.717958285] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538191.125789059] [shared_controller]: DWAL stop: waiting for odometry/reference
+[dwal_generator-18] [INFO] [1792538191.196769033] [dwal_planner.dwal_generator]: Spinning: T= 117.300000 passed
+[dwal_clustering-17] [INFO] [1792538191.818364871] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538191.818747676] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538194.155928743] [shared_controller]: Selected cluster: near
+[shared_control_node-19] [INFO] [1792538194.166248546] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,-0.006) radius=0.939 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538194.196748296] [dwal_planner.dwal_generator]: Spinning: T= 119.300000 passed
+[dwal_clustering-17] [INFO] [1792538194.816338359] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.084 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538194.816633810] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538195.375743890] [shared_controller]: DWAL stop: stale reference command
+[dwal_generator-18] [INFO] [1792538196.996738931] [dwal_planner.dwal_generator]: Spinning: T= 121.300000 passed
+[shared_control_node-19] [INFO] [1792538197.607925744] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,0.000) radius=0.740 rejected=(0,0)
+[dwal_clustering-17] [INFO] [1792538197.619477279] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538197.619872831] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538199.996729203] [dwal_planner.dwal_generator]: Spinning: T= 123.300000 passed
+[shared_control_node-19] [INFO] [1792538200.592810213] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.150,0.036) radius=1.800 rejected=(0,0)
+[dwal_clustering-17] [INFO] [1792538200.627208545] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.132 accepted=102 rejected=0
+[dwal_clustering-17] [INFO] [1792538200.627663627] [dwal_planner.dwal_clustering]: DWAL clustering: samples=102 free_prefixes=102 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538202.996706848] [dwal_planner.dwal_generator]: Spinning: T= 125.300000 passed
+[shared_control_node-19] [INFO] [1792538203.537450765] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.129,0.026) radius=1.800 rejected=(0,0)
+[dwal_clustering-17] [INFO] [1792538203.626439774] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.119 accepted=103 rejected=0
+[dwal_clustering-17] [INFO] [1792538203.626815841] [dwal_planner.dwal_clustering]: DWAL clustering: samples=103 free_prefixes=103 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538205.996728062] [dwal_planner.dwal_generator]: Spinning: T= 127.300000 passed
+[shared_control_node-19] [INFO] [1792538206.522103092] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,-0.000) radius=0.700 rejected=(0,0)
+[dwal_clustering-17] [INFO] [1792538206.712480730] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.063 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538206.712853371] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538208.796708167] [dwal_planner.dwal_generator]: Spinning: T= 129.300000 passed
+[shared_control_node-19] [INFO] [1792538209.381233205] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,0.000) radius=0.720 rejected=(0,0)
+[dwal_clustering-17] [INFO] [1792538209.618090096] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.063 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538209.618615725] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538211.796739831] [dwal_planner.dwal_generator]: Spinning: T= 131.300000 passed
+[shared_control_node-19] [INFO] [1792538212.366607982] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,0.000) radius=0.740 rejected=(0,0)
+[dwal_clustering-17] [INFO] [1792538212.620838564] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.063 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538212.621288818] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538214.796760802] [dwal_planner.dwal_generator]: Spinning: T= 133.300000 passed
+[shared_control_node-19] [INFO] [1792538215.335566997] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,0.000) radius=0.560 rejected=(0,0)
+[dwal_clustering-17] [INFO] [1792538215.521691031] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.063 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538215.522481981] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538217.796709299] [dwal_planner.dwal_generator]: Spinning: T= 135.300000 passed
+[shared_control_node-19] [INFO] [1792538218.408881585] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.150,0.048) radius=1.800 rejected=(0,0)
+[dwal_clustering-17] [INFO] [1792538218.617198177] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.088 accepted=102 rejected=0
+[dwal_clustering-17] [INFO] [1792538218.617516324] [dwal_planner.dwal_clustering]: DWAL clustering: samples=102 free_prefixes=102 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538220.896737180] [dwal_planner.dwal_generator]: Spinning: T= 137.300000 passed
+[dwal_clustering-17] [INFO] [1792538221.597683769] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=6 rejected=0
+[dwal_clustering-17] [INFO] [1792538221.597754731] [dwal_planner.dwal_clustering]: DWAL clustering: samples=6 free_prefixes=6 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538221.670667478] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,-0.061) radius=1.539 rejected=(0,0)
+[shared_control_node-19] [WARN] [1792538221.925674270] [shared_controller]: No valid clusters. Outputting controlled stop.
+[dwal_generator-18] [INFO] [1792538223.796755576] [dwal_planner.dwal_generator]: Spinning: T= 139.300000 passed
+[dwal_clustering-17] [INFO] [1792538224.528882061] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.133 accepted=103 rejected=0
+[dwal_clustering-17] [INFO] [1792538224.529164284] [dwal_planner.dwal_clustering]: DWAL clustering: samples=103 free_prefixes=103 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538224.941417617] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.150,-0.030) radius=1.800 rejected=(0,0)
+[shared_control_node-19] [WARN] [1792538225.525937613] [shared_controller]: DWAL stop: stale reference command
+[dwal_generator-18] [INFO] [1792538226.796707713] [dwal_planner.dwal_generator]: Spinning: T= 141.300000 passed
+[dwal_clustering-17] [INFO] [1792538227.517030974] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.063 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538227.517324348] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538227.931838553] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.126,0.009) radius=1.800 rejected=(0,0)
+[shared_control_node-19] [WARN] [1792538229.325664076] [shared_controller]: No valid clusters. Outputting controlled stop.
+[dwal_generator-18] [INFO] [1792538229.796873360] [dwal_planner.dwal_generator]: Spinning: T= 143.300000 passed
+[dwal_clustering-17] [INFO] [1792538230.511445699] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.063 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538230.511808891] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538230.948575355] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,0.000) radius=0.340 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538232.796735597] [dwal_planner.dwal_generator]: Spinning: T= 145.300000 passed
+[dwal_clustering-17] [INFO] [1792538233.514271475] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.063 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538233.514637218] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538233.936840572] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,0.000) radius=0.640 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538235.796690349] [dwal_planner.dwal_generator]: Spinning: T= 147.300000 passed
+[dwal_clustering-17] [INFO] [1792538236.620272084] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.063 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538236.620662120] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538236.985552101] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,0.000) radius=1.040 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538238.796775306] [dwal_planner.dwal_generator]: Spinning: T= 149.300000 passed
+[shared_control_node-19] [WARN] [1792538239.225854809] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538239.625740735] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538239.626000126] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538240.134045608] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,0.001) radius=1.340 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538241.796819486] [dwal_planner.dwal_generator]: Spinning: T= 151.300000 passed
+[shared_control_node-19] [WARN] [1792538242.275968250] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538242.619597235] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538242.620150821] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538244.796730924] [dwal_planner.dwal_generator]: Spinning: T= 153.300000 passed
+[shared_control_node-19] [WARN] [1792538245.275744222] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538245.624454309] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538245.624753626] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538247.796745891] [dwal_planner.dwal_generator]: Spinning: T= 155.300000 passed
+[shared_control_node-19] [WARN] [1792538248.225781456] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538248.621094975] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538248.621378496] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=5 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538250.796846955] [dwal_planner.dwal_generator]: Spinning: T= 157.300000 passed
+[shared_control_node-19] [WARN] [1792538251.225455439] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538251.523944939] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538251.524204391] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538253.796734985] [dwal_planner.dwal_generator]: Spinning: T= 159.300000 passed
+[shared_control_node-19] [WARN] [1792538254.225664433] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538254.511384293] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538254.511611180] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538255.415978213] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,0.000) radius=0.620 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538256.796728281] [dwal_planner.dwal_generator]: Spinning: T= 161.300000 passed
+[dwal_clustering-17] [INFO] [1792538257.625279343] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.063 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538257.625627806] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538258.445700307] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.137,0.071) radius=1.800 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538259.896748353] [dwal_planner.dwal_generator]: Spinning: T= 163.300000 passed
+[dwal_clustering-17] [INFO] [1792538260.626211340] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.122 accepted=102 rejected=0
+[dwal_clustering-17] [INFO] [1792538260.626505050] [dwal_planner.dwal_clustering]: DWAL clustering: samples=102 free_prefixes=102 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538261.484525773] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.030,0.000) radius=1.400 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538262.896812321] [dwal_planner.dwal_generator]: Spinning: T= 165.300000 passed
+[dwal_clustering-17] [INFO] [1792538263.723111277] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.063 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538263.723490495] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538264.500731358] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.150,0.048) radius=1.800 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538265.896719371] [dwal_planner.dwal_generator]: Spinning: T= 167.300000 passed
+[dwal_clustering-17] [INFO] [1792538266.723204445] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.132 accepted=103 rejected=0
+[dwal_clustering-17] [INFO] [1792538266.723409132] [dwal_planner.dwal_clustering]: DWAL clustering: samples=103 free_prefixes=103 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538267.490344636] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.150,0.024) radius=1.800 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538268.896945718] [dwal_planner.dwal_generator]: Spinning: T= 169.300000 passed
+[dwal_clustering-17] [INFO] [1792538269.626285539] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.122 accepted=103 rejected=1
+[dwal_clustering-17] [INFO] [1792538269.626631374] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=103 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538270.489022088] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.126,0.002) radius=1.800 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538271.896706693] [dwal_planner.dwal_generator]: Spinning: T= 171.300000 passed
+[dwal_clustering-17] [INFO] [1792538272.619309227] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.099 accepted=103 rejected=0
+[dwal_clustering-17] [INFO] [1792538272.619611607] [dwal_planner.dwal_clustering]: DWAL clustering: samples=103 free_prefixes=103 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538273.449881660] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.126,0.024) radius=1.800 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538274.796858726] [dwal_planner.dwal_generator]: Spinning: T= 173.300000 passed
+[dwal_clustering-17] [INFO] [1792538275.618709317] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.103 accepted=103 rejected=0
+[dwal_clustering-17] [INFO] [1792538275.619093217] [dwal_planner.dwal_clustering]: DWAL clustering: samples=103 free_prefixes=103 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538276.389992744] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.119,-0.035) radius=1.800 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538277.796753407] [dwal_planner.dwal_generator]: Spinning: T= 175.300000 passed
+[dwal_clustering-17] [INFO] [1792538278.529993769] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.117 accepted=102 rejected=0
+[dwal_clustering-17] [INFO] [1792538278.530325323] [dwal_planner.dwal_clustering]: DWAL clustering: samples=102 free_prefixes=102 clusters=1 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [INFO] [1792538279.377881532] [shared_controller]: DWAL command: variable=true requested=(0.150,0.000) selected=(0.128,0.029) radius=1.800 rejected=(0,0)
+[dwal_generator-18] [INFO] [1792538280.796759081] [dwal_planner.dwal_generator]: Spinning: T= 177.300000 passed
+[shared_control_node-19] [WARN] [1792538281.025457796] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538281.516963293] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538281.517304261] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538283.796761771] [dwal_planner.dwal_generator]: Spinning: T= 179.300000 passed
+[shared_control_node-19] [WARN] [1792538284.025833644] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538284.522573939] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538284.522829404] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=5 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538286.696822559] [dwal_planner.dwal_generator]: Spinning: T= 181.300000 passed
+[shared_control_node-19] [WARN] [1792538286.975653679] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538287.523329829] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538287.523626543] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=5 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538289.696708675] [dwal_planner.dwal_generator]: Spinning: T= 183.300000 passed
+[shared_control_node-19] [WARN] [1792538289.925484394] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538290.301374077] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538290.301462652] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538292.296701723] [dwal_planner.dwal_generator]: Spinning: T= 185.300000 passed
+[shared_control_node-19] [WARN] [1792538292.575503917] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538293.113890148] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538293.114253119] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=4 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538295.296829999] [dwal_planner.dwal_generator]: Spinning: T= 187.300000 passed
+[shared_control_node-19] [WARN] [1792538295.775802724] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538296.114946338] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538296.115626608] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538298.296761461] [dwal_planner.dwal_generator]: Spinning: T= 189.300000 passed
+[shared_control_node-19] [WARN] [1792538298.725653831] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538299.111562336] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538299.111794032] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538301.296766255] [dwal_planner.dwal_generator]: Spinning: T= 191.300000 passed
+[shared_control_node-19] [WARN] [1792538301.875424454] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538302.113147387] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538302.113482424] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538304.296824903] [dwal_planner.dwal_generator]: Spinning: T= 193.300000 passed
+[shared_control_node-19] [WARN] [1792538304.925610901] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538305.112146188] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538305.112399692] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538307.396828854] [dwal_planner.dwal_generator]: Spinning: T= 195.300000 passed
+[shared_control_node-19] [WARN] [1792538307.925593451] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538308.108631944] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538308.109005282] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538310.296705337] [dwal_planner.dwal_generator]: Spinning: T= 197.300000 passed
+[shared_control_node-19] [WARN] [1792538310.925317440] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538311.110024659] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538311.110350825] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538313.296748246] [dwal_planner.dwal_generator]: Spinning: T= 199.300000 passed
+[shared_control_node-19] [WARN] [1792538313.925493168] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538314.118963696] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538314.119329170] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538316.296830162] [dwal_planner.dwal_generator]: Spinning: T= 201.300000 passed
+[shared_control_node-19] [WARN] [1792538316.925808003] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538317.125237244] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538317.125514920] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=2 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538319.296803934] [dwal_planner.dwal_generator]: Spinning: T= 203.300000 passed
+[shared_control_node-19] [WARN] [1792538319.925625793] [shared_controller]: DWAL stop: stale reference command
+[dwal_clustering-17] [INFO] [1792538320.116854715] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538320.117261918] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[dwal_generator-18] [INFO] [1792538322.296761308] [dwal_planner.dwal_generator]: Spinning: T= 205.300000 passed
+[dwal_clustering-17] [INFO] [1792538323.111734179] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538323.112142867] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[shared_control_node-19] [WARN] [1792538324.425789532] [shared_controller]: DWAL stop: stale reference command
+[dwal_generator-18] [INFO] [1792538325.296720694] [dwal_planner.dwal_generator]: Spinning: T= 207.300000 passed
+[dwal_clustering-17] [INFO] [1792538326.120502006] [dwal_planner.dwal_clustering]: DWAL braking: required_length=0.050 accepted=104 rejected=0
+[dwal_clustering-17] [INFO] [1792538326.120730878] [dwal_planner.dwal_clustering]: DWAL clustering: samples=104 free_prefixes=104 clusters=3 separation=5 min_span=0.200 width_reference=1.800 level=1.800
+[python3-22] {
+[python3-22]   "source": "/rosbags/dense_crowd_dynamic_split_off_seed1_20261019T133051612349Z",
+[python3-22]   "sha256": "4e32e403b58b3f4ad76d1a692944f552efc044504645ac386e4c7dc5b1464578",
+[python3-22]   "messages": 1705,
+[python3-22]   "completed": true,
+[python3-22]   "sent_messages": 1705,
+[python3-22]   "absolute_start": true,
+[python3-22]   "start_sim_s": 120.0,
+[python3-22]   "timing_valid": true,
+[python3-22]   "max_lateness_s": 2.842170943040401e-14,
+[python3-22]   "lateness_tolerance_s": 0.15,
+[python3-22]   "reference_duration_s": 88.7,
+[python3-22]   "evaluation_duration_s": 60.0
+[python3-22] }
+[python3-22] [INFO] [1792538326.658403624] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[python3-22] [INFO] [1792538326.669975617] [rosbag2_recorder]: Event publisher thread: Exiting
+[python3-22] [INFO] [1792538326.670273568] [rosbag2_recorder]: Recording stopped
+[python3-22] Experiment finished; status=0. Recorder closed before simulator shutdown.
+[INFO] [python3-22]: process has finished cleanly [pid 186]
+[INFO] [rviz2-21]: sending signal 'SIGINT' to process[rviz2-21]
+[INFO] [constant_speed_limit.py-20]: sending signal 'SIGINT' to process[constant_speed_limit.py-20]
+[INFO] [shared_control_node-19]: sending signal 'SIGINT' to process[shared_control_node-19]
+[INFO] [dwal_generator-18]: sending signal 'SIGINT' to process[dwal_generator-18]
+[INFO] [dwal_clustering-17]: sending signal 'SIGINT' to process[dwal_clustering-17]
+[INFO] [lifecycle_manager-16]: sending signal 'SIGINT' to process[lifecycle_manager-16]
+[INFO] [nav2_costmap_2d-15]: sending signal 'SIGINT' to process[nav2_costmap_2d-15]
+[INFO] [lifecycle_manager-14]: sending signal 'SIGINT' to process[lifecycle_manager-14]
+[INFO] [final_cmd_watchdog.py-13]: sending signal 'SIGINT' to process[final_cmd_watchdog.py-13]
+[INFO] [collision_monitor-12]: sending signal 'SIGINT' to process[collision_monitor-12]
+[INFO] [velocity_smoother-11]: sending signal 'SIGINT' to process[velocity_smoother-11]
+[INFO] [command_guard.py-10]: sending signal 'SIGINT' to process[command_guard.py-10]
+[INFO] [hunav_to_cohan_bridge.py-9]: sending signal 'SIGINT' to process[hunav_to_cohan_bridge.py-9]
+[INFO] [scan_to_scan_filter_chain-8]: sending signal 'SIGINT' to process[scan_to_scan_filter_chain-8]
+[INFO] [joint_state_publisher-7]: sending signal 'SIGINT' to process[joint_state_publisher-7]
+[INFO] [robot_state_publisher-6]: sending signal 'SIGINT' to process[robot_state_publisher-6]
+[INFO] [gzserver-5]: sending signal 'SIGINT' to process[gzserver-5]
+[INFO] [hunav_agent_manager-3]: sending signal 'SIGINT' to process[hunav_agent_manager-3]
+[INFO] [hunav_loader-1]: sending signal 'SIGINT' to process[hunav_loader-1]
+[rviz2-21] [INFO] [1792538327.163858360] [rclcpp]: signal_handler(signum=2)
+[shared_control_node-19] [INFO] [1792538327.205441621] [rclcpp]: signal_handler(signum=2)
+[dwal_generator-18] [INFO] [1792538327.223162724] [rclcpp]: signal_handler(signum=2)
+[dwal_clustering-17] [INFO] [1792538327.242591284] [rclcpp]: signal_handler(signum=2)
+[constant_speed_limit.py-20] Traceback (most recent call last):
+[constant_speed_limit.py-20]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/constant_speed_limit.py", line 30, in main
+[constant_speed_limit.py-20]     rclpy.spin(node)
+[constant_speed_limit.py-20]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[constant_speed_limit.py-20]     executor.spin_once()
+[constant_speed_limit.py-20]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 751, in spin_once
+[constant_speed_limit.py-20]     self._spin_once_impl(timeout_sec)
+[constant_speed_limit.py-20]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 740, in _spin_once_impl
+[constant_speed_limit.py-20]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[constant_speed_limit.py-20]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 723, in wait_for_ready_callbacks
+[constant_speed_limit.py-20]     return next(self._cb_iter)
+[constant_speed_limit.py-20]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 620, in _wait_for_ready_callbacks
+[constant_speed_limit.py-20]     wait_set.wait(timeout_nsec)
+[constant_speed_limit.py-20] KeyboardInterrupt
+[constant_speed_limit.py-20] 
+[constant_speed_limit.py-20] During handling of the above exception, another exception occurred:
+[constant_speed_limit.py-20] 
+[constant_speed_limit.py-20] Traceback (most recent call last):
+[constant_speed_limit.py-20]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/constant_speed_limit.py", line 37, in <module>
+[constant_speed_limit.py-20]     main()
+[constant_speed_limit.py-20]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/constant_speed_limit.py", line 33, in main
+[constant_speed_limit.py-20]     rclpy.shutdown()
+[constant_speed_limit.py-20]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[constant_speed_limit.py-20]     _shutdown(context=context)
+[constant_speed_limit.py-20]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[constant_speed_limit.py-20]     return context.shutdown()
+[constant_speed_limit.py-20]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[constant_speed_limit.py-20]     self.__context.shutdown()
+[constant_speed_limit.py-20] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[lifecycle_manager-16] [INFO] [1792538327.262989520] [rclcpp]: signal_handler(signum=2)
+[lifecycle_manager-16] [INFO] [1792538327.263587305] [costmap_lifecycle_manager]: Running Nav2 LifecycleManager rcl preshutdown (costmap_lifecycle_manager)
+[nav2_costmap_2d-15] [INFO] [1792538327.282678270] [rclcpp]: signal_handler(signum=2)
+[lifecycle_manager-16] [INFO] [1792538327.289194323] [costmap_lifecycle_manager]: Destroying costmap_lifecycle_manager
+[lifecycle_manager-14] [INFO] [1792538327.302195717] [rclcpp]: signal_handler(signum=2)
+[lifecycle_manager-14] [INFO] [1792538327.303273171] [command_pipeline_lifecycle_manager]: Running Nav2 LifecycleManager rcl preshutdown (command_pipeline_lifecycle_manager)
+[final_cmd_watchdog.py-13] Traceback (most recent call last):
+[final_cmd_watchdog.py-13]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/final_cmd_watchdog.py", line 35, in main
+[final_cmd_watchdog.py-13]     try: rclpy.spin(node)
+[final_cmd_watchdog.py-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[final_cmd_watchdog.py-13]     executor.spin_once()
+[final_cmd_watchdog.py-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 751, in spin_once
+[final_cmd_watchdog.py-13]     self._spin_once_impl(timeout_sec)
+[final_cmd_watchdog.py-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 740, in _spin_once_impl
+[final_cmd_watchdog.py-13]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[final_cmd_watchdog.py-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 723, in wait_for_ready_callbacks
+[final_cmd_watchdog.py-13]     return next(self._cb_iter)
+[final_cmd_watchdog.py-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 620, in _wait_for_ready_callbacks
+[final_cmd_watchdog.py-13]     wait_set.wait(timeout_nsec)
+[final_cmd_watchdog.py-13] KeyboardInterrupt
+[final_cmd_watchdog.py-13] 
+[final_cmd_watchdog.py-13] During handling of the above exception, another exception occurred:
+[final_cmd_watchdog.py-13] 
+[final_cmd_watchdog.py-13] Traceback (most recent call last):
+[final_cmd_watchdog.py-13]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/final_cmd_watchdog.py", line 42, in <module>
+[final_cmd_watchdog.py-13]     if __name__ == '__main__': main()
+[final_cmd_watchdog.py-13]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/final_cmd_watchdog.py", line 37, in main
+[final_cmd_watchdog.py-13]     node.publisher.publish(Twist())
+[final_cmd_watchdog.py-13]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/publisher.py", line 70, in publish
+[final_cmd_watchdog.py-13]     self.__publisher.publish(msg)
+[final_cmd_watchdog.py-13] rclpy._rclpy_pybind11.RCLError: Failed to publish: publisher's context is invalid, at ./src/rcl/publisher.c:389
+[collision_monitor-12] [INFO] [1792538327.330064416] [rclcpp]: signal_handler(signum=2)
+[collision_monitor-12] [INFO] [1792538327.332837617] [collision_monitor]: Running Nav2 LifecycleNode rcl preshutdown (collision_monitor)
+[collision_monitor-12] [INFO] [1792538327.333053768] [collision_monitor]: Deactivating
+[collision_monitor-12] [INFO] [1792538327.333106081] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[lifecycle_manager-14] [INFO] [1792538327.335665022] [command_pipeline_lifecycle_manager]: Destroying command_pipeline_lifecycle_manager
+[velocity_smoother-11] [INFO] [1792538327.339943046] [rclcpp]: signal_handler(signum=2)
+[velocity_smoother-11] [INFO] [1792538327.340181365] [velocity_smoother]: Running Nav2 LifecycleNode rcl preshutdown (velocity_smoother)
+[velocity_smoother-11] [INFO] [1792538327.340377720] [velocity_smoother]: Deactivating
+[velocity_smoother-11] [INFO] [1792538327.340430441] [velocity_smoother]: Destroying bond (velocity_smoother) to lifecycle manager.
+[collision_monitor-12] [WARN] [1792538327.341537163] [LifecyclePublisher]: Trying to publish message on the topic '/cmd_vel_safe', but the publisher is not activated
+[collision_monitor-12] [WARN] [1792538327.341597966] [LifecyclePublisher]: Trying to publish message on the topic '/FootprintApproach', but the publisher is not activated
+[nav2_costmap_2d-15] Warning: class_loader.ClassLoader: SEVERE WARNING!!! Attempting to unload library while objects created by this loader exist in the heap! You should delete your objects before attempting to unload the library or destroying the ClassLoader. The library will NOT be unloaded.
+[nav2_costmap_2d-15]          at line 127 in ./src/class_loader.cpp
+[nav2_costmap_2d-15] terminate called without an active exception
+[collision_monitor-12] [INFO] [1792538327.343393060] [collision_monitor]: Cleaning up
+[collision_monitor-12] [INFO] [1792538327.343473294] [collision_monitor]: [FootprintApproach]: Destroying Polygon
+[collision_monitor-12] [INFO] [1792538327.343626093] [collision_monitor]: [scan]: Destroying Scan
+[velocity_smoother-11] [INFO] [1792538327.350677632] [velocity_smoother]: Cleaning up
+[velocity_smoother-11] [INFO] [1792538327.351044570] [velocity_smoother]: Destroying bond (velocity_smoother) to lifecycle manager.
+[collision_monitor-12] [INFO] [1792538327.354046969] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[scan_to_scan_filter_chain-8] [INFO] [1792538327.363540439] [rclcpp]: signal_handler(signum=2)
+[collision_monitor-12] [INFO] [1792538327.363598728] [collision_monitor]: Destroying
+[velocity_smoother-11] [INFO] [1792538327.372122389] [velocity_smoother]: Destroying
+[robot_state_publisher-6] [INFO] [1792538327.374475094] [rclcpp]: signal_handler(signum=2)
+[hunav_to_cohan_bridge.py-9] Traceback (most recent call last):
+[hunav_to_cohan_bridge.py-9]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/hunav_to_cohan_bridge.py", line 63, in main
+[hunav_to_cohan_bridge.py-9]     rclpy.spin(node)
+[hunav_to_cohan_bridge.py-9]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[hunav_to_cohan_bridge.py-9]     executor.spin_once()
+[hunav_to_cohan_bridge.py-9]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 751, in spin_once
+[hunav_to_cohan_bridge.py-9]     self._spin_once_impl(timeout_sec)
+[hunav_to_cohan_bridge.py-9]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 740, in _spin_once_impl
+[hunav_to_cohan_bridge.py-9]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[hunav_to_cohan_bridge.py-9]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 723, in wait_for_ready_callbacks
+[hunav_to_cohan_bridge.py-9]     return next(self._cb_iter)
+[hunav_to_cohan_bridge.py-9]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 620, in _wait_for_ready_callbacks
+[hunav_to_cohan_bridge.py-9]     wait_set.wait(timeout_nsec)
+[hunav_to_cohan_bridge.py-9] KeyboardInterrupt
+[hunav_to_cohan_bridge.py-9] 
+[hunav_to_cohan_bridge.py-9] During handling of the above exception, another exception occurred:
+[hunav_to_cohan_bridge.py-9] 
+[hunav_to_cohan_bridge.py-9] Traceback (most recent call last):
+[hunav_to_cohan_bridge.py-9]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/hunav_to_cohan_bridge.py", line 70, in <module>
+[hunav_to_cohan_bridge.py-9]     main()
+[hunav_to_cohan_bridge.py-9]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/hunav_to_cohan_bridge.py", line 66, in main
+[hunav_to_cohan_bridge.py-9]     rclpy.shutdown()
+[hunav_to_cohan_bridge.py-9]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[hunav_to_cohan_bridge.py-9]     _shutdown(context=context)
+[hunav_to_cohan_bridge.py-9]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[hunav_to_cohan_bridge.py-9]     return context.shutdown()
+[hunav_to_cohan_bridge.py-9]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[hunav_to_cohan_bridge.py-9]     self.__context.shutdown()
+[hunav_to_cohan_bridge.py-9] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[command_guard.py-10] Traceback (most recent call last):
+[command_guard.py-10]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/command_guard.py", line 86, in main
+[command_guard.py-10]     try: rclpy.spin(node)
+[command_guard.py-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 229, in spin
+[command_guard.py-10]     executor.spin_once()
+[command_guard.py-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 751, in spin_once
+[command_guard.py-10]     self._spin_once_impl(timeout_sec)
+[command_guard.py-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 740, in _spin_once_impl
+[command_guard.py-10]     handler, entity, node = self.wait_for_ready_callbacks(timeout_sec=timeout_sec)
+[command_guard.py-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 723, in wait_for_ready_callbacks
+[command_guard.py-10]     return next(self._cb_iter)
+[command_guard.py-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 620, in _wait_for_ready_callbacks
+[command_guard.py-10]     wait_set.wait(timeout_nsec)
+[command_guard.py-10] KeyboardInterrupt
+[command_guard.py-10] 
+[command_guard.py-10] During handling of the above exception, another exception occurred:
+[command_guard.py-10] 
+[command_guard.py-10] Traceback (most recent call last):
+[command_guard.py-10]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/command_guard.py", line 92, in <module>
+[command_guard.py-10]     if __name__ == '__main__': main()
+[command_guard.py-10]   File "/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/command_guard.py", line 89, in main
+[command_guard.py-10]     rclpy.shutdown()
+[command_guard.py-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py", line 130, in shutdown
+[command_guard.py-10]     _shutdown(context=context)
+[command_guard.py-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/utilities.py", line 58, in shutdown
+[command_guard.py-10]     return context.shutdown()
+[command_guard.py-10]   File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/context.py", line 102, in shutdown
+[command_guard.py-10]     self.__context.shutdown()
+[command_guard.py-10] rclpy._rclpy_pybind11.RCLError: failed to shutdown: rcl_shutdown already called on the given context, at ./src/rcl/init.c:241
+[hunav_agent_manager-3] [INFO] [1792538327.387928825] [rclcpp]: signal_handler(signum=2)
+[hunav_loader-1] [INFO] [1792538327.395868520] [rclcpp]: signal_handler(signum=2)
+[INFO] [shared_control_node-19]: process has finished cleanly [pid 178]
+[INFO] [dwal_clustering-17]: process has finished cleanly [pid 174]
+[ERROR] [constant_speed_limit.py-20]: process has died [pid 181, exit code 1, cmd '/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/constant_speed_limit.py --ros-args -r __node:=constant_speed_limit --params-file /tmp/launch_params_tnbw69rc'].
+[INFO] [dwal_generator-18]: process has finished cleanly [pid 176]
+[INFO] [lifecycle_manager-14]: process has finished cleanly [pid 168]
+[INFO] [lifecycle_manager-16]: process has finished cleanly [pid 172]
+[INFO] [collision_monitor-12]: process has finished cleanly [pid 164]
+[INFO] [velocity_smoother-11]: process has finished cleanly [pid 162]
+[INFO] [robot_state_publisher-6]: process has finished cleanly [pid 152]
+[INFO] [hunav_loader-1]: process has finished cleanly [pid 114]
+[INFO] [hunav_agent_manager-3]: process has finished cleanly [pid 118]
+[INFO] [scan_to_scan_filter_chain-8]: process has finished cleanly [pid 156]
+[ERROR] [final_cmd_watchdog.py-13]: process has died [pid 166, exit code 1, cmd '/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/final_cmd_watchdog.py --ros-args -r __node:=final_cmd_watchdog --params-file /tmp/crowd_aware_p4euupz4/command_pipeline.yaml'].
+[ERROR] [hunav_to_cohan_bridge.py-9]: process has died [pid 158, exit code 1, cmd '/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/hunav_to_cohan_bridge.py --ros-args -r __node:=hunav_to_cohan_bridge --params-file /tmp/launch_params_prk92i_3'].
+[ERROR] [command_guard.py-10]: process has died [pid 160, exit code 1, cmd '/opt/dwal_ws/install/crowd_aware_simulation/lib/crowd_aware_simulation/command_guard.py --ros-args -r __node:=command_guard --params-file /tmp/crowd_aware_p4euupz4/command_pipeline.yaml'].
+[ERROR] [nav2_costmap_2d-15]: process has died [pid 170, exit code -6, cmd '/opt/ros/humble/lib/nav2_costmap_2d/nav2_costmap_2d --ros-args -r __node:=costmap -r __ns:=/costmap --params-file /tmp/crowd_aware_p4euupz4/costmap.yaml -r costmap:=/local_costmap/costmap -r costmap_updates:=/local_costmap/costmap_updates -r published_footprint:=/local_costmap/published_footprint'].
+[INFO] [rviz2-21]: process has finished cleanly [pid 184]
+[INFO] [joint_state_publisher-7]: process has finished cleanly [pid 154]
+[INFO] [gzserver-5]: process has finished cleanly [pid 150]
+[gzserver-5] [0m[1;32m[0m[1;32m[0m[1;36m[0m[1;32m[0m
+[gzserver-5] [1;33m[0m[1;31m[0m

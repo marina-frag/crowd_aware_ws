@@ -13,7 +13,7 @@ import xacro
 import yaml
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from setup_config import load_configuration, load_scenario_defaults
+from configuration import load_configuration, load_scenario_defaults
 
 
 class RosParamDumper(yaml.SafeDumper):
@@ -217,6 +217,46 @@ def _materialize_random_agents(document, seed, cfg):
                 behavior['other_force_factor'] = rng.uniform(*cfg['simulation']['random_agents']['uniform_other_force'])
         behavior['configuration'] = 1
     return result
+
+def _materialize_goal_variation(document, seed, scenario):
+    """Perturb axis-aligned crossing goals; never change initial poses/behaviors."""
+    result = copy.deepcopy(document)
+    settings = scenario.get('goal_variation')
+    if settings is None:
+        return result
+    if not isinstance(settings, dict):
+        raise ValueError('scenario.goal_variation must be a mapping')
+    baseline = settings.get('baseline_seed')
+    if isinstance(baseline, bool) or not isinstance(baseline, int) or baseline < 0:
+        raise ValueError('goal_variation.baseline_seed must be a nonnegative integer')
+    offset = settings.get('max_offset_m')
+    if isinstance(offset, bool) or not isinstance(offset, (int, float)) or not math.isfinite(offset) or offset <= 0:
+        raise ValueError('goal_variation.max_offset_m must be positive and finite')
+    if seed == baseline:
+        return result
+    # Separate from behavior RNG; identical for all controller/semantics variants.
+    rng = random.Random(f'crossing-goals-v1:{seed}')
+    parameters = result['hunav_loader']['ros__parameters']
+    intended = scenario.get('intended_user', {})
+    for name in sorted(parameters['agents']):
+        if intended.get('enabled') and name == intended.get('agent_name'):
+            continue
+        agent = parameters[name]
+        goals = [agent[key] for key in agent['goals']]
+        if len(goals) < 2:
+            raise ValueError(f'goal_variation: {name} needs at least two goals')
+        xs, ys = [float(g['x']) for g in goals], [float(g['y']) for g in goals]
+        dx, dy = max(xs)-min(xs), max(ys)-min(ys)
+        if dx <= 1e-9 and dy > 1e-9:
+            transverse_axis = 'x'
+        elif dy <= 1e-9 and dx > 1e-9:
+            transverse_axis = 'y'
+        else:
+            raise ValueError(f'goal_variation: {name} needs an axis-aligned crossing')
+        for goal in goals:
+            goal[transverse_axis] = float(goal[transverse_axis]) + rng.uniform(-offset, offset)
+    return result
+
 
 
 def _validate_obvious_static_obstacles(world, points, source):
@@ -423,7 +463,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
                    Path(__file__).resolve().parents[1]/'config/experiment.yaml')
     cfg = load_configuration(config_path)
     runtime = cfg['runtime']
-    from evaluation_config import load_evaluation, resolve_variant
+    from configuration import load_evaluation, resolve_variant
     evaluation_cfg = load_evaluation(config_path.parent)
     variant = resolve_variant(controller or runtime['controller'], variant, evaluation_cfg)
     scenario = runtime['scenario'] if scenario is None else scenario
@@ -463,6 +503,20 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
     world = tree.getroot().find('world')
     if world is None:
         raise ValueError(f'{scenario_data["_world_path"]}: missing SDF world element')
+
+
+    runtime_agents = _materialize_goal_variation(runtime_agents, seed, scenario_data)
+    goal_variation = scenario_data.get('goal_variation')
+    if goal_variation and seed != goal_variation['baseline_seed']:
+        # Reuse the existing limited static-box point check; no path-clearance claim.
+        agent_parameters = runtime_agents['hunav_loader']['ros__parameters']
+        goal_points = [(f"agent {name} goal {key}",
+                        [agent_parameters[name][key]['x'], agent_parameters[name][key]['y']])
+                        for name in agent_parameters['agents']
+                        for key in agent_parameters[name]['goals']]
+        _validate_obvious_static_obstacles(world, goal_points, scenario_data['_world_path'])
+
+
     points = [('start', scenario_data['robot']['initial_pose'][:2])]
     points.extend((f'path point {index}', point)
                   for index, point in enumerate(scenario_data['robot']['path_xy']))
@@ -671,7 +725,8 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         'intended_user': scenario_data['intended_user'],
         'evaluation': evaluation,
         'runtime_world': str(target/'scenario.world'),
-        'runtime_agents': str(target/'agents.yaml')}))
+        'runtime_agents': str(target/'agents.yaml'),
+        'goal_variation': scenario_data.get('goal_variation')}))
     (target/'evaluation.json').write_text(__import__('json').dumps({
         **evaluation_cfg, 'variant': variant,
         'duration_s': float(evaluation_cfg['duration_s']),

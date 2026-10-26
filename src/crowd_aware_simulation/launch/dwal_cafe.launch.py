@@ -131,7 +131,7 @@ def setup(context):
         package='hunav_agent_manager', executable='hunav_agent_manager',
         output='screen', parameters=[{'use_sim_time': runtime['use_sim_time']}])
     world_ready = ExecuteProcess(
-        cmd=[sys.executable, str(share/'scripts/wait_world.py'),
+        cmd=[sys.executable, str(share/'scripts/wait_ready.py'), 'world',
              str(run/'generatedWorld.world')], output='screen')
     server = ExecuteProcess(
         cmd=['gzserver', '--verbose', '--seed', seed, str(run/'generatedWorld.world'),
@@ -244,7 +244,7 @@ def setup(context):
         if not Path(reference_bag).is_dir():
             raise RuntimeError(f'Reference bag does not exist: {reference_bag}')
         experiment = ExecuteProcess(
-            cmd=['python3', str(share/'scripts/run_recorded_experiment.py'), reference_bag],
+            cmd=['python3', str(share/'scripts/experiment.py'), 'run', reference_bag],
             output='screen')
         runtime_nodes.append(experiment)
         experiment_handlers.append(RegisterEventHandler(OnProcessExit(

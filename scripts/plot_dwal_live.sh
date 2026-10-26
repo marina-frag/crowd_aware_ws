@@ -16,4 +16,4 @@ trap cleanup EXIT
 docker exec "$container" /bin/bash /dwal_entrypoint.sh python3 -c \
  'import numpy; import matplotlib; matplotlib.use("TkAgg"); import matplotlib.pyplot; import tkinter; print("Live plot stack: NumPy", numpy.__version__)'
 docker exec -it -e DISPLAY="$DISPLAY" "$container" /bin/bash /dwal_entrypoint.sh python3 \
- /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/plot_dwal_live.py "$@"
+ /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/plot.py live "$@"
