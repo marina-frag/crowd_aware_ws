@@ -57,7 +57,7 @@ if [[ "$mode" == teleop ]]; then
 fi
 if [[ "$mode" == record ]]; then
   exec docker exec -it iwalk_dwal /bin/bash /dwal_entrypoint.sh python3 \
-    /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/experiment.py record \
+    /opt/dwal_ws/install/crowd_aware_simulation/share/crowd_aware_simulation/scripts/experiment.py \
     record "$scenario" "$controller" "$semantics" "$seed"
 fi
 if [[ "$mode" == build ]]; then
@@ -104,15 +104,18 @@ if [[ "$headless" == false || "$gui" == true || "$rviz" == true ]]; then
   if ! xhost | grep -q 'SI:localuser:root'; then xhost +si:localuser:root; granted=true; fi
   cleanup() { if [[ "$granted" == true ]]; then xhost -si:localuser:root >/dev/null; fi; }
   trap cleanup EXIT
-  # docker_args+=(-e DISPLAY -e QT_X11_NO_MITSHM=1 -e LIBGL_ALWAYS_SOFTWARE=1 \
-  #   -v /tmp/.X11-unix:/tmp/.X11-unix:ro)
-    docker_args+=(--gpus all
-      -e DISPLAY
-      -e QT_X11_NO_MITSHM=1
+  # NVIDIA GLX fails through XWayland (BadValue creating the context), so a
+  # Wayland session falls back to software OpenGL. Override with GL=nvidia|software.
+  gl=${GL:-$([[ "${XDG_SESSION_TYPE:-}" == wayland ]] && echo software || echo nvidia)}
+  docker_args+=(-e DISPLAY -e QT_X11_NO_MITSHM=1 -v /tmp/.X11-unix:/tmp/.X11-unix:ro)
+  case "$gl" in
+    nvidia) docker_args+=(--gpus all
       -e NVIDIA_DRIVER_CAPABILITIES=graphics,display,utility,compute
       -e __NV_PRIME_RENDER_OFFLOAD=1
-      -e __GLX_VENDOR_LIBRARY_NAME=nvidia
-      -v /tmp/.X11-unix:/tmp/.X11-unix:ro)
+      -e __GLX_VENDOR_LIBRARY_NAME=nvidia);;
+    software) docker_args+=(-e LIBGL_ALWAYS_SOFTWARE=1);;
+    *) echo 'GL must be nvidia or software'; exit 2;;
+  esac
 fi
 
 args=(

@@ -82,6 +82,15 @@ RUN cd /home/hunav_gz_ws/src/hunav_gazebo_wrapper && \
     source /home/hunav_gz_ws/install/setup.bash && \
     cd /home/hunav_gz_ws && \
     colcon build --packages-select hunav_gazebo_wrapper --cmake-args -DCMAKE_BUILD_TYPE=Release
+# max_vel=0 is made explicitly stationary at the Gazebo boundary; HuNavSim
+# itself has no stationary behavior type and may return social-force motion.
+COPY patches/hunav_stationary_agents.py /tmp/hunav_stationary_agents.py
+RUN python3 /tmp/hunav_stationary_agents.py && \
+    source /opt/ros/humble/setup.bash && \
+    source /home/kiro_ws/install/setup.bash && \
+    source /home/hunav_gz_ws/install/setup.bash && \
+    cd /home/hunav_gz_ws && \
+    colcon build --packages-select hunav_gazebo_wrapper --cmake-args -DCMAKE_BUILD_TYPE=Release
 # END HUNAV_COLLISION_HEIGHT_FIX
 
 COPY docker/dwal/entrypoint.sh /dwal_entrypoint.sh
