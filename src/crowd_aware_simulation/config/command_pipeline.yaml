@@ -18,7 +18,8 @@ collision:
   FootprintApproach:
     type: polygon
     action_type: approach
-    time_before_collision: 1.2
+    # time_before_collision is not set here: prepare_scene.py derives it from the
+    # braking model, T + v_max/(2a) (0.7 s with T=0.4 s, v_max=0.3 m/s, a=0.5 m/s2).
     simulation_time_step: 0.05
     max_points: 1
     visualize: true
@@ -28,7 +29,5 @@ collision:
   scan:
     type: scan
     enabled: true
-command_guard:
-  output_rate: 20.0
 final_cmd_watchdog:
   output_rate: 20.0

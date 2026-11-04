@@ -45,7 +45,7 @@ def validate(data,variant,controller,semantics,seed):
 
 def pipeline_check(run):
     """Check recorded output presence; zero velocities are legitimate outputs."""
-    totals={topic:0 for topic in ('/cmd_vel_guarded','/cmd_vel_smoothed','/cmd_vel_safe','/cmd_vel')}
+    totals={topic:0 for topic in ('/cmd_vel_smoothed','/cmd_vel_safe','/cmd_vel')}
     files=sorted((run/'bag').glob('*.db3'))
     if not files:raise ValueError('No SQLite bag shards for pipeline check')
     for file in files:

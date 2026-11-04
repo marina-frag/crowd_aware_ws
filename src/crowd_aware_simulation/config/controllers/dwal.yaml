@@ -1,10 +1,16 @@
 generator:
   dwal_generator/min_trans_vel: 0.05
   dwal_generator/sim_period: 0.2
-  dwal_generator/DS:
-    when_false: 0.05
+  # Arc-length step of the path simulation (m), same for fixed and dynamic DWAL
+  # so the two differ only in the clustering/admissibility logic.
+  dwal_generator/DS: 0.05
   dwal_generator/alpha: 0.05
-  dwal_generator/Hz: 10.0
+  # DWAL path rate: the generator's main loop (rclcpp::Rate) takes the latest /odom
+  # at this rate, as in the original dwal_planner (default 5 Hz). 5 Hz: the costmap
+  # publishes at 5 Hz (costmap.yaml), and at iWalk's 0.3 m/s the robot moves 6 cm
+  # between path sets. Keep it a divisor of the /odom rate (Gazebo: 20 Hz,
+  # simulation.yaml publish_rate) so no odometry period is skipped irregularly.
+  dwal_generator/Hz: 5.0
 clustering:
   dwal_clustering/postfix:
     when_true:

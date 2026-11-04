@@ -10,6 +10,8 @@ seed=${4:-$(runtime_default seed)}
 scenario=${SCENARIO:-$(runtime_default scenario)}
 [[ "$seed" =~ ^[0-9]+$ ]] || { echo 'Seed must be a nonnegative integer'; exit 2; }
 # Include untracked source files too; a successful old build must not run silently.
+# config/ is bind-mounted from the host at run time: its file NAMES count (the image
+# holds one symlink per file), its CONTENTS do not (edits need no rebuild).
 source_fingerprint() {
   python3 - "$repo_dir" <<'PYCODE'
 import hashlib, pathlib, sys
@@ -20,10 +22,24 @@ for relative in ['docker/dwal','patches','scripts/run_dwal_cafe.sh',
     files=[base] if base.is_file() else sorted(base.rglob('*'))
     for path in files:
         if not path.is_file() or '__pycache__' in path.parts or path.suffix=='.pyc': continue
-        digest.update(str(path.relative_to(root)).encode()+b'\0')
+        rel=path.relative_to(root)
+        digest.update(str(rel).encode()+b'\0')
+        if rel.parts[:3]==('src','crowd_aware_simulation','config'): continue
         digest.update(path.read_bytes()+b'\0')
 print(digest.hexdigest())
 PYCODE
+}
+# Contents of the host config/ that this run reads (printed for provenance).
+config_dir="$repo_dir/src/crowd_aware_simulation/config"
+config_fingerprint() {
+  python3 - "$config_dir" <<'PYCODE2'
+import hashlib, pathlib, sys
+root=pathlib.Path(sys.argv[1]); digest=hashlib.sha256()
+for path in sorted(root.rglob('*')):
+    if path.is_file() and '__pycache__' not in path.parts:
+        digest.update(str(path.relative_to(root)).encode()+b'\0'+path.read_bytes()+b'\0')
+print(digest.hexdigest())
+PYCODE2
 }
 extra_args=("${@:5}")
 while (( ${#extra_args[@]} )); do
@@ -82,7 +98,7 @@ if [[ "$mode" == run ]]; then
     echo 'The image does not match the current sources/patches. Run: bash scripts/run_dwal_cafe.sh build'
     exit 1
   fi
-  echo "DWAL_UPSTREAM_V4: controller=$controller semantics=$semantics source=$built"
+  echo "DWAL_UPSTREAM_V4: controller=$controller semantics=$semantics source=$built config=$(config_fingerprint) (host config/)"
 fi
 headless=${HEADLESS:-$(runtime_default headless)}
 gui=${GUI:-$(runtime_default gui)}
@@ -97,7 +113,9 @@ done
 contains_runtime_value reference_modes "$reference_mode" || { echo "Invalid REFERENCE_MODE: $reference_mode"; exit 2; }
 mkdir -p "$repo_dir/rosbags"
 
-docker_args=(--rm -it --name iwalk_dwal -e "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-$(runtime_default ros_domain_id)}" -v "$repo_dir/rosbags:/rosbags")
+docker_args=(--rm -it --name iwalk_dwal -e "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-$(runtime_default ros_domain_id)}" -v "$repo_dir/rosbags:/rosbags"
+  # The installed share/config entries are symlinks into this directory (--symlink-install).
+  -v "$config_dir:/opt/dwal_ws/src/crowd_aware_simulation/config:ro")
 granted=false
 if [[ "$headless" == false || "$gui" == true || "$rviz" == true ]]; then
   : "${DISPLAY:?DISPLAY is required when graphical mode is enabled}"

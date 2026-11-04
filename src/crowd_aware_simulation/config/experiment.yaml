@@ -10,24 +10,20 @@ experiment:
     human_states: /human_states
     tracked_agents_controller: /tracked_agents
     tracked_agents_logging: /tracked_agents_logging
-    context: /crowd_context
     reference_cmd: /reference_cmd
     selected_cmd: /cmd_vel_selected
-    guarded_cmd: /cmd_vel_guarded
     smoothed_cmd: /cmd_vel_smoothed
     collision_checked_cmd: /cmd_vel_safe
     final_cmd: /cmd_vel
     scan_raw: /scan_raw
     robot_states: /robot_states
     agents_info: /agents_info
-    context_profile: /crowd_context/profile
     costmap: /local_costmap/costmap
     published_footprint: /local_costmap/published_footprint
     path: /experiment/path
     clusters_near: /dwal_planner/clusters_near
     clusters_far: /dwal_planner/clusters_far
     costmap_updates: /local_costmap/costmap_updates
-    speed_limit: /experiment/speed_limit
     tracked_agents_disabled: /tracked_agents_disabled
   limits:
     max_linear: 0.3
@@ -36,15 +32,11 @@ experiment:
     deceleration: 0.5
     angular_acceleration: 1.0
     angular_deceleration: 1.0
-    allow_reverse: false
   timeouts:
     odom: 0.5
     clusters: 0.5
     reference: 0.35
     tracks: 0.5
-    context: 0.5
-    selected_command: 0.35
-    speed_limit: 0.5
     final_input: 0.3
   dwal:
     fixed_levels:
@@ -57,40 +49,25 @@ experiment:
     max_curvature: 4.0
   dynamic_dwal:
     max_search_radius: 1.8
-    sweep_resolution: 0.02
+    # Split a cluster where the free length of neighbouring accepted paths jumps
+    # by more than this (m): "towards the obstacle" vs "past it" (depth
+    # discontinuity, Nearness Diagram). Runtime value, no build needed; the
+    # dynamic_no_split variant disables it.
+    length_jump_threshold: 0.3
+    # Cluster ID correspondence between frames:
+    #   upstream: greedy matching of mean cluster angles (original dwal_planner,
+    #             with the duplicate-ID bug fixed)
+    #   tracking: interval IoU + optimal order-preserving assignment + gating +
+    #             track management (IDs never reused) + split/merge belief sharing
+    #             + ego-motion compensation
+    correspondence: upstream
+    correspondence_gate: 0.2     # tracking: minimum IoU to inherit an ID
+    track_keep_frames: 2         # tracking: frames a lost ID is kept (2 = 0.4 s at 5 Hz)
     reaction_time: 0.4
     longitudinal_margin: 0.05
     prediction_horizon: 2.0
     human_base_uncertainty: 0.1
     human_uncertainty_growth: 0.1
-  context:
-    rate: 8.0
-    costmap_stale_after: 0.5
-    minimum_dwell: 1.5
-    switch_margin: 0.12
-    crowd_radius: 3.0
-    dense_count: 4
-    narrow_width: 1.5
-    doorway_width: 1.15
-    open_clearance: 2.25
-    junction_clearance: 1.8
-  profiles:
-    OPEN_AREA:
-      max_speed: 0.3
-    NARROW_CORRIDOR:
-      max_speed: 0.22
-    DOORWAY:
-      max_speed: 0.16
-    JUNCTION:
-      max_speed: 0.2
-    DENSE_CROWD:
-      max_speed: 0.12
-    OCCLUSION:
-      max_speed: 0.1
-    UNKNOWN:
-      max_speed: 0.08
-    STALE:
-      max_speed: 0.0
   geometry:
     footprint_padding: 0.02
   human_model:

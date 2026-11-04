@@ -36,11 +36,10 @@ def configured_node(exp, **kwargs):
         '/odom': 'odom', '/scan': 'scan', '/human_states': 'human_states',
         '/robot_states': 'robot_states', '/tracked_agents': 'tracked_agents_controller',
         '/tracked_agents_logging': 'tracked_agents_logging', '/agents_info': 'agents_info',
-        '/crowd_context': 'context', '/crowd_context/profile': 'context_profile',
         '/reference_cmd': 'reference_cmd', '/cmd_vel_selected': 'selected_cmd',
-        '/cmd_vel_guarded': 'guarded_cmd', '/cmd_vel_smoothed': 'smoothed_cmd',
+        '/cmd_vel_smoothed': 'smoothed_cmd',
         '/cmd_vel_safe': 'collision_checked_cmd', '/cmd_vel': 'final_cmd',
-        '/experiment/speed_limit': 'speed_limit', '/experiment/path': 'path'}
+        '/experiment/path': 'path'}
     mappings = [(source, exp['topics'][key]) for source, key in api_topics.items()
                 if source != exp['topics'][key]]
     if mappings:
@@ -156,14 +155,10 @@ def setup(context):
         package='crowd_aware_simulation', executable='hunav_to_cohan_bridge.py',
         name='hunav_to_cohan_bridge', output='screen', parameters=[{
             'use_sim_time': runtime['use_sim_time'], 'publish_controller_output': semantic_on}])
-    guard_parameters = [str(run/'command_pipeline.yaml')]
-    guard = configured_node(exp, 
-        package='crowd_aware_simulation', executable='command_guard.py',
-        name='command_guard', output='screen', parameters=guard_parameters)
     smoother = configured_node(exp, 
         package='nav2_velocity_smoother', executable='velocity_smoother',
         name='velocity_smoother', output='screen', parameters=[str(run/'command_pipeline.yaml')],
-        remappings=[('cmd_vel', topics['guarded_cmd']),
+        remappings=[('cmd_vel', topics['selected_cmd']),
                     ('cmd_vel_smoothed', topics['smoothed_cmd'])])
     collision = configured_node(exp, 
         package='nav2_collision_monitor', executable='collision_monitor',
@@ -206,10 +201,7 @@ def setup(context):
                  name='shared_controller', output='screen',
                  parameters=[str(run/f'shared_control_{semantics}.yaml'),
                              {'reference_timeout':teleop_input_timeout}]
-                 if reference_mode == 'teleop' else [str(run/f'shared_control_{semantics}.yaml')]),
-            configured_node(exp, package='crowd_aware_simulation', executable='constant_speed_limit.py',
-                 name='constant_speed_limit', output='screen',
-                 parameters=[{'use_sim_time':runtime['use_sim_time'],'max_speed':exp['limits']['max_linear']}])]
+                 if reference_mode == 'teleop' else [str(run/f'shared_control_{semantics}.yaml')])]
         if reference_mode == 'autonomous':
             condition_nodes += [
                 configured_node(exp, package='nav2_controller', executable='controller_server',
@@ -225,7 +217,7 @@ def setup(context):
         condition=IfCondition(LaunchConfiguration('rviz')))
     runtime_nodes = [
         server, client, rsp, jsp, scan_filter, adapter,
-        guard, smoother, collision, final_watchdog, pipeline_manager,
+        smoother, collision, final_watchdog, pipeline_manager,
         *condition_nodes, *task_nodes, rviz]
     # Same configuration and frames as this run; recorder refuses mismatched labels.
     evaluation = json.loads((run/'evaluation.json').read_text())

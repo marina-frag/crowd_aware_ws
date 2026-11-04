@@ -13,8 +13,6 @@ install(PROGRAMS
   scripts/wait_ready.py
   scripts/dwal_runtime_check.py
   scripts/reference_task.py
-  scripts/constant_speed_limit.py
-  scripts/command_guard.py
   scripts/final_cmd_watchdog.py
   DESTINATION lib/${PROJECT_NAME})
 

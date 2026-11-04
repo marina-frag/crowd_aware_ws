@@ -577,6 +577,7 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         raise ValueError('DWAL levels must be positive and finite')
     common={'common/levels':levels,'common/odom_frame':'odom','use_sim_time':True}
     generator={**common,
+        'dwal_generator/variable_length':variable_dwal,
         'dwal_generator/odometryTopic':cfg['experiment']['topics']['odom'], 'dwal_generator/occ_topic':cfg['experiment']['topics']['costmap'],
         'dwal_generator/base_frame':cfg['experiment']['frames']['base'],
         'dwal_generator/footprint':[v for point in footprint for v in point],
@@ -587,11 +588,14 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         'dwal_generator/max_trans_vel':limits['max_linear'],
         'dwal_generator/min_trans_vel':cfg['generator']['dwal_generator/min_trans_vel'], 'dwal_generator/max_vel_theta':limits['max_angular'],
         'dwal_generator/sim_period':cfg['generator']['dwal_generator/sim_period'],
-        'dwal_generator/DS':float(dynamic_config['sweep_resolution']) if variable_dwal else cfg['generator']['dwal_generator/DS']['when_false'],
+        'dwal_generator/DS':cfg['generator']['dwal_generator/DS'],
         'dwal_generator/Kmax':cfg['experiment']['dwal']['max_curvature'], 'dwal_generator/alpha':cfg['generator']['dwal_generator/alpha'], 'dwal_generator/Hz':cfg['generator']['dwal_generator/Hz']}
     clustering={**common,
-        'dwal_clustering/length_jump_threshold': (float(evaluation_cfg['length_jump_threshold_m'])
+        'dwal_clustering/length_jump_threshold': (float(dynamic_config['length_jump_threshold'])
             if variant != 'dynamic_no_split' else float.fromhex('0x1.fffffffffffffp+1023')),
+        'dwal_clustering/correspondence': str(dynamic_config['correspondence']),
+        'dwal_clustering/correspondence_gate': float(dynamic_config['correspondence_gate']),
+        'dwal_clustering/track_keep_frames': int(dynamic_config['track_keep_frames']),
         'dwal_clustering/variable_length':variable_dwal,
         'dwal_clustering/postfix':cfg['clustering']['dwal_clustering/postfix']['when_true'] if variable_dwal else cfg['clustering']['dwal_clustering/postfix']['when_false'],
         'dwal_clustering/spin':cfg['clustering']['dwal_clustering/spin']['when_true'] if variable_dwal else cfg['clustering']['dwal_clustering/spin']['when_false'],
@@ -634,7 +638,8 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
                  'polygons': cfg['collision']['polygons'],
                  'FootprintApproach': {'type': cfg['collision']['FootprintApproach']['type'], 'action_type': cfg['collision']['FootprintApproach']['action_type'],
                                        'footprint_topic': cfg['experiment']['topics']['published_footprint'],
-                                       'time_before_collision': cfg['collision']['FootprintApproach']['time_before_collision'],
+                                       # Same braking model as DWAL: v*t_bc >= v*T + v^2/(2a) for every v <= v_max.
+                                       'time_before_collision': float(dynamic_config['reaction_time']) + float(limits['max_linear']) / (2.0 * float(limits['deceleration'])),
                                        'simulation_time_step': cfg['collision']['FootprintApproach']['simulation_time_step'], 'max_points': cfg['collision']['FootprintApproach']['max_points'],
                                        'visualize': cfg['collision']['FootprintApproach']['visualize'], 'enabled': cfg['collision']['FootprintApproach']['enabled']},
                  'observation_sources': cfg['collision']['observation_sources'],
@@ -642,11 +647,6 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
     pipeline = {}
     pipeline.update(ros_params('/velocity_smoother', smoother))
     pipeline.update(ros_params('/collision_monitor', collision))
-    pipeline.update(ros_params('/command_guard', {
-        'use_sim_time': cfg['runtime']['use_sim_time'], 'input_timeout': timeouts['selected_command'],
-        'speed_limit_timeout': timeouts['speed_limit'], 'output_rate': cfg['command_guard']['output_rate'],
-        'max_linear': limits['max_linear'], 'max_angular': limits['max_angular'],
-        'allow_reverse': cfg['experiment']['limits']['allow_reverse']}))
     pipeline.update(ros_params('/final_cmd_watchdog', {
         'use_sim_time': cfg['runtime']['use_sim_time'], 'input_timeout': timeouts['final_input'], 'output_rate': cfg['final_cmd_watchdog']['output_rate']}))
     (target/'command_pipeline.yaml').write_text(dump_yaml(pipeline))
@@ -657,11 +657,10 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
                      'user_cmd_topic': cfg['experiment']['topics']['reference_cmd'], 'output_cmd_topic': cfg['experiment']['topics']['selected_cmd'],
                      'use_stamped_twist_input': cfg['shared_common']['use_stamped_twist_input'], 'use_stamped_twist_output': cfg['shared_common']['use_stamped_twist_output'],
                      'tracked_agents_topic': cfg['experiment']['topics']['tracked_agents_controller'],
-                     'context_profile_topic': cfg['experiment']['topics']['context_profile'],
                      'odom_timeout': timeouts['odom'], 'cluster_timeout': timeouts['clusters'],
                      'reference_timeout': timeouts['reference'],
                      'tracks_timeout': timeouts['tracks'],
-                     'allow_reverse': cfg['experiment']['limits']['allow_reverse'], 'allow_no_cluster_passthrough': cfg['shared_common']['allow_no_cluster_passthrough'],
+                     'allow_no_cluster_passthrough': cfg['shared_common']['allow_no_cluster_passthrough'],
                      'personal_space': evaluation['personal_space'], 'social_weight': cfg['shared_common']['social_weight'],
                      'c_max': cfg['shared_common']['c_max'], 'alpha': cfg['shared_common']['alpha'], 's_min': cfg['shared_common']['s_min'],
                      'Kphi': cfg['shared_common']['Kphi'], 'Kmax': cfg['experiment']['dwal']['max_curvature'], 'v_low': cfg['shared_common']['v_low'], 'v_high': cfg['shared_common']['v_high'],
@@ -673,6 +672,8 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         'variable_length': variable_dwal,
         'inplace_via_collision_monitor': cfg['shared_common']['inplace_via_collision_monitor'],
         'intent_reference_radius': levels[-1] if variable_dwal else cfg['shared_common']['intent_reference_radius']['when_false'],
+        # Correspondence "tracking": the estimator shares a parent's belief among overlapping children.
+        'intent.split_by_overlap': bool(variable_dwal and dynamic_config['correspondence'] == 'tracking'),
         'a_brake': limits['deceleration'],
         'reaction_time': dynamic_config['reaction_time'],
         'stop_margin': dynamic_config['longitudinal_margin'],

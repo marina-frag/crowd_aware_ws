@@ -34,12 +34,13 @@ def load_configuration(experiment_path):
         if duplicate:
             raise ValueError(f'{source}: duplicate top-level configuration sections: {duplicate}')
         cfg.update(data)
-    exp = cfg['experiment']
-    exp['context'].setdefault('odom_stale_after', exp['timeouts']['odom'])
-    exp['context'].setdefault('track_stale_after', exp['timeouts']['tracks'])
-    for name, profile in exp['profiles'].items():
-        if not 0 <= profile['max_speed'] <= exp['limits']['max_linear']:
-            raise ValueError(f'profiles.{name}.max_speed must be within global limits')
+    dynamic = cfg['experiment']['dynamic_dwal']
+    if not (math.isfinite(dynamic['length_jump_threshold']) and dynamic['length_jump_threshold'] > 0):
+        raise ValueError('dynamic_dwal.length_jump_threshold must be positive and finite')
+    if dynamic['correspondence'] not in ('upstream', 'tracking'):
+        raise ValueError("dynamic_dwal.correspondence must be 'upstream' or 'tracking'")
+    if not 0 < dynamic['correspondence_gate'] <= 1 or int(dynamic['track_keep_frames']) < 0:
+        raise ValueError('dynamic_dwal.correspondence_gate in (0, 1], track_keep_frames >= 0')
     return cfg
 
 
@@ -56,7 +57,7 @@ def load_scenario_defaults(package_root, override, experiment=None):
 def load_evaluation(directory=None):
     directory = Path(directory) if directory else Path(__file__).resolve().parents[1]/'config'
     cfg = json.loads((directory/'evaluation.json').read_text())
-    for key in ('length_jump_threshold_m', 'reference_radius_m', 'reference_motion_threshold_mps',
+    for key in ('reference_radius_m', 'reference_motion_threshold_mps',
                 'duration_s', 'replay_start_sim_s', 'replay_max_lateness_s',
                 'minimum_coverage_fraction', 'stationary_threshold_mps', 'contact_rate_hz', 'contact_max_gap_s', 'contact_release_s'):
         if not math.isfinite(cfg[key]) or cfg[key] <= 0:
@@ -77,10 +78,10 @@ def recording_topics(exp, cfg, controller):
     t = {**cfg['topics'], **exp['topics']}
     keys = ['odom', 'scan', 'costmap', 'costmap_updates', 'published_footprint',
             'human_states', 'robot_states', 'tracked_agents_logging', 'tracked_agents_controller',
-            'reference_cmd', 'selected_cmd', 'guarded_cmd', 'smoothed_cmd',
+            'reference_cmd', 'selected_cmd', 'smoothed_cmd',
             'collision_checked_cmd', 'final_cmd', 'sampled_paths', 'sampled_markers',
             'clusters_far', 'far_markers', 'shared_path', 'human_path',
-            'contacts', 'braking_requirement', 'far_diagnostics', 'guard_status']
+            'contacts', 'braking_requirement', 'far_diagnostics', 'intent_diagnostics']
     if controller == 'fixed_dwal':
         keys += ['clusters_near', 'near_markers', 'near_diagnostics']
     return list(dict.fromkeys(['/clock', '/tf', '/tf_static', '/parameter_events'] + [t[k] for k in keys]))
