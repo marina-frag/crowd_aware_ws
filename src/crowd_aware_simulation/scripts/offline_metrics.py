@@ -399,6 +399,7 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
         if not frames:
             continue
         mixed = clusters_total = runs = oversplit = 0
+        violation = pass_choices = pass_split = 0
         counts, ari_values, agree, recheck_err = [], [], [], []
         recorded_ids = []
         replay = {'upstream': [], 'tracking': []}
@@ -445,15 +446,32 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
             if i not in comp_cache:
                 comp_cache = {i: lethal_components(costmaps[i])}
             points, comps = comp_cache[i]
-            label = {}
-            for _, members in clusters:
-                for k in members:
-                    p = paths[k]
-                    label[k] = target_label(p['end'], points, comps, footprint, p['reach'])
-            for _, members in clusters:
+            # labels of ALL sampled paths (not only clustered ones), so a cluster that
+            # bridges excluded paths is judged against what lies between its members
+            label = {k: target_label(p['end'], points, comps, footprint, p['reach'])
+                     for k, p in enumerate(paths)}
+            # motion choice of the cluster definition: 'brake' = ends at any obstacle (towards
+            # A and towards B are the same choice); each run of consecutive free paths in
+            # angular (curvature) order is one 'pass' choice (left of A, between A and B, ...)
+            choice, seg, prev_free = {}, 0, False
+            for k in sorted(range(len(paths)), key=lambda k: paths[k]['curvature']):
+                if label[k] == 'free':
+                    seg += not prev_free
+                    choice[k], prev_free = ('pass', seg), True
+                else:
+                    choice[k], prev_free = 'brake', False
+            owners = {}
+            for n, (_, members) in enumerate(clusters):
                 clusters_total += 1
                 if len({label[k] for k in members}) >= 2:
                     mixed += 1
+                chosen = {choice[k] for k in members}
+                violation += len(chosen) >= 2
+                for c in chosen:
+                    if c != 'brake':
+                        owners.setdefault(c, set()).add(n)
+            pass_choices += len(owners)
+            pass_split += sum(len(ns) >= 2 for ns in owners.values())
             ordered = sorted((k, n) for n, (_, members) in enumerate(clusters) for k in members)
             run_clusters, run_label = set(), None
             for k, n in ordered + [(None, None)]:
@@ -482,6 +500,8 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
             'replica_agreement_fraction': mean([float(a) for a in agree]),
             'mixed_cluster_fraction': mixed / clusters_total if clusters_total else None,
             'oversplit_run_fraction': oversplit / runs if runs else None,
+            'choice_violation_fraction': violation / clusters_total if clusters_total else None,
+            'pass_oversplit_fraction': pass_split / pass_choices if pass_choices else None,
             'labelled_clusters': clusters_total,
             'count_changes_per_min': changes / minutes if minutes else None,
             'flicker_per_min': flicker / minutes if minutes else None,
@@ -496,7 +516,10 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
         'Per clustering frame. Collision-target label of a clustered path = lethal costmap component '
         'nearest to the footprint at its last free pose (or "free" if it reaches the horizon); '
         'mixed = clusters whose members have >= 2 labels; over-split = runs of consecutive clustered '
-        'paths with one label that span >= 2 clusters. Flicker = cluster-count change undone within 0.5 s. '
+        'paths with one label that span >= 2 clusters. Motion choice of a path (cluster definition): '
+        '"brake" if it ends at any obstacle, else "pass k" = k-th run of consecutive free paths in '
+        'curvature order over all sampled paths; choice_violation = clusters whose members belong to '
+        '>= 2 choices; pass_oversplit = pass choices whose paths span >= 2 clusters. Flicker = cluster-count change undone within 0.5 s. '
         f'Stability = ARI between the clustering (Python replica) of the same sampled paths with free '
         f'lengths re-checked (footprint vs scan points, step {settings["scan_noise_step"]} m, up to the '
         f'longest recorded path) on the clean scan and on the scan with Gaussian range noise '

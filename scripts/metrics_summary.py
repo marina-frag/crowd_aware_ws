@@ -37,7 +37,7 @@ REPO = Path(__file__).resolve().parents[1]
 PACKAGE = REPO/'src'/'crowd_aware_simulation'
 CONTAINER_PACKAGE = '/opt/dwal_ws/src/crowd_aware_simulation'
 LAMBDAS = (1.0, 1.0, 1.0)  # Loss(tau) weights: under_split, over_split, cluster_instability (--lambdas)
-SCHEMA = 7  # evaluation.py metrics.json schema_version this summary expects
+SCHEMA = 8  # evaluation.py metrics.json schema_version this summary expects
 CODES = [('clustered', 'cluster'), ('invalid_or_filtered', '-1'), ('braking_rejected', '-2'),
          ('outside_slice', '-3'), ('min_span_rejected', '-4')]
 
@@ -165,7 +165,7 @@ def rows_for(run, data):
     values['cost_applied'] = cost.get('applied')
     for group, v in (off.get('clustering') or {}).items():
         if not isinstance(v, dict): continue
-        for key in ('mixed_cluster_fraction', 'oversplit_run_fraction', 'flicker_per_min', 'count_changes_per_min',
+        for key in ('mixed_cluster_fraction', 'choice_violation_fraction', 'pass_oversplit_fraction', 'oversplit_run_fraction', 'flicker_per_min', 'count_changes_per_min',
                     'stability_ari_mean', 'replica_agreement_fraction'):
             values[f'cl_{group}_{key}'] = v.get(key)
         for src in ('recorded', 'replay_upstream', 'replay_tracking'):
@@ -240,11 +240,14 @@ def deviation_only(runs, a):
     return '\n'.join(out) + '\n', rows
 
 
+VIOLATION_MAX = 0.25  # definition filter (input2.md decisions K, Λ): per scenario x density cell
+
+
 def jump_selection(rows, table, out, lambdas=(1.0, 1.0, 1.0)):
     """Loss(tau) = l_under*under_split + l_over*over_split + l_switch*cluster_instability over the
     dynamic_split + tracking runs, each term divided by its largest value over the tau values
     (so all three are in [0, 1] and the weights compare like with like)."""
-    terms = (('under_split', 'cl_far_mixed_cluster_fraction'), ('over_split', 'cl_far_oversplit_run_fraction'),
+    terms = (('under_split', 'cl_far_choice_violation_fraction'), ('over_split', 'cl_far_oversplit_run_fraction'),
              ('cluster_instability', 'id_far_recorded_id_switches_per_min'))
     by_tau = {}
     for r in rows:
@@ -259,21 +262,39 @@ def jump_selection(rows, table, out, lambdas=(1.0, 1.0, 1.0)):
         loss[tau] = sum(l * (v / p if p else 0.0) for l, v, p in zip(lambdas, m, peaks))
     # admissible tau: every run collision-free and reaching the goal (step-1 criterion)
     ok_run = lambda r: r.get('collisions') == 0 and r.get('pd_goal_reached') is True
-    admissible = {tau: all(ok_run(r) for r in rs) for tau, rs in by_tau.items()}
+    # definition filter: in every scenario x density cell, mean choice violation <= VIOLATION_MAX
+    def worst_cell(rs):
+        cells = {}
+        for r in rs: cells.setdefault((r['scenario'], r['density']), []).append(r.get('cl_far_choice_violation_fraction'))
+        values = {c: mean_of(v) for c, v in cells.items()}
+        if any(v is None for v in values.values()) or not values: return None, None
+        cell = max(values, key=values.get)
+        return values[cell], '/'.join(cell)
+    worst = {tau: worst_cell(rs) for tau, rs in by_tau.items()}
+    safe = {tau: all(ok_run(r) for r in rs) for tau, rs in by_tau.items()}
+    defined = {tau: worst[tau][0] is not None and worst[tau][0] <= VIOLATION_MAX for tau in by_tau}
+    admissible = {tau: safe[tau] and defined[tau] for tau in by_tau}
     candidates = [t for t in loss if loss[t] is not None and admissible[t]]
     best = None
     if candidates:
         low = min(loss[t] for t in candidates)
         best = min((t for t in candidates if loss[t] - low < 0.02), key=lambda t: means[t][2])  # tie: smaller S
     table('Επιλογή jump (dynamic_split + tracking)',
-          ['τ [m]', 'Runs', 'Αποδεκτό (0 συγκρ., στόχος)', 'under_split (mixed)', 'over_split', 'ID switches / min (S)', 'Loss(τ)'],
+          ['τ [m]', 'Runs', 'Ασφάλεια (0 συγκρ., στόχος)', f'Ορισμός (χειρότερο κελί ≤ {VIOLATION_MAX:g})',
+           'Αποδεκτό', 'under_split (παραβίαση ορισμού)', 'mixed (παλιό, ενημερωτικά)', 'over_split',
+           'ID switches / min (S)', 'Loss(τ)'],
           [[f'{tau:g}' + (' ✔' if tau == best else ''), len(by_tau[tau]),
-            f"{'ναι' if admissible[tau] else 'όχι'} ({sum(ok_run(r) for r in by_tau[tau])}/{len(by_tau[tau])})",
-            num(means[tau][0], 3), num(means[tau][1], 3), num(means[tau][2], 2), num(loss[tau], 3)] for tau in sorted(by_tau)])
+            f"{'ναι' if safe[tau] else 'όχι'} ({sum(ok_run(r) for r in by_tau[tau])}/{len(by_tau[tau])})",
+            f"{'ναι' if defined[tau] else 'όχι'} ({num(worst[tau][0], 3)}, {worst[tau][1]})",
+            'ναι' if admissible[tau] else 'όχι',
+            num(means[tau][0], 3), num(mean_of([r.get('cl_far_mixed_cluster_fraction') for r in by_tau[tau]]), 3),
+            num(means[tau][1], 3), num(means[tau][2], 2), num(loss[tau], 3)] for tau in sorted(by_tau)])
     out.append(f'\nLoss(τ) = {lambdas[0]:g}·under/max + {lambdas[1]:g}·over/max + {lambdas[2]:g}·switches/max '
                '(μέσοι όροι όλων των runs με αυτό το τ· κάθε όρος διαιρείται με τη μέγιστη τιμή του στα τ). '
-               'under = mixed_cluster_fraction, over = oversplit_run_fraction, switches = ID switches των '
-               'δημοσιευμένων clusters. Υποψήφια μόνο τα αποδεκτά τ (όλα τα runs χωρίς σύγκρουση και με στόχο). '
+               'under = choice_violation_fraction (clusters με διαδρομές σε ≥ 2 επιλογές κίνησης: brake ή pass k), '
+               'over = oversplit_run_fraction, switches = ID switches των δημοσιευμένων clusters. Αποδεκτά τ: όλα '
+               f'τα runs χωρίς σύγκρουση και με στόχο, και μέση παραβίαση ορισμού ≤ {VIOLATION_MAX:g} σε κάθε κελί '
+               '(σενάριο × πυκνότητα· input2.md, απόφαση Κ). Αν κανένα τ δεν είναι αποδεκτό, δεν επιλέγεται τ. '
                '✔ = ελάχιστο Loss· ισοπαλία (διαφορά < 0.02) → μικρότερο S.')
 
 

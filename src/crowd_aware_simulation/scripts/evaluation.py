@@ -276,7 +276,7 @@ def evaluate_main():
     result['comparison_ready']=bool(metric.requested > 0 and result['reference_count_matches_replay'] and replay and replay.get('completed') and replay.get('timing_valid') and
         replay.get('absolute_start') and result['complete_window'] and
         result['collision_episodes'] is not None and result['standstill_while_requested_s'] is not None)
-    result['schema_version']=7
+    result['schema_version']=8
     result['additional_metrics'] = (extra.result(metric.start,duration,dest)
         if metric.start is not None and duration > 0 else {'all_metrics_available':False,'error':'No evaluation window'})
     if metric.start is not None and duration > 0:

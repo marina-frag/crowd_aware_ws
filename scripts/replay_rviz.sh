@@ -51,5 +51,10 @@ exec docker run --rm "${tty[@]}" --name iwalk_replay -e ROS_DOMAIN_ID=${REPLAY_D
     python3 /replay_paths.py /rosbags/$run >/dev/null 2>&1 &
     rviz2 -d /replay_rviz/$rviz --ros-args -p use_sim_time:=true >/dev/null 2>&1 &
     sleep 4
-    ros2 bag play /rosbags/$run/bag --clock --rate $rate
+    # The bag also holds the recorded /clock (10 Hz). Played back next to the player's own
+    # --clock, the two disagree slightly, time jumps back several times a second and RViz
+    # resets (\"Detected jump back in time\"), so the view freezes. Play every topic except
+    # /clock (Humble has no exclude option) and let --clock be the only time source.
+    topics=\$(grep -oE 'name: /[^ ]+' /rosbags/$run/bag/metadata.yaml | cut -d' ' -f2 | grep -vx /clock | sort -u)
+    ros2 bag play /rosbags/$run/bag --clock 100 --rate $rate --topics \$topics
     echo 'Playback finished. Close RViz or press Ctrl-C.'; wait"
