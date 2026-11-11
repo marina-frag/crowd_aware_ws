@@ -16,7 +16,7 @@
 > Ζωντανή, ενημερωμένη περιγραφή: `doc/input1.md`, ενότητα «Τι άλλαξε στον κώδικα». Όπου το παρόν κείμενο λέει «πρόταση», ισχύει η εκδοχή του `input1.md`.
 > Δύο υποθέσεις διαψεύστηκαν με test:
 > - ο smoother **δεν** κρατά NaN (§6.1),
-> - τα πεδία «γονέων» στο `PathCluster` θα έκαναν τα παλιά bags μη αναγνώσιμα, οπότε το μοίρασμα πίστης σε split γίνεται στον estimator.
+> - τα πεδία «γονέων» στο `PathCluster` θα έκαναν τα παλιά bags μη αναγνώσιμα, οπότε το μοίρασμα πίστης σε split μπήκε στον estimator (αφαιρέθηκε 2026-11-10: ο estimator μένει ο αρχικός).
 
 **Τι ελέγχθηκε**
 - Upstream: `gmoustri/dwal_planner@95b1aa5`, `gmoustri/bayesian_shared_control@9d0df25` (αντίγραφο στο `~/Downloads/moustris`).
@@ -681,7 +681,6 @@ Paths με την ίδια ετικέτα είναι η ίδια επιλογή.
 | | Είναι σταθερό σε θόρυβο; | SCAND offline: ίδιο frame, με και χωρίς θόρυβο (scan σ = 2 cm, yaw ± 0.5°) | **ARI** μεταξύ των δύο ομαδοποιήσεων | κοντά στο 1 | ❌ |
 | | Αλλάζει τη συμπεριφορά; | HuNav, no_split έναντι split | standstill, συγκρούσεις, απόσταση | όχι χειρότερα | ✅ |
 | **Β3** correspondence | Κρατά σταθερά IDs; | Offline στα καταγεγραμμένα clusters, upstream έναντι πρότασης | ID switches/λεπτό, fragmentations, crossings, duplicates, αστήρικτη κληρονομιά (`J < 0.1`) | όλα ↓, duplicates = 0 | ❌ |
-| **Β4** επιλογή cluster | Διαλέγει ό,τι θα διάλεγε ο άνθρωπος; | SCAND | **hit rate** (φ_true μέσα στο MAP cluster), **Brier**, **log-loss** | καλύτερα από (i) cluster που περιέχει το φ_user και (ii) ομοιόμορφη κατανομή | ❌ |
 | **Β5** επιλογή path | Πόσο κοντά στην πραγματική διαδρομή; | SCAND | `|φ* − φ_true|` στα 1.8 m, ADE/FDE σε ίσο μήκος τόξου, discrete Fréchet | καλύτερα από το baseline «μόνο χρήστης», κυρίως κοντά σε εμπόδια | ❌ (υπάρχει μόνο clearance και ταχύτητα του `path_shared`) |
 
 **Fixed near/far στο Β2**: ο fixed βγάζει **δύο** ομαδοποιήσεις ανά frame, οπότε οι μετρικές υπολογίζονται χωριστά για καθεμία. Για «όπως χρησιμοποιήθηκε», παίρνουμε το group που είχε επιλέξει η hysteresis. Η κύρια σύγκριση του Β2 είναι **μέσα στο dynamic** (no_split έναντι split).
@@ -768,7 +767,7 @@ Paths με την ίδια ετικέτα είναι η ίδια επιλογή.
 |---|---|---|
 | Δ1 | Offline script πάνω σε `sampled_paths` / `clusters_far`: ετικέτες στόχου σύγκρουσης, mixed, over-split, flicker, ARI, ID switches/crossings/duplicates, και επανάληψη της correspondence offline (upstream έναντι πρότασης) | νέο `scripts/clustering_metrics.py` (host, χωρίς build) |
 | Δ2 | Μείωση ταχύτητας ανά στάδιο της αλυσίδας (από το `speed_audit.py`) και κατανομή του συντελεστή κόστους | `evaluation.py` + `metrics_summary.py` |
-| Δ3 | SCAND: ψευδή stops, φ_true, hit rate, Brier, log-loss, `|φ* − φ_true|`, ADE/FDE, baseline «μόνο χρήστης», σήμανση εξαιρέσεων iWalk | νέο offline script ή επέκταση του `evaluation.py` (`motion_source = selected_cmd`) |
+| Δ3 | SCAND: ψευδή stops, φ_true, `|φ* − φ_true|`, ADE/FDE, baseline «μόνο χρήστης», σήμανση εξαιρέσεων iWalk | νέο offline script ή επέκταση του `evaluation.py` (`motion_source = selected_cmd`) |
 | Δ4 | Μέτρηση καθυστέρησης scan → `/cmd_vel` για το T (§5.5) | offline script |
 | Δ5 | Στατιστική: Wilcoxon, rank-biserial, bootstrap CI στο `metrics_summary.py` | `scripts/metrics_summary.py` |
 
@@ -812,7 +811,6 @@ Paths με την ίδια ετικέτα είναι η ίδια επιλογή.
 | Ben-Hur, Elisseeff, Guyon, *A stability based method for discovering structure in clustered data*, PSB, 2002 · von Luxburg, *Clustering stability: an overview*, FnT ML 2(3), 2010 🔎 | Η σταθερότητα υπό διαταραχή ως κριτήριο εγκυρότητας χωρίς ground truth | §10.3 Β2 (stability) | Επιλογή πλήθους clusters |
 | Hubert & Arabie, *Comparing partitions*, J. Classification 2(1), 1985 🔎 | ARI | §10.3 Β2 | — |
 | Karnan et al., *Socially CompliAnt Navigation Dataset (SCAND)*, RA-L 7(4), 2022 🔎 | Επιδείξεις ανθρώπων ως αναφορά συμπεριφοράς. Τα δεδομένα | §10.1, §10.3 Β4–Β5 | — |
-| Brier, *Verification of forecasts expressed in terms of probability*, Monthly Weather Review 78(1), 1950 🔎 · log-loss (proper scoring rules, π.χ. Gneiting & Raftery, JASA 102(477), 2007 💡🔎) | Αξιολόγηση **πιθανοτικής** πρόβλεψης (της κατανομής του estimator) | §10.3 Β4 | — |
 | Alahi et al., *Social LSTM*, CVPR, 2016 🔎 | Ορισμοί ADE/FDE | §10.3 Β5 | Το μοντέλο |
 | Eiter & Mannila, *Computing discrete Fréchet distance*, TU Wien tech. report, 1994 🔎 | Discrete Fréchet | §10.3 Β5 | — |
 | Wilcoxon, *Individual comparisons by ranking methods*, Biometrics Bulletin 1(6), 1945 🔎 | Ζευγαρωτός έλεγχος χωρίς υπόθεση κανονικότητας | §10.4 | — |

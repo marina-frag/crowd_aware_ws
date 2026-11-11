@@ -25,7 +25,9 @@ def events(path, topics=None):
     from rosidl_runtime_py.utilities import get_message
     bag, _ = locate(path)
     metadata = yaml.safe_load((bag/'metadata.yaml').read_text())['rosbag2_bagfile_information']
-    reader = rosbag2_py.SequentialReader()
+    # Compressed bags (zstd, experiment.py since 2026-11-10) need the compression reader.
+    compressed = bool(metadata.get('compression_format'))
+    reader = rosbag2_py.SequentialCompressionReader() if compressed else rosbag2_py.SequentialReader()
     reader.open(rosbag2_py.StorageOptions(uri=str(bag), storage_id=metadata.get('storage_identifier') or ('sqlite3' if list(bag.glob('*.db3')) else '')),
                 rosbag2_py.ConverterOptions('', ''))
     types = {t.name: t.type for t in reader.get_all_topics_and_types()}

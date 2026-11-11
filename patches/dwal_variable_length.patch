@@ -595,8 +595,8 @@ index 1fb1a5a..ffecf88 100644
 +  // 2 optimal order-preserving assignment (dynamic programming),
 +  // 3 gating (IoU >= correspondence_gate, else a new ID),
 +  // 4 track management (lost IDs kept track_keep_frames frames, IDs never reused),
-+  // 5 split/merge: the child with the largest IoU inherits the ID (step 2); the
-+  //   belief of the parent is shared by overlap in the intent estimator,
++  // 5 split/merge: the child with the largest IoU inherits the ID (step 2), the
++  //   other children get new IDs (the intent estimator is upstream),
 +  // 6 ego-motion: previous intervals rotated by the heading change.
 +  std::string correspondence_mode{"upstream"};
 +  double correspondence_gate{0.2};

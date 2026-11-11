@@ -8,12 +8,73 @@ Used for crowd_aware simulation bags and scand_ws runs (evaluation.json decides 
 motion source and the window).
 """
 import argparse
+import bisect
 import csv
+import hashlib
 import json
 import math
 from pathlib import Path
 from dwal_bag import events, locate, sample_geometry, twist
 from offline_metrics import Collector
+import path_deviation as pdev
+
+
+def desired_path(bag, cfg):
+    """Desired reference path of an autonomous run: evaluation.json, or (runs recorded
+    before it was stored there) run/task.yaml. None for teleop/SCAND runs."""
+    if cfg.get('reference_mode') != 'autonomous':
+        return None
+    if cfg.get('reference_path_xy'):
+        return cfg['reference_path_xy']
+    task = bag.parent/'run'/'task.yaml'
+    try:
+        import yaml
+        flat = next(iter(yaml.safe_load(task.read_text()).values()))['ros__parameters']['path_xy']
+        return [flat[i:i+2] for i in range(0, len(flat), 2)]
+    except (OSError, KeyError, TypeError, StopIteration):
+        return None
+
+
+def deviation_section(bag, cfg, odom, start, duration, dest):
+    path = desired_path(bag, cfg)
+    if path is None:
+        return {'available': False, 'reason': 'not an autonomous run with a desired path (teleop or SCAND; '
+                'for SCAND see offline.intent ADE/FDE, same equal-arc-length definition)'}
+    end = start + duration if start is not None and math.isfinite(duration) else None
+    result = pdev.path_deviation(path, odom, start, end, cfg.get('goal_tolerance_m', 0.3))
+    c = cfg
+    pdev.plot(path, odom, start, end, result,
+              f"{c.get('scenario')} / {c.get('density') or 'medium'} / {c.get('path_shape') or 'line'} / "
+              f"{c.get('variant')} / seed {c.get('seed')}", dest/'path_deviation.png')
+    result['plot'] = 'path_deviation.png'
+    return result
+
+
+def path_deviation_main(bag, cfg, duration, dest):
+    """--metrics path_deviation: only odometry and the reference command are read."""
+    t = cfg['topics']
+    provenance = bag.parent/'reference_schedule.json'
+    replay = json.loads(provenance.read_text()) if provenance.exists() else None
+    metric = Metrics(cfg, duration if duration is not None else math.inf,
+                     start=replay.get('start_sim_s') if replay else None)
+    odom = []
+    for now, topic, msg in events(bag, {t['odom'], t['reference_cmd']}):
+        metric.advance(now)
+        if topic == t['odom']:
+            p = msg.pose.pose.position
+            odom.append((now, p.x, p.y))
+            metric.motion(now, msg.twist.twist.linear.x)
+        elif topic == t['reference_cmd']:
+            v = twist(msg).linear.x
+            if math.isfinite(v): metric.reference(now, v)
+    result = {'condition': {**{k: cfg.get(k) for k in ('controller', 'variant', 'semantics', 'scenario', 'seed')},
+                            'density': cfg.get('density'), 'path_shape': cfg.get('path_shape'),
+                            'reference_mode': cfg.get('reference_mode')},
+              'window_start_sim_s': metric.start, 'duration_s': duration,
+              'path_deviation': deviation_section(bag, cfg, odom, metric.start,
+                                                  duration if duration is not None else math.inf, dest)}
+    (dest/'path_deviation.json').write_text(json.dumps(result, indent=2, allow_nan=False))
+    print(json.dumps(result, indent=2, allow_nan=False))
 
 
 class Metrics:
@@ -97,7 +158,10 @@ class Metrics:
         motion_ok = (elapsed > 0 and self.known_motion/elapsed >= coverage_min and
                      (request_coverage is None or request_coverage >= coverage_min))
         return {
-            'condition': {k:self.cfg.get(k) for k in ('controller','variant','semantics','scenario','seed')},
+            'condition': {**{k:self.cfg.get(k) for k in ('controller','variant','semantics','scenario','seed')},
+                          # None: SCAND, or a simulation run from before these options (= medium, line)
+                          'density': self.cfg.get('density'), 'path_shape': self.cfg.get('path_shape'),
+                          'correspondence': self.cfg.get('correspondence'), 'jump': self.cfg.get('length_jump_threshold')},
             'duration_requested_s': self.duration, 'duration_observed_s': elapsed,
             'complete_window': elapsed >= self.duration-1e-6,
             'collision_episodes': total if contact_ok else None,
@@ -144,11 +208,16 @@ def suppress_safety(result):
 
 def evaluate_main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('bag');p.add_argument('--duration',type=float)
-    p.add_argument('--output');p.add_argument('--metrics-config');a=p.parse_args();bag,cfg=locate(a.bag)
+    p.add_argument('--output');p.add_argument('--metrics-config')
+    p.add_argument('--metrics',choices=['all','path_deviation'],default='all',
+                   help='path_deviation: only the path deviation (fast; writes path_deviation.json)')
+    a=p.parse_args();bag,cfg=locate(a.bag)
     # duration_s null (scand_ws): evaluate from the first motion request to the end of the bag.
     duration=a.duration if a.duration is not None else cfg['duration_s']
     if duration is not None and (not math.isfinite(duration) or duration<=0):p.error('duration must be positive')
     dest=Path(a.output) if a.output else bag.parent/'analysis_v3';dest.mkdir(parents=True,exist_ok=True)
+    if a.metrics=='path_deviation':
+        return path_deviation_main(bag,cfg,duration,dest)
     provenance=bag.parent/'reference_schedule.json'
     replay=json.loads(provenance.read_text()) if provenance.exists() else None
     start = replay.get('start_sim_s') if replay else None
@@ -207,13 +276,14 @@ def evaluate_main():
     result['comparison_ready']=bool(metric.requested > 0 and result['reference_count_matches_replay'] and replay and replay.get('completed') and replay.get('timing_valid') and
         replay.get('absolute_start') and result['complete_window'] and
         result['collision_episodes'] is not None and result['standstill_while_requested_s'] is not None)
-    result['schema_version']=6
+    result['schema_version']=7
     result['additional_metrics'] = (extra.result(metric.start,duration,dest)
         if metric.start is not None and duration > 0 else {'all_metrics_available':False,'error':'No evaluation window'})
     if metric.start is not None and duration > 0:
         step=extra.settings['grid_step_s']
         grid=[metric.start+i*step for i in range(int(math.ceil(duration/step)))]
         result['offline']=collector.results(metric.start,duration,grid,extra)
+    result['path_deviation'] = deviation_section(bag, cfg, extra.odom, metric.start, duration, dest)
     if str(cfg.get('scenario','')).startswith('scand:'):
         suppress_safety(result)
     result['all_metrics_comparison_ready'] = bool(result['comparison_ready'] and
@@ -223,16 +293,8 @@ def evaluate_main():
     print(json.dumps(result,indent=2,allow_nan=False))
 
 
-"""Goal-free offline metrics. Uses bag receipt times, not exact sensor synchronization.
-
-All thresholds and preprocessing settings are exported with every result.
-"""
-import bisect
-import csv
-import hashlib
-import json
-import math
-from pathlib import Path
+# --- Goal-free offline metrics. Uses bag receipt times, not exact sensor synchronization.
+# All thresholds and preprocessing settings are exported with every result.
 
 
 def load_settings(path=None):
@@ -418,8 +480,8 @@ class AdditionalMetrics:
         r, a = ranges[valid], angles[valid]
         self.scan_points.append((now, frame(msg.header.frame_id), np.stack([r*np.cos(a), r*np.sin(a)], axis=1)))
 
-    def points_at(self, t):
-        """Latest scan (within scan_timeout) as obstacle points in the odometry frame."""
+    def scan_at(self, t):
+        """Latest scan (within scan_timeout): (sensor origin xy, obstacle points) in the odometry frame."""
         import numpy as np
         scans, odom = Series(self.scan_points), Series(self.odom)
         b = scans.at(t, self.cfg.get('scan_timeout_s', 0.5))
@@ -429,7 +491,12 @@ class AdditionalMetrics:
         if offset is None: return None
         x, y, yaw = compose(o[1:4], offset)
         c, s = math.cos(yaw), math.sin(yaw)
-        return b[2] @ np.array([[c, s], [-s, c]]) + [x, y]
+        return np.array([x, y]), b[2] @ np.array([[c, s], [-s, c]]) + [x, y]
+
+    def points_at(self, t):
+        """Latest scan (within scan_timeout) as obstacle points in the odometry frame."""
+        scan = self.scan_at(t)
+        return None if scan is None else scan[1]
 
     def false_stop(self, grid):
         """Share of grid time where the selected command stops (< 0.01 m/s) while the recorded
@@ -619,47 +686,9 @@ class AdditionalMetrics:
         result['all_metrics_available'] = bool(human_ok and known_distances and scan_ok and
             all(v is not None for k,v in smooth_results.items() if not k.endswith('coverage_fraction')))
         return result
-#!/usr/bin/env python3
-"""Export all metrics and validity flags without treating unavailable values as zero."""
-import argparse
-import csv
-import json
-from pathlib import Path
-
-
-def flatten(obj, prefix=''):
-    result = {}
-    for key,value in obj.items():
-        name = prefix+key
-        if isinstance(value,dict): result.update(flatten(value,name+'.'))
-        elif not isinstance(value,list): result[name]=value
-    return result
-
-
-def compare_main():
-    p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('results',nargs='+',type=Path)
-    p.add_argument('--output',type=Path,required=True)
-    a=p.parse_args()
-    rows=[]
-    for path in a.results:
-        if path.is_dir():
-            path = path/'analysis_v3'/'metrics.json'
-        if path.name != 'metrics.json':
-            raise SystemExit(f'comparison input must be metrics.json or a run directory: {path}')
-        d=json.loads(path.read_text())
-        row=flatten(d)
-        row['source']=str(path)
-        rows.append(row)
-    fields=list(dict.fromkeys(k for row in rows for k in row))
-    a.output.parent.mkdir(parents=True,exist_ok=True)
-    with a.output.open('w',newline='') as stream:
-        writer=csv.DictWriter(stream,fieldnames=fields)
-        writer.writeheader();writer.writerows(rows)
-    print(f'{len(rows)} runs -> {a.output}. Pair equal seed, reference SHA, window and additional settings SHA. Check per-metric coverage; ID continuity is a proxy.')
-
+# --- Command line: export all metrics and validity flags without treating unavailable
+# values as zero.
 def main():
-    import argparse
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest='command', required=True)
     evaluate = subparsers.add_parser('evaluate')
@@ -667,21 +696,15 @@ def main():
     evaluate.add_argument('--duration', type=float)
     evaluate.add_argument('--output')
     evaluate.add_argument('--metrics-config')
-    compare = subparsers.add_parser('compare')
-    compare.add_argument('results', nargs='+', type=Path)
-    compare.add_argument('--output', type=Path, required=True)
+    evaluate.add_argument('--metrics', choices=['all', 'path_deviation'], default='all')
     args = parser.parse_args()
-    if args.command == 'evaluate':
-        import sys
-        sys.argv = [sys.argv[0], args.bag]
-        if args.duration is not None: sys.argv += ['--duration', str(args.duration)]
-        if args.output is not None: sys.argv += ['--output', args.output]
-        if args.metrics_config is not None: sys.argv += ['--metrics-config', args.metrics_config]
-        evaluate_main()
-    else:
-        import sys
-        sys.argv = [sys.argv[0], *[str(path) for path in args.results], '--output', str(args.output)]
-        compare_main()
+    import sys
+    sys.argv = [sys.argv[0], args.bag]
+    if args.duration is not None: sys.argv += ['--duration', str(args.duration)]
+    if args.output is not None: sys.argv += ['--output', args.output]
+    if args.metrics_config is not None: sys.argv += ['--metrics-config', args.metrics_config]
+    sys.argv += ['--metrics', args.metrics]
+    evaluate_main()
 
 if __name__ == '__main__':
     main()

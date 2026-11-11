@@ -104,6 +104,8 @@ headless=${HEADLESS:-$(runtime_default headless)}
 gui=${GUI:-$(runtime_default gui)}
 rviz=${RVIZ:-$(runtime_default rviz)}
 reference_mode=${REFERENCE_MODE:-$(runtime_default reference_mode)}
+density=${DENSITY:-$(runtime_default density)}
+path_shape=${PATH_SHAPE:-$(runtime_default path_shape)}
 teleop_input_timeout=${TELEOP_INPUT_TIMEOUT:-}
 variant=${DWAL_VARIANT:-}
 for value in "$headless" "$gui" "$rviz"; do
@@ -111,6 +113,8 @@ for value in "$headless" "$gui" "$rviz"; do
 done
 
 contains_runtime_value reference_modes "$reference_mode" || { echo "Invalid REFERENCE_MODE: $reference_mode"; exit 2; }
+contains_runtime_value densities "$density" || { echo "Invalid DENSITY: $density (sparse|medium|dense)"; exit 2; }
+contains_runtime_value path_shapes "$path_shape" || { echo "Invalid PATH_SHAPE: $path_shape (line|s_curve|hard_curve)"; exit 2; }
 mkdir -p "$repo_dir/rosbags"
 
 docker_args=(--rm -it --name iwalk_dwal -e "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-$(runtime_default ros_domain_id)}" -v "$repo_dir/rosbags:/rosbags"
@@ -143,10 +147,17 @@ args=(
   "reference_mode:=$reference_mode"
   "scenario:=$scenario"
   "seed:=$seed"
+  "density:=$density"
+  "path_shape:=$path_shape"
+  "wait_for_recorder:=${WAIT_FOR_RECORDER:-false}"
   "headless:=$headless"
   "gui:=$gui"
   "rviz:=$rviz"
 )
+
+# ros2 launch rejects empty values: pass the overrides only when set
+if [[ -n "${JUMP:-}" ]]; then args+=("jump:=$JUMP"); fi
+if [[ -n "${CORRESPONDENCE:-}" ]]; then args+=("correspondence:=$CORRESPONDENCE"); fi
 
 if [[ -n "$variant" ]]; then
   args+=("variant:=$variant")

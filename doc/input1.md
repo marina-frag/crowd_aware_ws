@@ -1,9 +1,21 @@
-# bulletproof τεκμηρίωση
+# to do
+- [ ] Ξαναγράφουμε το input1.md->input2.md  καθαρό και να το εχω καταλάβει στο 100%
+- [ ] Αλλαγές auto test. pid για ευθεία στα automatic tests?? οχι απλώς να πηγαίνει μπροστα +αλλες 2 καμπύλες ++ να μπορεί να συγκρίνει τελική με επιθυμητή διαδρομή
+- [ ] dense crowd με πυκνότητα σαν μεταβλητή 3 επίπεδα
+- [ ] dense static με πυκνότητα σαν μεταβλητή 3 επίπεδα
+- [ ] οριστικόποίησουμε τα τεστ
+- [ ] τρέχουμε τα τεστσ
+- [x] Βγάζουμε τα σενάρια του occlusion και target confusion από παντού
 
+
+# notes
  τα ίδια 3 conditions ανά seed: fixed, dynamic_split upstream, dynamic_split tracking.
  
   Η στατιστική ενώνει crowd και static σε ένα σύνολο ζευγών. Για τη διπλωματική ίσως αξίζει να βγάλεις ξεχωριστή στατιστική ανά σενάριο.
-  
+Από τα πειράματα λείπει ακόμα μόνο το SCAND tracking. Υπάρχουν μόνο τα R37 (fixed) και R38 (upstream). Αν το χρειάζεσαι για τη σύγκριση συνέπειας IDs στα πραγματικά δεδομένα, μπορώ να σου το στήσω να τρέξει.
+# bulletproof τεκμηρίωση
+
+
 ## bugs
 
 ### 1. generatePath()
@@ -165,16 +177,21 @@ print(upstream_new_ids([0],[0,100,100]))           # [0, 1, 0]
         └── dynamic_dwal: /dwal_planner/clusters_far (μεταβλητό μήκος έως 1.8 m)
         ▼
 /shared_controller  [patched upstream node]
-        │  επιλογή cluster → επιλογή path → v, ω
+		dwal_intent_estimator.hpp
+		|	(fixed: πρώτα near/far με hysteresis ταχύτητας)
+	    |   (dynamic: πρώτα αφαιρεί paths χωρίς εμπρός ταχύτητα)
+	    ▼
+    επιλογή cluster → επιλογή path → v, ω
         ├── dynamic μόνο: /dwal_planner/braking_requirement ──► dwal_clustering
         ├── /shared_controller/intent_diagnostics (μόνο για μετρικές)
         ▼ /cmd_vel_selected
 /velocity_smoother    [Nav2]                 → /cmd_vel_smoothed
 /collision_monitor    [Nav2]                 → /cmd_vel_safe
 /final_cmd_watchdog   [project implementation] → /cmd_vel → Gazebo / robot base
+        ├── dynamic μόνο: /dwal_planner/braking_requirement ──► dwal_clustering
+        ├── /shared_controller/intent_diagnostics (μόνο για μετρικές)
+    
 ```
-Ο `command_guard` και ο `constant_speed_limit` **αφαιρέθηκαν** (§ Command guard).
-
 
 ## dwal_generator node
 
@@ -197,12 +214,12 @@ print(upstream_new_ids([0],[0,100,100]))           # [0, 1, 0]
 
 ✅ Πού μπαίνουν τα papers («το από κάτω»): κάθε μηχανισμός αιτιολογείται από άλλη πηγή.
 
-|     | Μηχανισμός | Κώδικας | Fixed | Dynamic | Αιτιολόγηση |
-| --- | --- | --- | --- | --- | --- |
-| Α   | Φίλτρο αποδοχής | fixed: `colission_r > R`, dynamic: `min(L, m + π/(2\|κ\|)) ≥ S_req(v)` | σταθερό R | μεταβλητό | **DWA, admissible velocities** (Fox 1997). Όχι ND |
-| Β   | Κενό δεικτών > `cluster_separation` | `index − previous > Csep` | με B1 | σωστά | **Paper §3.3**. Αναλογία με VFH/Follow-the-Gap (valley = συνεχόμενα ελεύθερα δείγματα) |
-| Γ   | Άλμα μήκους > `length_jump_threshold` | `\|L_i − L_{i−1}\| > 0.30` | όχι | ναι | **Nearness Diagram** (ασυνέχεια βάθους) και **TangentBug** (ασυνέχειες της range function) |
-| Δ   | Ελάχιστο πλάτος | χορδή ≥ `min_cluster_span` | ναι | ναι | **Paper §3.3** (0.2 m). Admissible Gap Navigation: γιατί όχι ίσο με το πλάτος του ρομπότ |
+|     | Μηχανισμός                            | Κώδικας                                                                | Fixed     | Dynamic   | Αιτιολόγηση                                                                                |
+| --- | ------------------------------------- | ---------------------------------------------------------------------- | --------- | --------- | ------------------------------------------------------------------------------------------ |
+| Α   | Φίλτρο αποδοχής                       | fixed: `colission_r > R`, dynamic: `min(L, m + π/(2\|κ\|)) ≥ S_req(v)` | σταθερό R | μεταβλητό | **DWA, admissible velocities** (Fox 1997). Όχι ND                                          |
+| Β   | Κενό δεικτών > `cluster_separation`   | `index − previous > Csep`                                              | με B1     | σωστά     | **Paper §3.3**. Αναλογία με VFH/Follow-the-Gap (valley = συνεχόμενα ελεύθερα δείγματα)     |
+| Γ   | Άλμα μήκους > `length_jump_threshold` | `\|L_i − L_{i−1}\| > 0.30`                                             | όχι       | ναι       | **Nearness Diagram** (ασυνέχεια βάθους) και **TangentBug** (ασυνέχειες της range function) |
+| Δ   | Ελάχιστο πλάτος                       | χορδή ≥ `min_cluster_span`                                             | ναι       | ναι       | **Paper §3.3** (0.2 m). Admissible Gap Navigation: γιατί όχι ίσο με το πλάτος του ρομπότ   |
 
 Ο fixed ομαδοποιεί όπως το VFH/FGM: δυαδικό κατώφλι σε σταθερό ορίζοντα. Ο dynamic έχει ορίζοντα που εξαρτάται από την ταχύτητα, άρα χρειάζεται και ασυνέχειες βάθους (ND/TangentBug) για να ξεχωρίσει το «προς το εμπόδιο» από το «δίπλα του». **Το ND αιτιολογεί μόνο το Γ.** Το μεταβλητό r (Α) το αιτιολογεί το DWA.
 
@@ -384,7 +401,7 @@ costmap resolution = 0.05 m
 - πόσα paths μένουν μαζί ενώ έχουν διαφορετικό obstacle target,
 - πόσα paths διασπώνται ενώ έχουν το ίδιο obstacle target,
 - πόσο συχνά δημιουργούνται πολύ μικρά clusters,
-- αν αυξάνονται τα oscillatory ή unstable cluster switches.
+- αν αυξάνονται τα unstable cluster switches.
 
 #### Αξιολόγηση under-splitting και over-splitting
 
@@ -440,8 +457,8 @@ Loss(τ) =
   - (α) **flicker**, split → merge → split. Μετριέται ως «αλλαγή πλήθους clusters που αναιρείται μέσα σε 0.5 s», ανά λεπτό.
   - (β) **απώλεια πίστης του estimator στο split**. Με την αντιστοίχιση `tracking` η πίστη του γονέα μοιράζεται στα παιδιά ανάλογα με την επικάλυψη (§ Correspondence). Μετριέται με τις μετρικές IDs.
 
-| Paper | Πού στηρίζει | Τι παίρνουμε |
-| --- | --- | --- |
+| Paper                                          | Πού στηρίζει                                                                        | Τι παίρνουμε                                                                                                                                                                     |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Kamon, Rimon, Rivlin, *TangentBug* (IJRR 1998) | Μηχανισμός Γ (άλμα μήκους), μαζί με το ND. Και το «μακριά ένα cluster, κοντά σπάει» | Οι **ασυνέχειες της range function** είναι άκρες εμποδίων και ορίζουν εναλλακτικές διαδρομές. Εμφανίζονται μόνο εντός του εύρους αισθητήρα, άρα πρόκειται για φαινόμενο ορίζοντα |
 
 #### γ. Ελάχιστο πλάτος ομάδας: `min_cluster_span = 0.2 m`
@@ -459,8 +476,8 @@ $$
 - Το 0.2 m είναι **η τιμή του paper** (*«to avoid small clusters which could be the result of noise or could signify very tight spaces»*).
 - ✅ **«Πρέπει να το κάνω σύμφωνα με τις διαστάσεις του iWalk;» Όχι.** Κάθε μέλος ελέγχεται ήδη με το **footprint** του iWalk, άρα το «χωράει το ρομπότ» ισχύει ανά path. Η χορδή μετρά πόσο **απλώνονται** οι ελεύθερες κατευθύνσεις στα 1.8 m, όχι το πλάτος του διαδρόμου. Αν τεθεί ίση με 0.653 m, το πλάτος θα μετρηθεί δύο φορές.
 
-| Paper | Πού στηρίζει | Τι παίρνουμε |
-| --- | --- | --- |
+| Paper                                                                | Πού στηρίζει                                            | Τι παίρνουμε                                                                                                                                                                                                                                             |
+| -------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Mujahed, Fischer, Mertsching, *Admissible Gap Navigation* (RAS 2018) | Μηχανισμός Δ (`min_cluster_span`) και ο ορισμός cluster | Ένα κενό είναι αποδεκτό όταν **περνιέται με εφικτή κίνηση** του συγκεκριμένου ρομπότ (σχήμα, κινηματική). Στον DWAL αυτό ισχύει ήδη ανά path: κινηματικά εφικτά τόξα, έλεγχος με footprint. Γι' αυτό η χορδή **δεν** τίθεται ίση με το πλάτος του ρομπότ |
 
 
@@ -482,15 +499,12 @@ $$
 - **Ενημέρωση (likelihood).** Η εντολή του χρήστη μετατρέπεται σε γωνία `φ_user = Kphi·ω` (`Kphi = 1.5`, με όριο). Κάθε cluster πολλαπλασιάζεται με μια ασύμμετρη Gauss γύρω από το `φ_C`, τη γωνία του path με το μικρότερο κόστος. Το εύρος είναι `eta = 0.5` φορές την απόσταση του `φ_C` από το αντίστοιχο άκρο του cluster, με ελάχιστο `sigma_min = 0.03 rad`.
 - Επιλέγεται το cluster με τη μεγαλύτερη πίστη (MAP).
 - Τι σημαίνουν οι τιμές μας: `alpha = 0.92` και `β = 8` κάνουν τον estimator πολύ «επίμονο». Χρειάζονται λίγοι κύκλοι με αντίθετη εντολή για να αλλάξει cluster, και σχεδόν όλη η υπόλοιπη πίστη πηγαίνει στο πιο κοντινό γωνιακά cluster. Τιμή που θα δικαιολογούσε το 0.92: π.χ. «η πρόθεση αλλάζει κατά μέσο όρο κάθε 1/(1−0.92) ≈ 12 κύκλους ≈ 0.6 s στα 20 Hz».
-- **Με την αντιστοίχιση `tracking`** (`intent.split_by_overlap`, ενεργό μόνο τότε): το `alpha` ενός προηγούμενου cluster δεν πηγαίνει μόνο στο cluster με το ίδιο ID. Πηγαίνει σε όλα τα τωρινά clusters που επικαλύπτουν το γωνιακό του διάστημα (αφού διορθωθεί η στροφή του ρομπότ), ανάλογα με την επικάλυψη. Έτσι, σε split η πίστη του γονέα μοιράζεται στα παιδιά. Είναι δική μας επέκταση.
+- Ο estimator είναι **ο αρχικός του upstream σε όλες τις μεθόδους**. Η πίστη ενός cluster περνά στο επόμενο frame μόνο στο cluster με το ίδιο ID.
 
-> ==🔴❓ **Ο Bayesian estimator δεν περιγράφεται στο paper.** Το paper (§5) περιγράφει FSM με scoring, timeout και persistence (soft/hard). Ο estimator υπάρχει μόνο στο repo. Οι τιμές μας (`intent.alpha = 0.92`, `beta = 8`, έναντι defaults 0.8/2) χρειάζονται τεκμηρίωση ή ρώτημα στον G. Moustris (§11, σημείο 9).==
 
-> ==🔴Ερωτήσεις για τον υπεύθυνο / G. Moustris: (1)  Από πού προέρχονται τα `alpha = 0.92`, `β = 8`, `Kphi = 1.5`; (2) Συμφωνεί να κάνουμε ευαισθησία στο `alpha`/`β` (π.χ. alpha ∈ {0.8, 0.9, 0.95}, β ∈ {2, 4, 8}) με τις μετρικές επιλογής του SCAND;==
 > Ευαισθησία alpha/β.
 - alpha = πόση πίστη μένει στο ίδιο cluster από κύκλο σε κύκλο (πόσο «επίμονος» είναι ο estimator).
 - β = πόσο προτιμά τα γωνιακά κοντινά clusters όταν η πίστη μετακινείται.
-- Η ευαισθησία είναι να τρέξουμε το ίδιο SCAND με διάφορες τιμές τους (στο controllers/dwal.yaml, χωρίς build) και να δούμε πού το hit rate, το Brier και το log-loss είναι καλά και σταθερά.
 
 
 ## ==🔴shared_controller node επιλογή path==
@@ -652,11 +666,11 @@ $$
 
 Επειδή είναι τομή, η σειρά δεν παίζει ρόλο: «πρώτα admissible και μετά window» δίνει το ίδιο με το αντίστροφο. Χρειάζονται και τα δύο, γιατί απαντούν σε διαφορετικά ερωτήματα (ασφάλεια, εφικτότητα).
 
-| Σκέλος DWA | Fixed | Dynamic |
-|---|---|---|
-| `V_s` | όρια v, ω | όρια v, ω |
-| `V_d` | **generator** (εύρος καμπυλοτήτων από το window) | ίδιο |
-| `V_a` | **έμμεσα**: σταθερό R (1.2 m ↔ πέδηση από 0.89 m/s, 1.8 m ↔ από 1.14 m/s) | **clustering**: `min(L, m + π/(2|κ|)) ≥ S_req(v_μετρ.)` |
+| Σκέλος DWA | Fixed                                                                     | Dynamic                          |     |                      |
+| ---------- | ------------------------------------------------------------------------- | -------------------------------- | --- | -------------------- |
+| `V_s`      | όρια v, ω                                                                 | όρια v, ω                        |     |                      |
+| `V_d`      | **generator** (εύρος καμπυλοτήτων από το window)                          | ίδιο                             |     |                      |
+| `V_a`      | **έμμεσα**: σταθερό R (1.2 m ↔ πέδηση από 0.89 m/s, 1.8 m ↔ από 1.14 m/s) | **clustering**: `min(L, m + π/(2 | κ   | )) ≥ S_req(v_μετρ.)` |
 Ο fixed έχει admissible velocities; Όχι ρητά.
 - Δέχεται μόνο paths ελεύθερα ως τα 1.2/1.8 m. Αυτό αρκεί για φρενάρισμα από 0.89/1.14 m/s, πολύ πάνω από το 0.3, άρα το admissible ισχύει έμμεσα και υπερβολικά συντηρητικά.
 - Το dynamic window του generator υπάρχει και στους δύο.
@@ -740,7 +754,7 @@ dynamic_dwal:
 | 2 | Βέλτιστη ανάθεση με διατήρηση σειράς (δυναμικός προγραμματισμός, όπως στη στοίχιση ακολουθιών), με μέγιστο συνολικό IoU. Αφού τα περάσματα δεν μπορούν να διασταυρωθούν, είναι το βέλτιστο του Hungarian περιορισμένο σε αναθέσεις χωρίς διασταύρωση | Kuhn 1955, Munkres 1957 |
 | 3 | Gating: αν `J < 0.2`, νέο ID αντί για κληρονομιά | Blackman & Popoli 1999 |
 | 4 | Track management: ID που χάθηκε κρατιέται 2 frames (0.4 s), και τα IDs δεν ξαναχρησιμοποιούνται | Blackman & Popoli 1999 |
-| 5 | Split/merge: το ID το κληρονομεί το παιδί με το μεγαλύτερο IoU (βήμα 2). Η πίστη του γονέα μοιράζεται σε όλα τα παιδιά ανάλογα με την επικάλυψη (στον estimator, `intent.split_by_overlap`) | **Δική μας επέκταση** |
+| 5 | Split/merge: το ID το κληρονομεί το παιδί με το μεγαλύτερο IoU (βήμα 2). Ο estimator μένει ο αρχικός (η πίστη ακολουθεί το ID) | **Δική μας επέκταση** (μόνο στην αντιστοίχιση) |
 | 6 | Αντιστάθμιση ego-motion: τα προηγούμενα διαστήματα στρέφονται κατά −Δθ πριν από τη σύγκριση | Γεωμετρία |
 
 Σημείωση υλοποίησης: το μήνυμα `PathCluster` **δεν άλλαξε**. Μια πρώτη εκδοχή πρόσθετε πεδία «γονέων», αλλά τότε τα παλιά bags δεν διαβάζονταν πια. Το βήμα 5 γίνεται λοιπόν στον estimator, από τα γωνιακά διαστήματα δύο διαδοχικών frames.
@@ -869,10 +883,9 @@ python3 ~/crowd_aware_ws/scripts/metrics_summary.py ~/crowd_aware_ws/rosbags ~/s
 |                        |                                        | SCAND, fixed έναντι dynamic                                   | (α) αποδεκτά paths ανά frame, (β) % frames χωρίς cluster, (γ) **ψευδή stops**: προτεινόμενη v < 0.01 ενώ το Jackal κινούνταν > 0.1 m/s                                                                                                   | (α) ↑ (β) ↓ (γ) ↓                                                   | ✅ (κωδικοί διάγνωσης, ψευδή stops)               |                                                                  |     |
 | **Β2** άλμα μήκους     | Χωρίζει επιλογές χωρίς να θρυμματίζει; | SCAND / HuNav: no_split έναντι split, σάρωση 0.1…1.0 m        | ****mixed** = % clusters που περιέχουν paths με ≥ 2 ετικέτες. Το split πρέπει να το **μειώνει**.<br>- **over-split** = % συνεχόμενων paths με την ίδια ετικέτα που κόβονται σε ≥ 2 clusters. Ένα πολύ «επιθετικό» κατώφλι το **αυξάνει** | mixed ↓, over-split μικρό                                           | ✅ (η σάρωση = runs με διαφορετική τιμή στο yaml) |                                                                  |     |
 |                        | Τρεμοπαίζει;                           | SCAND, HuNav                                                  | **flicker** = αλλαγή πλήθους clusters που αναιρείται σε < 0.5 s, ανά λεπτό                                                                                                                                                               | ≤ no_split                                                          | ✅                                                |                                                                  |     |
-|                        | Είναι σταθερό σε θόρυβο;               | offline, ίδιο frame                                           | ==🔴**ARI** ομαδοποίησης με και χωρίς θόρυβο σ = 2 cm στο ελεύθερο μήκος (Python αντίγραφο του clustering)==                                                                                                                             | κοντά στο 1                                                         | ✅                                                |                                                                  |     |
+|                        | Είναι σταθερό σε θόρυβο;               | offline, ίδιο frame                                           | ==🔴**ARI** σε θορυβώδεις μετρήσεις lidar ==                                                                                                                                                                                             | κοντά στο 1                                                         | ✅                                                |                                                                  |     |
 |                        | Αλλάζει τη συμπεριφορά;                | HuNav, no_split έναντι split                                  | standstill, συγκρούσεις, απόσταση                                                                                                                                                                                                        | όχι χειρότερα                                                       | ✅                                                |                                                                  |     |
 | **Β3** correspondence  | Κρατά σταθερά IDs;                     | Offline στα καταγεγραμμένα clusters, upstream έναντι tracking | ==🔴ID switches, fragmentations, crossings, διπλά IDs, αστήρικτη κληρονομιά (`J < 0.1`)==                                                                                                                                                | ==🔴όλα ↓, διπλά = 0==                                              | ✅                                                |                                                                  |     |
-| **Β4** επιλογή cluster | Διαλέγει ό,τι ο οδηγός;                | SCAND                                                         | ==🔴**hit rate**, **Brier**, **log-loss**==                                                                                                                                                                                              | ==🔴καλύτερα από (i) cluster του φ_user, (ii) ομοιόμορφη κατανομή== | ✅                                                |                                                                  |     |
 | **Β5** επιλογή path    | Πόσο κοντά στην πραγματική διαδρομή;   | SCAND                                                         | `                                                                                                                                                                                                                                        | φ* − φ_true                                                         | στα 1.8 m, ==🔴ADE/FDE σε ίσο μήκος τόξου==      | καλύτερα από το baseline «μόνο χρήστης», κυρίως κοντά σε εμπόδια |     |
 | Καθυστέρηση            | Πόσο είναι το T στην πράξη;            | κάθε run                                                      | ηλικία πληροφορίας scan → /cmd_vel, μέσο και Σp95                                                                                                                                                                                        | —                                                                   | ✅                                                |                                                                  |     |
 | Αλυσίδα εντολών        | Πού χάνεται η ταχύτητα;                | κάθε run                                                      | μέση ταχύτητα ανά στάδιο                                                                                                                                                                                                                 | —                                                                   | ✅                                                |                                                                  |     |
@@ -943,10 +956,9 @@ python3 ~/crowd_aware_ws/scripts/metrics_summary.py ~/crowd_aware_ws/rosbags ~/s
 
 ## Επίπεδο 3: επιλογή (SCAND)
 - **Ground truth πρόθεσης**: η καταγεγραμμένη μελλοντική διαδρομή του οδηγού (SCAND, Karnan et al., RA-L 2022: οι επιδείξεις ανθρώπων ως αναφορά συμπεριφοράς).
-- **α) Cluster hit**: φ_true = γωνία στην οποία η πραγματική διαδρομή βγαίνει από τον κύκλο 1.8 m. Hit αν φ_true ∈ [φ_min, φ_max] του MAP cluster.
-  - Επειδή ο estimator δίνει **κατανομή**, μετράμε και **Brier score** (Brier 1950) και **log-loss** της πιθανότητας του σωστού cluster (proper scoring rules).
+- **α)** φ_true = γωνία στην οποία η πραγματική διαδρομή βγαίνει από τον κύκλο 1.8 m. (Οι μετρικές πιθανοτήτων του estimator, hit / Brier / log-loss, αφαιρέθηκαν 2026-11-10.)
 - **β) Απόσταση path**: |φ* − φ_true| στον ορίζοντα και ADE/FDE σε ίσο μήκος τόξου (ορισμοί από την πρόβλεψη τροχιών, π.χ. Alahi et al., *Social LSTM*, CVPR 2016). Το discrete Fréchet (Eiter & Mannila 1994) δεν υλοποιήθηκε.
-- **Baselines**: cluster που περιέχει το φ_user, ομοιόμορφη κατανομή, τόξο με την καμπυλότητα ω/v της εντολής («μόνο χρήστης»).
+- **Baselines**: φ_user, τόξο με την καμπυλότητα ω/v της εντολής («μόνο χρήστης»).
 - ✅ Τι εννοούσα με «baseline μόνο χρήστης» και «εξαιρέσεις»: βλ. § SCAND πειράματα.
 
 ---
@@ -960,7 +972,7 @@ python3 ~/crowd_aware_ws/scripts/metrics_summary.py ~/crowd_aware_ws/rosbags ~/s
 | `generatePath()`: κάθε φρουρός τυπώνει αιτία και τιμές. `max_steps` μένει με ERROR | `patches/bayesian_shared_control_safety_semantics.patch` (helper_fcns) |
 | `DS = 0.05` και στους δύο τρόπους (αφαιρέθηκε το `sweep_resolution`) | `config/controllers/dwal.yaml`, `experiment.yaml`, `prepare_scene.py` |
 | `length_jump_threshold` στο `experiment.yaml` (0.3, runtime) | `experiment.yaml`, `prepare_scene.py`, `evaluation.json`, `configuration.py` |
-| Αντιστοίχιση `upstream`/`tracking` με επιλογή από yaml. Μοίρασμα πίστης σε split (`intent.split_by_overlap`) | `dwal_variable_length.patch`, shared patch (estimator), `experiment.yaml`, `prepare_scene.py` |
+| Αντιστοίχιση `upstream`/`tracking` με επιλογή από yaml (ο estimator μένει ο αρχικός· το μοίρασμα πίστης σε split αφαιρέθηκε 2026-11-10) | `dwal_variable_length.patch`, shared patch (estimator), `experiment.yaml`, `prepare_scene.py` |
 | Φίλτρο πέδησης μόνο στο clustering, με όριο τόξου. Heartbeat `[S_req, timeout, stamp, m]` | `dwal_variable_length.patch`, shared patch |
 | Dynamic: χωρίς όρο κόστους και χωρίς απόρριψη στο `candidateSpeed`. Όπισθεν → `v = 0` με κράτηση της περιστροφής | shared patch |
 | Έλεγχος πεπερασμένων τιμών στο `publishCmd` (ο smoother απορρίπτει ήδη NaN, επαληθεύτηκε με test) | shared patch |
@@ -1000,7 +1012,6 @@ python3 ~/crowd_aware_ws/scripts/metrics_summary.py ~/crowd_aware_ws/rosbags ~/s
 | Ben-Hur, Elisseeff, Guyon, *A stability based method for discovering structure in clustered data*, PSB, 2002 · von Luxburg, *Clustering stability: an overview*, FnT ML 2(3), 2010 🔎 | Η σταθερότητα υπό διαταραχή ως κριτήριο εγκυρότητας χωρίς ground truth | §10.3 Β2 (stability) | Επιλογή πλήθους clusters |
 | Hubert & Arabie, *Comparing partitions*, J. Classification 2(1), 1985 🔎 | ARI | §10.3 Β2 | — |
 | Karnan et al., *Socially CompliAnt Navigation Dataset (SCAND)*, RA-L 7(4), 2022 🔎 | Επιδείξεις ανθρώπων ως αναφορά συμπεριφοράς. Τα δεδομένα | §10.1, §10.3 Β4–Β5 | — |
-| Brier, *Verification of forecasts expressed in terms of probability*, Monthly Weather Review 78(1), 1950 🔎 · log-loss (proper scoring rules, π.χ. Gneiting & Raftery, JASA 102(477), 2007 💡🔎) | Αξιολόγηση **πιθανοτικής** πρόβλεψης (της κατανομής του estimator) | §10.3 Β4 | — |
 | Alahi et al., *Social LSTM*, CVPR, 2016 🔎 | Ορισμοί ADE/FDE | §10.3 Β5 | Το μοντέλο |
 | Eiter & Mannila, *Computing discrete Fréchet distance*, TU Wien tech. report, 1994 🔎 | Discrete Fréchet | §10.3 Β5 | — |
 | Wilcoxon, *Individual comparisons by ranking methods*, Biometrics Bulletin 1(6), 1945 🔎 | Ζευγαρωτός έλεγχος χωρίς υπόθεση κανονικότητας | §10.4 | — |

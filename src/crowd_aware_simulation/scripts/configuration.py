@@ -81,7 +81,7 @@ def recording_topics(exp, cfg, controller):
             'reference_cmd', 'selected_cmd', 'smoothed_cmd',
             'collision_checked_cmd', 'final_cmd', 'sampled_paths', 'sampled_markers',
             'clusters_far', 'far_markers', 'shared_path', 'human_path',
-            'contacts', 'braking_requirement', 'far_diagnostics', 'intent_diagnostics']
+            'contacts', 'braking_requirement', 'far_diagnostics', 'intent_diagnostics', 'path', 'actual_path']
     if controller == 'fixed_dwal':
         keys += ['clusters_near', 'near_markers', 'near_diagnostics']
     return list(dict.fromkeys(['/clock', '/tf', '/tf_static', '/parameter_events'] + [t[k] for k in keys]))

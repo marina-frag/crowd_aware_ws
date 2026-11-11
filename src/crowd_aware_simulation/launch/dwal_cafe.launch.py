@@ -56,6 +56,8 @@ def setup(context):
         raise RuntimeError('REFERENCE_BAG requires REFERENCE_MODE=teleop')
     seed = LaunchConfiguration('seed').perform(context)
     scenario = LaunchConfiguration('scenario').perform(context)
+    density = LaunchConfiguration('density').perform(context)
+    path_shape = LaunchConfiguration('path_shape').perform(context)
     share = Path(get_package_share_directory('crowd_aware_simulation'))
     runtime = json.loads((share/'config/runtime.json').read_text())
     if controller not in ('fixed_dwal', 'dynamic_dwal'):
@@ -90,14 +92,19 @@ def setup(context):
     run = module.prepare(
         description, wrapper, Path(tempfile.mkdtemp(prefix='crowd_aware_')),
         share/'config/experiment.yaml', headless=headless, scenario=scenario,
-        seed=int(seed), controller=controller, require_intended_user_support=True, variant=variant_arg or None)
+        seed=int(seed), controller=controller, require_intended_user_support=True, variant=variant_arg or None,
+        density=density, path_shape=path_shape,
+        wait_for_recorder=truth(context, 'wait_for_recorder'),
+        jump=LaunchConfiguration('jump').perform(context) or None,
+        correspondence=LaunchConfiguration('correspondence').perform(context) or None)
     resolved = cfg | {'selection': {'controller': controller, 'semantics': semantics,
         'reference_mode': reference_mode, 'scenario': scenario, 'seed': int(seed),
+        'density': density, 'path_shape': path_shape,
         'headless': headless, 'gui': truth(context, 'gui'), 'rviz': truth(context, 'rviz'),
         'reference_timeout': teleop_input_timeout,
         'variant': json.loads((run/'evaluation.json').read_text())['variant']}}
     (run/'resolved_config.yaml').write_text(module.dump_yaml(resolved))
-    print(f'Scenario={scenario}, experiment={controller}/{semantics}, '
+    print(f'Scenario={scenario} (density={density}, path={path_shape}), experiment={controller}/{semantics}, '
           f'reference={reference_mode}, seed={seed}; runtime files={run}', flush=True)
 
     if is_dwal:
@@ -225,7 +232,7 @@ def setup(context):
     (run/'evaluation.json').write_text(json.dumps(evaluation, indent=2))
     active = {'run_directory': str(run), 'controller': controller, 'semantics': semantics,
               'scenario': scenario, 'seed': int(seed), 'variant': evaluation['variant'],
-              'reference_mode': reference_mode}
+              'reference_mode': reference_mode, 'density': density, 'path_shape': path_shape}
     active_file = Path('/tmp/dwal_active_run.json')
     tmp_active = active_file.with_suffix('.tmp')
     tmp_active.write_text(json.dumps(active, indent=2))
@@ -268,9 +275,12 @@ def generate_launch_description():
         DeclareLaunchArgument(name, default_value=(str(defaults[name]).lower()
             if isinstance(defaults[name], bool) else str(defaults[name])))
         for name in ('controller', 'semantics', 'reference_mode', 'scenario', 'seed',
-                     'headless', 'gui', 'rviz')]
+                     'density', 'path_shape', 'headless', 'gui', 'rviz')]
     return LaunchDescription(arguments + [
         DeclareLaunchArgument('teleop_input_timeout', default_value=''),
         DeclareLaunchArgument('variant', default_value=''),
         DeclareLaunchArgument('reference_bag', default_value=''),
+        DeclareLaunchArgument('wait_for_recorder', default_value='false'),
+        DeclareLaunchArgument('jump', default_value=''),
+        DeclareLaunchArgument('correspondence', default_value=''),
         OpaqueFunction(function=setup)])

@@ -16,3 +16,12 @@ scenario:
       - 0.0
   evaluation:
     timeout: 90.0
+  seed_variation:
+    baseline_seed: 1
+    start_fraction: 0.8
+    speed_scale:
+    - 0.85
+    - 1.15
+    static_below_mps: 0.1
+    shift_x_m: 0.3
+    shift_y_m: 0.2

@@ -3,5 +3,7 @@ build/
 install/
 log/
 rosbags/
+rosbags_tests/
+rosbags_failed/
 **/__pycache__/
 

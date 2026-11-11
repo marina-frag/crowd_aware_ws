@@ -1,8 +1,6 @@
 # Reuse the existing HuNavSim environment; do not mix host Jazzy and Humble DDS.
 ARG BASE_IMAGE=pmb2_hunav_simulation:latest
 FROM ${BASE_IMAGE}
-ARG SOURCE_SHA=unknown
-LABEL org.iwalk.source-sha256=${SOURCE_SHA}
 LABEL org.iwalk.dwal-revision="95b1aa5e1f0259ae8a467c731bf994fc0ebc4f6d"
 USER root
 SHELL ["/bin/bash", "-c"]
@@ -103,5 +101,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3-pip pyt
 RUN /bin/bash /dwal_entrypoint.sh python3 /tmp/dwal_plot.py check-backend
 # END DWAL_PLOT_COMPATIBILITY_FIX
 
+# Last, so a source change does not invalidate the cache of the layers above.
+ARG SOURCE_SHA=unknown
+LABEL org.iwalk.source-sha256=${SOURCE_SHA}
 ENTRYPOINT ["/bin/bash", "/dwal_entrypoint.sh"]
 CMD ["ros2", "launch", "crowd_aware_simulation", "dwal_cafe.launch.py"]

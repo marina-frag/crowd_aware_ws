@@ -9,7 +9,13 @@ reference:
   use_velocity_scaled_lookahead_dist: true
   min_approach_linear_velocity: 0.05
   approach_velocity_scaling_dist: 0.6
-  use_collision_detection: true
+  # The reference stands for the user: it keeps asking to move along the path and never
+  # gives up; obstacle avoidance is the job of DWAL + shared controller. So no collision
+  # check here, no progress timeout and no failure count (an abort would send 0 and hide
+  # standstill from standstill_while_requested).
+  use_collision_detection: false
+  movement_time_allowance: 1000000.0
+  failure_tolerance: -1.0
   max_allowed_time_to_collision_up_to_carrot: 1.0
   use_rotate_to_heading: true
   allow_reversing: false

@@ -26,5 +26,28 @@ scenario:
       - 0.0
     - - 8.0
       - 0.0
+    path_shapes:
+      line:
+        type: line
+        length_m: 8.0
+      s_curve:
+        type: lane_change
+        length_m: 8.0
+        offset_m: 1.5
+      hard_curve:
+        type: slalom
+        length_m: 8.0
+        amplitude_m: 0.4
+        wavelength_m: 5.0
+        ramp_m: 3.0
   evaluation:
     timeout: 90.0
+  seed_variation:
+    baseline_seed: 1
+    start_fraction: 0.8
+    speed_scale:
+    - 0.85
+    - 1.15
+    static_below_mps: 0.1
+    shift_x_m: 0.3
+    shift_y_m: 0.2

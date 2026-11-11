@@ -4,6 +4,8 @@
   "reference_mode": "teleop",
   "scenario": "dense_crowd",
   "seed": 1,
+  "density": "medium",
+  "path_shape": "line",
   "headless": true,
   "gui": false,
   "rviz": true,
@@ -25,5 +27,15 @@
   "teleop": {
     "speed": 0.15,
     "turn": 0.4
-  }
+  },
+  "densities": [
+    "sparse",
+    "medium",
+    "dense"
+  ],
+  "path_shapes": [
+    "line",
+    "s_curve",
+    "hard_curve"
+  ]
 }

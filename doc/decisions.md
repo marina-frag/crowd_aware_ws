@@ -27,7 +27,7 @@ assets:
 ## Problem Description
 
 - Front-following requires the robot to remain ahead of its intended user while guiding or accompanying them in the user's intended direction.
-- Crowded, dynamic spaces introduce target confusion, occlusion, rapidly changing free space, and socially sensitive interactions.
+- Crowded, dynamic spaces introduce rapidly changing free space, and socially sensitive interactions.
 - The robot must preserve the user–robot formation without blocking, surprising, or endangering nearby pedestrians.
 - **Contribution:** a Nav2-compatible, crowd-aware local planner/controller that uses semantic context to follow crowd-aware social protocols while keeping an assistive robot safely in front of its intended user.
 - Scope: local motion generation and control; perception and tracking are upstream inputs.
@@ -188,7 +188,7 @@ assets:
 
 - $C_i$ is a critic score and $s_i$ is its configured scale.
 - There is no single fixed DWB objective because the critic set is configurable.
-- Typical critics include obstacle, path alignment, path distance, goal alignment, goal distance, rotation-to-goal, oscillation, and forward preference.
+- Typical critics include obstacle, path alignment, path distance, goal alignment, goal distance, rotation-to-goal, and forward preference.
 - Project option: add social and formation critics while retaining the DWB architecture.
 
 ## Taxonomy Based on Planning and Decision-Making 5/6
@@ -228,7 +228,6 @@ assets:
 | Doorway | Restrict overtaking and wait when passage is unsafe. |
 | Junction | Increase emphasis on short-horizon user-intention prediction. |
 | Dense crowd | Reduce speed and shorten formation distance within safe bounds. |
-| Occlusion zone | Increase caution and rely on short-term target prediction. |
 
 - Decision: the desired front-following pose is context dependent rather than fixed.
 
@@ -262,7 +261,7 @@ assets:
   - static obstacles and local free space;
   - local crowd density;
   - available passage width or constrained-space indication;
-  - occlusion and stale-input indication.
+  - stale-input indication.
 - Not required: full scene semantics, human–object interaction recognition, or semantic classification of every room, door, and object.
 - Initial decision: derive context from geometry and tracked agents rather than introducing a new semantic-perception model.
 
@@ -380,7 +379,6 @@ assets:
   - trust;
   - predictability;
   - confidence that the robot knows where it is going;
-  - confusion;
   - effort required to follow;
   - preference between planners.
 - Combine subjective ratings with objective logs from the same scenario.
@@ -393,11 +391,9 @@ assets:
 - Controlled scenario suite:
   1. One user, no pedestrians.
   2. One pedestrian crossing the route.
-  3. Several similarly dressed pedestrians near the user.
-  4. Temporary full occlusion.
-  5. A pedestrian passing between robot and user.
-  6. Narrow corridor.
-  7. Junction where the user turns.
+  3. A pedestrian passing between robot and user.
+  4. Narrow corridor.
+  5. Junction where the user turns.
   8. Doorway.
   9. Group blocking part of the route.
   10. Rapid change in user speed or direction.
@@ -424,7 +420,7 @@ assets:
   - crowd-aware local trajectory generation;
   - social, formation, obstacle, progress, and smoothness costs;
   - context-dependent speed and formation adaptation;
-  - safe behavior under low confidence, occlusion, stale data, or lack of a feasible trajectory;
+  - safe behavior under low confidence, stale data, or lack of a feasible trajectory;
   - controlled comparison with non-social baselines.
 
 ## Requirements Summary 2/4
@@ -440,7 +436,7 @@ assets:
 - **FR-6:** Avoid passing through detected groups when group information is available.
 - **FR-7:** Retain the provided intended-user ID; never substitute a bystander using nearest-person proximity alone.
 - **FR-8:** Reduce speed on stale or uncertain user input and stop when confidence, collision risk, or trajectory feasibility crosses a configured threshold.
-- **FR-9:** Avoid unnecessary oscillation, abrupt turns, and repeated stopping.
+- **FR-9:** Avoid abrupt turns and repeated stopping.
 - Functional behavior must remain compatible with the surrounding Nav2 pipeline and safety layers.
 
 ## Requirements Summary 4/4

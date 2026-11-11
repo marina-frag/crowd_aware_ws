@@ -151,9 +151,7 @@ group_blocking
 dense_crowd
 crossing
 cafe
-target_confusion **
 doorway
-occlusion **
 open_area
 
 `<controller>`

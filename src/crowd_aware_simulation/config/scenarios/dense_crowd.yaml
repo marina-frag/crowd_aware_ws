@@ -4,7 +4,7 @@ scenario:
   agents: agents_dense_crowd.yaml
   goal_variation:
     baseline_seed: 1
-    max_offset_m: 0.30
+    max_offset_m: 0.3
   robot:
     path_xy:
     - - 0.0
@@ -29,5 +29,60 @@ scenario:
       - 0.0
     - - 8.0
       - 0.0
+    path_shapes:
+      line:
+        type: line
+        length_m: 8.0
+      s_curve:
+        type: lane_change
+        length_m: 8.0
+        offset_m: 1.5
+      hard_curve:
+        type: slalom
+        length_m: 8.0
+        amplitude_m: 0.4
+        wavelength_m: 5.0
+        ramp_m: 3.0
   evaluation:
     timeout: 120.0
+  agent_layout:
+    kind: crowd
+    crossing:
+      start_s: 2.0
+      end_s: 7.0
+      half_width_m: 2.5
+      templates:
+      - walker1
+      - walker2
+      - walker3
+      - walker4
+      - walker7
+      - walker8
+    parallel:
+      start_s: 1.0
+      end_s: 7.0
+      lateral_m:
+      - 0.7
+      - -0.8
+      backward:
+      - true
+      - false
+      templates:
+      - walker5
+      - walker6
+    density:
+      sparse:
+        crossing_spacing_m: 2.0
+        parallel: 1
+      medium:
+        crossing_spacing_m: 1.0
+        parallel: 2
+      dense:
+        crossing_spacing_m: 0.5
+        parallel: 2
+    seed_variation:
+      baseline_seed: 1
+      start_fraction: 0.8
+      speed_scale:
+      - 0.85
+      - 1.15

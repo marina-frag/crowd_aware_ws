@@ -2,14 +2,18 @@
 """Record the ACTIVE run, snapshot parameters, and keep labels with the bag."""
 import argparse
 from datetime import datetime, timezone
+import hashlib
 import json
+import math
 from pathlib import Path
 import shutil
 import signal
 import subprocess
 import sys
+import time
 import yaml
 from configuration import recording_topics
+from dwal_bag import events, locate, twist
 
 
 def record_main():
@@ -27,11 +31,23 @@ def record_main():
     resolved = yaml.safe_load((run/'resolved_config.yaml').read_text())
     topics = recording_topics(resolved['experiment'], cfg, a.controller)
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
-    name = f'{a.scenario}_{active["variant"]}_{a.semantics}_seed{a.seed}_{stamp}'
+    layout = f'{active.get("density", "medium")}_{active.get("path_shape", "line")}'
+    method = active['variant']
+    if a.controller == 'dynamic_dwal':
+        method += f'_{cfg.get("correspondence", "upstream")}'
+        if cfg.get('length_jump_threshold') is not None:
+            method += f'_j{cfg["length_jump_threshold"]:g}'
+    name = f'{a.scenario}_{layout}_{method}_{a.semantics}_seed{a.seed}_{stamp}'
     root = Path(resolved['runtime']['result_directory'])/name
     root.mkdir(parents=True, exist_ok=False)
     shutil.copytree(run, root/'run')
     cfg.update({k: active[k] for k in ('controller', 'variant', 'semantics', 'scenario', 'seed', 'reference_mode')})
+    cfg.update({k: active.get(k, d) for k, d in (('density', 'medium'), ('path_shape', 'line'))})
+    # Pairing check (metrics_summary.py): same seed -> same agents for every method.
+    agents = run/'agents.yaml'
+    if agents.exists():
+        cfg['agents_sha256'] = hashlib.sha256(json.dumps(
+            yaml.safe_load(agents.read_text()), sort_keys=True).encode()).hexdigest()
     (root/'evaluation.json').write_text(json.dumps(cfg, indent=2))
     (root/'recording_topics.json').write_text(json.dumps(topics, indent=2))
     for node in ('/dwal_planner/dwal_generator', '/dwal_planner/dwal_clustering', '/shared_controller'):
@@ -42,10 +58,15 @@ def record_main():
             data = 'ERROR: parameter dump timed out\n'
         (root/(node.strip('/').replace('/', '_')+'_parameters.yaml')).write_text(data)
     transient = {'history': 'keep_last', 'depth': 1, 'reliability': 'reliable', 'durability': 'transient_local'}
-    qos = {'/tf_static': transient, cfg['topics']['costmap']: transient}
+    qos = {'/tf_static': transient, cfg['topics']['costmap']: transient,
+           resolved['experiment']['topics']['path']: transient, resolved['experiment']['topics']['actual_path']: transient}
     qos_file = root/'recorder_qos.yaml'; qos_file.write_text(yaml.safe_dump(qos))
+    # zstd per-message compression (lossless). Not file mode: Humble decompresses a
+    # file-mode bag next to itself on every read and leaves the full copy behind (and
+    # fails on read-only mounts). dwal_bag.py and `ros2 bag play` decompress in memory.
     cmd = ['ros2', 'bag', 'record', '--use-sim-time', '--qos-profile-overrides-path',
-           str(qos_file), '-o', str(root/'bag'), *topics]
+           str(qos_file), '--compression-mode', 'message', '--compression-format', 'zstd',
+           '-o', str(root/'bag'), *topics]
     (root/'recorder_command.json').write_text(json.dumps(cmd, indent=2))
     print(f'Recording {root}; stop with Ctrl+C. Start before the reference replay.', flush=True)
     child = subprocess.Popen(cmd)
@@ -60,16 +81,7 @@ def record_main():
     return code if code >= 0 else 128-code
 
 
-    sys.exit(main())
-#!/usr/bin/env python3
-"""Replay only reference commands at a fixed simulator time, with timing checks."""
-import argparse
-import hashlib
-import json
-import math
-import time
-from pathlib import Path
-from dwal_bag import events, locate, twist
+# --- Replay only reference commands at a fixed simulator time, with timing checks.
 
 
 def canonical_schedule(schedule):
@@ -160,15 +172,7 @@ def replay_main():
     print(json.dumps(provenance,indent=2),flush=True)
     if failure or not provenance['completed']:raise SystemExit(1)
 
-#!/usr/bin/env python3
-"""Own recording/replay lifetime for one freshly launched comparison run."""
-import argparse
-import json
-import signal
-import subprocess
-import sys
-import time
-from pathlib import Path
+# --- Own recording/replay lifetime for one freshly launched comparison run.
 
 
 def experiment_main():
@@ -214,7 +218,6 @@ def experiment_main():
     return code
 
 def main():
-    import sys
     if len(sys.argv) > 1 and sys.argv[1] == 'record':
         return record_main()
     if len(sys.argv) > 1 and sys.argv[1] == 'replay':

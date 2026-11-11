@@ -6,7 +6,8 @@ Called by evaluation.py; every result carries its own definition. Groups:
                  recorded clusters and an offline replay of both correspondence
                  modes (upstream / tracking) on the same frames
   intent       - SCAND only: did the controller pick what the demonstrator did
-                 (hit rate, Brier, log-loss, angle error, ADE/FDE, baselines)
+                 (angle error, ADE/FDE, baselines); the intent estimator's
+                 probabilities are not evaluated (the estimator is not a contribution)
   latency      - message age through the pipeline, an estimate for the reaction time T
   command_chain- where the commanded speed is reduced along the command pipeline
 
@@ -15,7 +16,6 @@ path crosses the circle of radius R (phi = asin(R*k/2) on the arc part).
 """
 import bisect
 import math
-import random
 
 
 # ---------------------------------------------------------------- geometry
@@ -45,6 +45,49 @@ def arc_line_point(k, s):
         return r * math.sin(th), r * (1 - math.cos(th))
     # 90-degree point (1/|k|, 1/k), then straight on along +-y
     return abs(r), r + math.copysign(s - s90, k)
+
+
+def arc_line_pose(k, s):
+    """Pose (x, y, heading) at arc length s of the arc-line path of arc_line_point."""
+    x, y = arc_line_point(k, s)
+    if abs(k) < 1e-9:
+        return x, y, 0.0
+    return x, y, (k * s if s <= math.pi / 2 / abs(k) else math.copysign(math.pi / 2, k))
+
+
+def scan_free_lengths(paths, pose0, points, footprint, horizon, step):
+    """Free length of every path (last pose before the footprint contains a scan point,
+    sampled every `step` up to `horizon`) and the radius from pose0 of that pose
+    (inf if the path stays free). points in the frame of pose0 (odometry)."""
+    import numpy as np
+    x0, y0, th0 = pose0
+    c0, s0 = math.cos(th0), math.sin(th0)
+    d = points - [x0, y0]
+    local = np.stack([c0 * d[:, 0] + s0 * d[:, 1], -s0 * d[:, 0] + c0 * d[:, 1]], axis=1)
+    xmin, xmax, ymin, ymax = footprint
+    reach = horizon + math.hypot(max(abs(xmin), abs(xmax)), max(abs(ymin), abs(ymax)))
+    local = local[np.hypot(local[:, 0], local[:, 1]) <= reach]
+    ss = np.arange(0.0, horizon + 1e-9, step)
+    lengths, radii = [], []
+    for p in paths:
+        poses = np.array([arc_line_pose(p['curvature'], s) for s in ss])
+        if len(local):
+            dx = local[None, :, 0] - poses[:, None, 0]
+            dy = local[None, :, 1] - poses[:, None, 1]
+            c, s = np.cos(poses[:, 2])[:, None], np.sin(poses[:, 2])[:, None]
+            lx, ly = c * dx + s * dy, -s * dx + c * dy
+            hit = ((lx >= xmin) & (lx <= xmax) & (ly >= ymin) & (ly <= ymax)).any(axis=1)
+        else:
+            hit = np.zeros(len(ss), dtype=bool)
+        if hit.any():
+            i = int(np.argmax(hit))
+            last = max(i - 1, 0)
+            lengths.append(float(ss[last]) if i > 0 else 0.0)
+            radii.append(float(math.hypot(poses[last, 0], poses[last, 1])))
+        else:
+            lengths.append(float(horizon))
+            radii.append(math.inf)
+    return lengths, radii
 
 
 def interval_iou(a, b):
@@ -342,11 +385,12 @@ def target_label(end, points, components, footprint, reach):
 
 
 # ----------------------------------------------------------------- metrics
-def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0):
+def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0, scan_at=None):
     """groups: {name: [frame, ...]}, frame = dict(time, yaw, R_level, paths, clusters,
     required). paths: dicts curvature, length, collision_r, end (x, y, th), reach.
     clusters: recorded [(id, [member indices])]."""
-    rng = random.Random(seed)
+    import numpy as np
+    rng = np.random.default_rng(seed)
     cm_times = [c['time'] for c in costmaps]
     comp_cache = {}
     out = {}
@@ -355,7 +399,7 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
         if not frames:
             continue
         mixed = clusters_total = runs = oversplit = 0
-        counts, ari_values, agree = [], [], []
+        counts, ari_values, agree, recheck_err = [], [], [], []
         recorded_ids = []
         replay = {'upstream': [], 'tracking': []}
         matchers = {'upstream': UpstreamMatcher(duplicate_bug=not settings['variable']),
@@ -371,17 +415,29 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
             recorded_ids.append((f['time'], f['yaw'], list(zip([c[0] for c in clusters], intervals))))
             for mode, matcher in matchers.items():
                 replay[mode].append((f['time'], f['yaw'], list(zip(matcher.step(intervals, f['yaw']), intervals))))
-            # replica check and stability (ARI) under length noise sigma
-            rerun = lambda L=None: replicate(paths, settings, f['R_level'], f['required'], L)
-            clean = rerun()
             agree.append(f['replica_match'])
-            noisy_L = [p['length'] + rng.gauss(0.0, settings['noise_sigma']) for p in paths]
-            noisy = rerun(noisy_L)
-            lab = lambda cl: [next((n for n, members in enumerate(cl) if k in members), -1) for k in range(len(paths))]
-            if clean or noisy:
-                ari = adjusted_rand_index(lab(clean), lab(noisy))
-                if ari is not None:
-                    ari_values.append(ari)
+            # stability (ARI): clustering of the same paths with free lengths re-checked
+            # against the clean scan and against the scan with Gaussian range noise
+            scan = scan_at(f['time']) if scan_at is not None else None
+            if scan is not None and paths:
+                origin, points = scan
+                rel = points - origin
+                r = np.hypot(rel[:, 0], rel[:, 1])
+                noisy_points = origin + rel * (1.0 + rng.normal(0.0, settings['scan_noise_sigma'], len(r)) /
+                                               np.maximum(r, 1e-6))[:, None]
+                horizon = max(p['length'] for p in paths)
+                labels = []
+                for pts in (points, noisy_points):
+                    L, cr = scan_free_lengths(paths, f['pose0'], pts, footprint, horizon, settings['scan_noise_step'])
+                    rechecked = [dict(p, length=L[k], collision_r=cr[k]) for k, p in enumerate(paths)]
+                    cl = replicate(rechecked, settings, f['R_level'], f['required'])
+                    labels.append([next((n for n, mem in enumerate(cl) if k in mem), -1) for k in range(len(paths))])
+                    if pts is points:
+                        recheck_err.extend(abs(L[k] - p['length']) for k, p in enumerate(paths))
+                if any(x >= 0 for x in labels[0] + labels[1]):
+                    ari = adjusted_rand_index(labels[0], labels[1])
+                    if ari is not None:
+                        ari_values.append(ari)
             # collision-target labels (needs a costmap no older than 0.5 s)
             i = bisect.bisect_right(cm_times, f['time']) - 1
             if i < 0 or f['time'] - cm_times[i] > 0.5 or not clusters:
@@ -431,6 +487,8 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
             'flicker_per_min': flicker / minutes if minutes else None,
             'stability_ari_mean': mean(ari_values),
             'stability_ari_p05': percentile(ari_values, 0.05),
+            'stability_frames': len(ari_values),
+            'stability_recheck_length_error_median_m': percentile(recheck_err, 0.5),
             'ids_recorded': id_metrics(recorded_ids, duration_s),
             'ids_replay_upstream': id_metrics(replay['upstream'], duration_s),
             'ids_replay_tracking': id_metrics(replay['tracking'], duration_s)}
@@ -439,8 +497,12 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
         'nearest to the footprint at its last free pose (or "free" if it reaches the horizon); '
         'mixed = clusters whose members have >= 2 labels; over-split = runs of consecutive clustered '
         'paths with one label that span >= 2 clusters. Flicker = cluster-count change undone within 0.5 s. '
-        f'Stability = ARI between the clustering of the recorded paths and of the same paths with free '
-        f'length noise sigma={settings["noise_sigma"]} m (Python replica; replica_agreement_fraction = '
+        f'Stability = ARI between the clustering (Python replica) of the same sampled paths with free '
+        f'lengths re-checked (footprint vs scan points, step {settings["scan_noise_step"]} m, up to the '
+        f'longest recorded path) on the clean scan and on the scan with Gaussian range noise '
+        f'sigma={settings["scan_noise_sigma"]} m; stability_recheck_length_error_median_m = median |re-checked '
+        'clean length - recorded length| (the planner checks against the costmap, not the raw scan). '
+        '(replica_agreement_fraction = '
         'frames where the replica reproduces the recorded clusters from a sampled_paths message '
         'received from 0.25 s before to 0.15 s after them; misses are mostly source messages '
         'absent from the bag). IDs: switch = consecutive-frame '
@@ -482,20 +544,10 @@ def intent_metrics(diags, odom, reference, scans_to_points, footprint, R_default
         phi_true = wrap(math.atan2(cross[2] - y0, cross[1] - x0) - th0)
         clusters = d['clusters']
         inside = [n for n, c in enumerate(clusters) if c['phi_min'] - 1e-9 <= phi_true <= c['phi_max'] + 1e-9]
-        dist = [0.0 if n in inside else min(abs(phi_true - c['phi_min']), abs(phi_true - c['phi_max']))
-                for n, c in enumerate(clusters)]
-        correct = int(np.argmin(dist))
-        belief = [c.get('belief', 0.0) for c in clusters]
-        total = sum(belief)
-        belief = [b / total for b in belief] if total > 0 else [1.0 / len(clusters)] * len(clusters)
-        brier = sum((b - (n == correct)) ** 2 for n, b in enumerate(belief))
-        uniform_brier = sum((1.0 / len(clusters) - (n == correct)) ** 2 for n in range(len(clusters)))
         j = bisect.bisect_right(rt, t) - 1
         k_ref = None
         if j >= 0 and abs(reference[j][1]) > 0.02:
             k_ref = reference[j][2] / reference[j][1]
-        user_cluster = next((n for n, c in enumerate(clusters)
-                             if c['phi_min'] <= d['phi_user'] <= c['phi_max']), None)
         # ADE/FDE at equal arc length, robot frame at pose0
         c0, s0 = math.cos(th0), math.sin(th0)
         true_local = [(sv, c0 * (x - x0) + s0 * (y - y0), -s0 * (x - x0) + c0 * (y - y0)) for sv, x, y in future]
@@ -526,9 +578,7 @@ def intent_metrics(diags, odom, reference, scans_to_points, footprint, R_default
         else:
             near = None
         rows.append(dict(
-            hit=d['map'] in inside if d['map'] >= 0 else False, inside=bool(inside), brier=brier,
-            uniform_brier=uniform_brier, logloss=-math.log(max(belief[correct], 1e-6)),
-            user_cluster_hit=user_cluster in inside if user_cluster is not None else False,
+            inside=bool(inside),
             phi_err=abs(wrap(d['phi_star'] - phi_true)), phi_user_err=abs(wrap(d['phi_user'] - phi_true)),
             phi_ref_err=abs(wrap(curv2phi(k_ref, R) - phi_true)) if k_ref is not None else None,
             ade=ade, fde=fde, b_ade=b_ade, b_fde=b_fde, exception=exception, near=near))
@@ -537,11 +587,8 @@ def intent_metrics(diags, odom, reference, scans_to_points, footprint, R_default
         if not sel:
             return None
         get = lambda key: [r[key] for r in sel if r[key] is not None]
-        return {'frames': len(sel), 'hit_rate': mean([float(r['hit']) for r in sel]),
-                'baseline_user_cluster_hit_rate': mean([float(r['user_cluster_hit']) for r in sel]),
+        return {'frames': len(sel),
                 'phi_true_inside_any_cluster_fraction': mean([float(r['inside']) for r in sel]),
-                'brier_mean': mean(get('brier')), 'baseline_uniform_brier_mean': mean(get('uniform_brier')),
-                'logloss_mean': mean(get('logloss')),
                 'phi_error_mean_rad': mean(get('phi_err')),
                 'baseline_phi_user_error_mean_rad': mean(get('phi_user_err')),
                 'baseline_reference_curvature_phi_error_mean_rad': mean(get('phi_ref_err')),
@@ -559,11 +606,10 @@ def intent_metrics(diags, odom, reference, scans_to_points, footprint, R_default
         'false_stop': false_stop,
         'definition': (
             'Per intent-diagnostics message. phi_true = polar angle (robot frame at pose0) where the recorded '
-            'future path first leaves the circle of the level radius. hit = phi_true inside the MAP cluster; '
-            'Brier = sum_i (p_i - y_i)^2 with y = cluster containing (or nearest to) phi_true; log-loss = '
-            '-log p_correct. phi_error = |phi_star - phi_true|. ADE/FDE: chosen arc-line path vs the true '
-            'path at equal arc length up to the circle. Baselines: cluster containing phi_user, uniform belief, '
-            'arc of the reference curvature w/v ("user only"). iWalk exception: the iWalk footprint along the '
+            'future path first leaves the circle of the level radius; phi_true_inside_any_cluster = some '
+            'cluster contains it. phi_error = |phi_star - phi_true|. ADE/FDE: chosen arc-line path vs the true '
+            'path at equal arc length up to the circle. Baselines: phi_user, arc of the reference curvature '
+            'w/v ("user only"). The estimator probabilities are not evaluated. iWalk exception: the iWalk footprint along the '
             'true path overlaps a scan point (path not feasible for iWalk), reported separately; by_obstacle_'
             'distance uses the nearest scan point to pose0. false_stop = share of grid time with selected '
             'v < 0.01 m/s while the recorded robot moved faster than 0.1 m/s.')}
@@ -705,7 +751,7 @@ class Collector:
                 paths.append({'curvature': float(p.curvature), 'length': length,
                               'collision_r': float(p.colission_r), 'end': end,
                               'end_radius': math.hypot(end[0] - x0, end[1] - y0)})
-            self.sampled.append((now, float(msg.pose0[2]), paths))
+            self.sampled.append((now, (float(x0), float(y0), float(msg.pose0[2])), paths))
         elif topic in self.cluster_topics and topic is not None:
             self.receipts['clusters'].append(now)
             self.clusters.setdefault(self.cluster_topics[topic], []).append(
@@ -744,7 +790,8 @@ class Collector:
                     'margin': float(self.shared.get('stop_margin', 0.05)),
                     'gate': float(self.dwal.get('dwal_clustering/correspondence_gate', 0.2)),
                     'keep': int(self.dwal.get('dwal_clustering/track_keep_frames', 2)),
-                    'noise_sigma': 0.02}
+                    'scan_noise_sigma': float(self.cfg.get('scan_noise_sigma_m', 0.03)),
+                    'scan_noise_step': 0.05}
         st = [s[0] for s in self.sampled]
         groups = {}
         for name, msgs in self.clusters.items():
@@ -764,27 +811,30 @@ class Collector:
                 chosen = None
                 i = bisect.bisect_right(st, now + 0.15) - 1
                 while i >= 0 and now - st[i] <= 0.25:
-                    _, yaw, paths = self.sampled[i]
+                    _, pose0, paths = self.sampled[i]
+                    yaw = pose0[2]
                     index = {p['curvature']: k for k, p in enumerate(paths)}
                     members = [(cid, [index.get(c) for c in curvatures]) for cid, curvatures, _ in clusters]
                     if all(ks and None not in ks for _, ks in members):
                         match = (sorted(map(tuple, replicate(paths, settings, R_level, required))) ==
                                  sorted(tuple(ks) for _, ks in members))
                         if chosen is None or (match and not chosen[3]):
-                            chosen = (yaw, paths, members, match)
+                            chosen = (pose0, paths, members, match)
                         if match:
                             break
                     i -= 1
                 if chosen is None:
                     continue
-                yaw, paths, members, match = chosen
+                pose0, paths, members, match = chosen
+                yaw = pose0[2]
                 for p in paths:
                     p['reach'] = (p['end_radius'] >= R_level - 0.05) if variable else (p['collision_r'] >= R_level)
-                frames.append({'time': now, 'yaw': yaw, 'R_level': R_level, 'paths': paths,
+                frames.append({'time': now, 'yaw': yaw, 'pose0': pose0, 'R_level': R_level, 'paths': paths,
                                'clusters': members, 'required': required, 'replica_match': match})
             groups[name] = frames
         if groups:
-            out['clustering'] = clustering_metrics(groups, settings, self.costmaps, self.footprint(), duration)
+            out['clustering'] = clustering_metrics(groups, settings, self.costmaps, self.footprint(), duration,
+                                                   scan_at=getattr(extra, 'scan_at', None))
         out['settings'] = {'correspondence': self.dwal.get('dwal_clustering/correspondence', 'upstream'),
                            'variable_length': variable, 'replay': settings}
         out['latency'] = latency(self.receipts, self.stamps)

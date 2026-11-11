@@ -54,6 +54,24 @@ Visualization Manager:
       Enabled: true
       Topic:
         Value: /dynamic_dwal/markers
+    - Class: rviz_default_plugins/Path
+      Name: Desired reference path
+      Enabled: true
+      Topic:
+        Value: /experiment/path
+        Durability Policy: Transient Local
+      Color: 0; 200; 255
+      Line Style: Billboards
+      Line Width: 0.05
+    - Class: rviz_default_plugins/Path
+      Name: Executed path
+      Enabled: true
+      Topic:
+        Value: /experiment/actual_path
+        Durability Policy: Transient Local
+      Color: 255; 170; 0
+      Line Style: Billboards
+      Line Width: 0.05
   Tools:
     - Class: rviz_default_plugins/MoveCamera
     - Class: rviz_default_plugins/Interact

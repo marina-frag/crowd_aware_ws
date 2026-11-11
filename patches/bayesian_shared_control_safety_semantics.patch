@@ -35,135 +35,6 @@ index 3ab5f40..e5e2ec6 100644
    tf2 tf2_ros tf2_geometry_msgs nav2_costmap_2d
    dwal_planner
  )
-diff --git a/include/shared_controller/dwal_intent_estimator.hpp b/include/shared_controller/dwal_intent_estimator.hpp
-index e44639e..71e6f35 100644
---- a/include/shared_controller/dwal_intent_estimator.hpp
-+++ b/include/shared_controller/dwal_intent_estimator.hpp
-@@ -25,6 +25,12 @@ public:
- 
-     // Optional gating
-     double min_confidence = 0.0;  // set >0 to reject low-confidence selection
-+
-+    // Split/merge (correspondence "tracking" mode): the persistent mass of a
-+    // previous cluster goes to every current cluster whose angular interval
-+    // overlaps its (heading-compensated) interval, in proportion to the overlap,
-+    // instead of only to the cluster with the same ID.
-+    bool split_by_overlap = false;
-   };
- 
-   struct Result
-@@ -42,6 +48,9 @@ public:
-     belief_.clear();
-     prev_ids_.clear();
-     prev_phiC_.clear();
-+    prev_lo_.clear();
-+    prev_hi_.clear();
-+    prev_yaw_ = std::numeric_limits<double>::quiet_NaN();
-   }
- 
-   Result update(double phi_user, const dwal_planner::msg::ClusterGroup& msg)
-@@ -91,11 +100,15 @@ public:
-       phi_C.push_back(pC);
-     }
- 
-+    const auto& pose0 = msg.clusters.front().pose0;
-+    const double yaw = pose0.size() >= 3 ? pose0[2] : std::numeric_limits<double>::quiet_NaN();
-+
-     // --- Initialize belief uniformly on first valid call ---
-     if (belief_.empty() || prev_ids_.empty()) {
-       belief_.assign(Kt, 1.0 / std::max<size_t>(1, Kt));
-       prev_ids_ = ids;
-       prev_phiC_ = phi_C;
-+      prev_lo_ = phi_k; prev_hi_ = phi_l; prev_yaw_ = yaw;
-       // pick MAP 
-       const auto [idx, conf] = argmax(belief_);
-       out.valid = true;
-@@ -120,16 +133,34 @@ public:
-       const uint32_t prev_id = prev_ids_[j];
-       const double prev_phiC = prev_phiC_[j];
- 
--      // find match by id
--      int match = -1;
--      for (size_t i = 0; i < Kt; ++i) {
--        if (ids[i] == prev_id) { match = static_cast<int>(i); break; }
-+      // Successors of prev cluster j: the cluster with the same ID (upstream), or
-+      // with split_by_overlap every current cluster overlapping its interval,
-+      // weighted by the overlap (phi is relative to the heading, so the previous
-+      // interval is rotated by the heading change first).
-+      std::vector<std::pair<size_t, double>> children;
-+      if (p_.split_by_overlap && j < prev_lo_.size()) {
-+        const double shift = (std::isfinite(yaw) && std::isfinite(prev_yaw_))
-+          ? std::remainder(yaw - prev_yaw_, 2.0 * M_PI) : 0.0;
-+        const double lo = prev_lo_[j] - shift, hi = prev_hi_[j] - shift;
-+        for (size_t i = 0; i < Kt; ++i) {
-+          if (msg.clusters[i].paths.empty()) continue;
-+          const double overlap = std::min(hi, phi_l[i]) - std::max(lo, phi_k[i]);
-+          if (overlap > 0.0) children.emplace_back(i, overlap);
-+        }
-       }
-+      if (children.empty())
-+        for (size_t i = 0; i < Kt; ++i)
-+          if (ids[i] == prev_id) { children.emplace_back(i, 1.0); break; }
-+      double child_total = 0.0;
-+      for (const auto& c : children) child_total += c.second;
-+      const int match = children.empty() ? -1 : static_cast<int>(children.front().first);
-+      const auto is_child = [&](size_t i) {
-+        return std::any_of(children.begin(), children.end(), [i](const auto& c) { return c.first == i; });
-+      };
- 
-       const double sticky_mass = (match >= 0) ? p_.alpha : 0.0;
--      if (match >= 0) {
--        prior[static_cast<size_t>(match)] += sticky_mass * bj;
--      }
-+      for (const auto& c : children)
-+        prior[c.first] += sticky_mass * bj * c.second / child_total;
- 
-       const double spread_mass = 1.0 - sticky_mass; // = (1-alpha) if matched, = 1 if unmatched
- 
-@@ -137,7 +168,7 @@ public:
-       std::vector<double> w(Kt, 0.0);
-       for (size_t i = 0; i < Kt; ++i) {
-         // Exclude matched successor from redistribution when match exists
--        if (match >= 0 && static_cast<int>(i) == match) {
-+        if (match >= 0 && is_child(i)) {
-           w[i] = 0.0;
-           continue;
-         }
-@@ -156,14 +187,15 @@ public:
-         // - if match exists: put all mass on match
-         // - else: uniform
-         if (match >= 0) {
--          prior[static_cast<size_t>(match)] += (1.0 - p_.alpha) * bj; // or just bj if you prefer
-+          for (const auto& c : children)
-+            prior[c.first] += (1.0 - p_.alpha) * bj * c.second / child_total;
-         } else {
-           const double u = 1.0 / std::max<size_t>(1, Kt);
-           for (size_t i = 0; i < Kt; ++i) prior[i] += bj * u;
-         }
-       } else {
-         for (size_t i = 0; i < Kt; ++i) {
--          if (match >= 0 && static_cast<int>(i) == match) continue;
-+          if (match >= 0 && is_child(i)) continue;
-           prior[i] += spread_mass * bj * (w[i] / Z);
-         }
-       }
-@@ -198,6 +230,7 @@ public:
-     belief_ = post;
-     prev_ids_ = ids;
-     prev_phiC_ = phi_C;
-+    prev_lo_ = phi_k; prev_hi_ = phi_l; prev_yaw_ = yaw;
- 
-     const auto [idx, conf] = argmax(belief_);
-     out.valid = true;
-@@ -214,6 +247,8 @@ private:
-   std::vector<double> belief_;     // posterior b_t over prev set
-   std::vector<uint32_t> prev_ids_;
-   std::vector<double> prev_phiC_;
-+  std::vector<double> prev_lo_, prev_hi_;  // angular interval of each previous cluster
-+  double prev_yaw_ = std::numeric_limits<double>::quiet_NaN();
- 
-   static void normalizeInPlace(std::vector<double>& v)
-   {
 diff --git a/include/shared_controller/helper_fcns.h b/include/shared_controller/helper_fcns.h
 index 2b8354a..0c418d5 100644
 --- a/include/shared_controller/helper_fcns.h
@@ -420,7 +291,7 @@ index ceadfba..a5966d1 100644
      Posetmp.pose.position.y = y;
  
 diff --git a/src/shared_controller.cpp b/src/shared_controller.cpp
-index 98f68fd..ccded39 100644
+index 98f68fd..bd1a7e0 100644
 --- a/src/shared_controller.cpp
 +++ b/src/shared_controller.cpp
 @@ -3,12 +3,18 @@
@@ -492,15 +363,7 @@ index 98f68fd..ccded39 100644
  
    v_low_  = this->declare_parameter<double>("v_low", 0.25);
    v_high_ = this->declare_parameter<double>("v_high", 0.35);
-@@ -58,6 +107,7 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
-   ip.eta = this->declare_parameter<double>("intent.eta", 0.5);
-   ip.sigma_min = this->declare_parameter<double>("intent.sigma_min", 0.03);
-   ip.min_confidence = this->declare_parameter<double>("intent.min_confidence", 0.0);
-+  ip.split_by_overlap = this->declare_parameter<bool>("intent.split_by_overlap", false);
- 
-   intent_ = std::make_unique<DWALClusterIntentEstimator>(ip);
- 
-@@ -82,16 +132,23 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+@@ -82,16 +131,23 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
    auto qos = rclcpp::QoS(rclcpp::KeepLast(1)).best_effort();
  
    clusters_sub_near_ = this->create_subscription<dwal_planner::msg::ClusterGroup>(
@@ -526,7 +389,7 @@ index 98f68fd..ccded39 100644
  
    //if user wants stamped input, subscribe to TwistStamped, else subscribe to Twist (for compatibility with different robot interfaces)
    if (use_stamped_twist_input_) {
-@@ -110,9 +167,12 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+@@ -110,9 +166,12 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
      fused_pub_ = this->create_publisher<geometry_msgs::msg::TwistStamped>(output_cmd_topic_, rclcpp::QoS(10));
    else 
      fused_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(output_cmd_topic_, rclcpp::QoS(10));
@@ -540,7 +403,7 @@ index 98f68fd..ccded39 100644
  
    RCLCPP_INFO(
        get_logger(),
-@@ -124,22 +184,191 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
+@@ -124,22 +183,191 @@ SharedController::SharedController(const rclcpp::NodeOptions &options)
  
  void SharedController::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
  {
@@ -732,7 +595,7 @@ index 98f68fd..ccded39 100644
  }
  
  geometry_msgs::msg::TwistStamped SharedController::MakeZeroTwist()
-@@ -154,7 +383,7 @@ geometry_msgs::msg::TwistStamped SharedController::MakeZeroTwist()
+@@ -154,7 +382,7 @@ geometry_msgs::msg::TwistStamped SharedController::MakeZeroTwist()
    z.angular.z = 0.0;
  
    out.header.frame_id = odom_frame_id_;
@@ -741,7 +604,7 @@ index 98f68fd..ccded39 100644
    out.twist = z;
    return out;
  }
-@@ -215,7 +444,7 @@ void SharedController::publishIntentPlotAtClusterHorizonMeanPhi(
+@@ -215,7 +443,7 @@ void SharedController::publishIntentPlotAtClusterHorizonMeanPhi(
      const double phi_l = cl.paths.back().phi;
      const double phi_mean = 0.5 * (phi_k + phi_l);
  
@@ -750,7 +613,7 @@ index 98f68fd..ccded39 100644
  
      /// Local point on the horizon (robot frame at pose0)
      const double xL = r * std::cos(phi_mean);
-@@ -296,8 +525,19 @@ void SharedController::publishIntentPlotAtClusterHorizonMeanPhi(
+@@ -296,8 +524,19 @@ void SharedController::publishIntentPlotAtClusterHorizonMeanPhi(
    intent_plot_pub_->publish(ma);
  }
  
@@ -771,7 +634,7 @@ index 98f68fd..ccded39 100644
    std::visit([&](auto& pub) {
      using PubT = std::decay_t<decltype(pub)>;
  
-@@ -307,6 +547,11 @@ inline void SharedController::publishCmd(const geometry_msgs::msg::TwistStamped&
+@@ -307,6 +546,11 @@ inline void SharedController::publishCmd(const geometry_msgs::msg::TwistStamped&
        pub->publish(cmd.twist);
      }
    }, fused_pub_);
@@ -783,7 +646,7 @@ index 98f68fd..ccded39 100644
  }
  
  // If user sends Twist (no stamp), convert to TwistStamped and call the main callback
-@@ -319,8 +564,9 @@ void SharedController::userCmdCallback( const geometry_msgs::msg::Twist::SharedP
+@@ -319,8 +563,9 @@ void SharedController::userCmdCallback( const geometry_msgs::msg::Twist::SharedP
    userCmdStampedCallback(twist_msg);
  }
  
@@ -795,7 +658,7 @@ index 98f68fd..ccded39 100644
  {
    
    if(!has_odom_) {
-@@ -328,9 +574,7 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+@@ -328,9 +573,7 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
      return;
    }
  
@@ -806,7 +669,7 @@ index 98f68fd..ccded39 100644
  
    // === Get user command ===
    const double v_user_raw = last_user_cmd_.twist.linear.x;
-@@ -435,7 +679,7 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+@@ -435,7 +678,7 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
    const double y0 = clusters_msg.clusters[0].pose0[1];
    const double th0 = clusters_msg.clusters[0].pose0[2];
  
@@ -815,7 +678,7 @@ index 98f68fd..ccded39 100644
    path_human_publisher->publish(human_path);
  
    if (v_user_raw < 0.0)
-@@ -533,7 +777,10 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+@@ -533,7 +776,10 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
      const double dev = std::fabs(phi - phi_near);
      const double c_norm = std::clamp(c / c_max_, 0.0, 1.0); // normalize cost to [0,1]
      const double d_norm = std::clamp(dev / phi_span, 0.0, 1.0);
@@ -827,7 +690,7 @@ index 98f68fd..ccded39 100644
  
      if (J < best_J)
      {
-@@ -572,7 +819,374 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
+@@ -572,7 +818,374 @@ void SharedController::userCmdStampedCallback(const geometry_msgs::msg::TwistSta
    }
  
    publishCmd(out);

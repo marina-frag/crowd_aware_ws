@@ -5,6 +5,7 @@ import rclpy
 import rclpy.duration
 from rclpy.node import Node
 from rclpy.parameter import Parameter
+from rclpy.qos import QoSProfile, DurabilityPolicy
 from rclpy.action import ActionClient
 from nav2_msgs.action import FollowPath
 from nav_msgs.msg import Path, Odometry
@@ -21,14 +22,28 @@ class ReferenceTask(Node):
         self.frame=self.declare_parameter('global_frame','odom').value
         odom=self.declare_parameter('odom_topic','/odom').value
         topic=self.declare_parameter('path_topic','/experiment/path').value
-        self.pub=self.create_publisher(Path,topic,1)
+        latched=QoSProfile(depth=1,durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        # desired path (latched, so RViz started later still shows it) and the executed trail
+        self.pub=self.create_publisher(Path,topic,latched)
+        self.trail_pub=self.create_publisher(Path,self.declare_parameter('actual_path_topic','/experiment/actual_path').value,latched)
+        self.trail=Path();self.trail.header.frame_id=self.frame
         self.client=ActionClient(self,FollowPath,'/reference/follow_path')
         self.have_odom=False;self.sent=False;self.retry_at=None
+        # experiments: send the path only once the bag recorder subscribes, so the
+        # recording contains the whole run from the start pose
+        self.wait_for_recorder=self.declare_parameter('wait_for_recorder',False).value
         self.sub=self.create_subscription(Odometry,odom,self.odom,10)
         self.timer=self.create_timer(.2,self.tick)
-    def odom(self,msg):self.have_odom=msg.header.frame_id==self.frame
+    def odom(self,msg):
+        self.have_odom=msg.header.frame_id==self.frame
+        if not (self.have_odom and self.sent):return
+        p=msg.pose.pose.position;last=self.trail.poses[-1].pose.position if self.trail.poses else None
+        if last is None or math.hypot(p.x-last.x,p.y-last.y)>=0.05:
+            pose=PoseStamped();pose.header=msg.header;pose.pose=msg.pose.pose
+            self.trail.poses.append(pose);self.trail.header.stamp=msg.header.stamp;self.trail_pub.publish(self.trail)
     def tick(self):
         if self.sent or not self.have_odom or not self.client.server_is_ready():return
+        if self.wait_for_recorder and not self.recorder_ready():return
         if self.retry_at is not None and self.get_clock().now()<self.retry_at:return
         if len(self.xy)<4 or len(self.xy)%2:raise ValueError('path_xy requires at least two points')
         path=Path();path.header.frame_id=self.frame;path.header.stamp=self.get_clock().now().to_msg()
@@ -44,6 +59,12 @@ class ReferenceTask(Node):
         goal=FollowPath.Goal();goal.path=path;goal.controller_id='FollowPath';goal.goal_checker_id='general_goal_checker'
         self.pub.publish(path);self.sent=True
         future=self.client.send_goal_async(goal);future.add_done_callback(self.accepted)
+    def recorder_ready(self):
+        topic=self.trail_pub.topic_name
+        ready=any('record' in info.node_name for info in self.get_subscriptions_info_by_topic(topic))
+        if ready and not getattr(self,'_logged',False):
+            self._logged=True;self.get_logger().info('Bag recorder subscribed; sending the reference path')
+        return ready
     @staticmethod
     def add_pose(path,x,y,yaw):
         pose=PoseStamped();pose.header=path.header

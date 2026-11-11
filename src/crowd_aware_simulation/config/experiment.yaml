@@ -21,6 +21,7 @@ experiment:
     costmap: /local_costmap/costmap
     published_footprint: /local_costmap/published_footprint
     path: /experiment/path
+    actual_path: /experiment/actual_path
     clusters_near: /dwal_planner/clusters_near
     clusters_far: /dwal_planner/clusters_far
     costmap_updates: /local_costmap/costmap_updates
@@ -58,7 +59,8 @@ experiment:
     #   upstream: greedy matching of mean cluster angles (original dwal_planner,
     #             with the duplicate-ID bug fixed)
     #   tracking: interval IoU + optimal order-preserving assignment + gating +
-    #             track management (IDs never reused) + split/merge belief sharing
+    #             track management (IDs never reused) + split/merge (the child with
+    #             the largest IoU inherits the ID; the intent estimator is upstream)
     #             + ego-motion compensation
     correspondence: upstream
     correspondence_gate: 0.2     # tracking: minimum IoU to inherit an ID

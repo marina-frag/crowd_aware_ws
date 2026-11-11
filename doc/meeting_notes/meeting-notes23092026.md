@@ -183,9 +183,7 @@ margin 0.12 + dwell time 1.5 s
 |Junction|Διάδρομοι που σχηματίζουν Τ ή σταυρό|
 |Crossing|Agent διασχίζει κάθετα την πορεία|
 |Dense crowd|Πολλοί agents κοντά στην πορεία|
-|Occlusion|Agent εμφανίζεται πίσω από εμπόδιο|
 |Group blocking|Στατική/κινούμενη ομάδα μπροστά|
-|Target confusion|Intended user μαζί με παρόμοιους distractors|
 
 ### 2. Working Experiments: Διαφορετικοί controllers
 
@@ -218,11 +216,7 @@ crossing
 
 cafe
 
-target_confusion **
-
 doorway
-
-occlusion **
 
 open_area
 ```
@@ -265,11 +259,7 @@ crossing
 
 cafe
 
-target_confusion **
-
 doorway
-
-occlusion **
 
 open_area
 ```

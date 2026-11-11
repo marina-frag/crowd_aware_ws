@@ -166,6 +166,274 @@ def _load_agents(path, intended_user):
     return document
 
 
+# ------------------------------------------------ reference path and agent layout
+def build_path(shape, start):
+    """Reference path points [[x, y], ...] (every 0.05 m in x) of a path shape:
+    line, lane_change (smooth S, zero heading at both ends) or slalom (sine with a
+    smooth ramp from zero heading). Coordinates relative to start (x, y, yaw)."""
+    kind, length = shape['type'], float(shape['length_m'])
+    xs = np.linspace(0.0, length, int(round(length / 0.05)) + 1)
+    if kind == 'line':
+        ys = np.zeros_like(xs)
+    elif kind == 'lane_change':
+        a = float(shape['offset_m'])
+        ys = a * (xs / length - np.sin(2 * np.pi * xs / length) / (2 * np.pi))
+    elif kind == 'slalom':
+        a, lam, ramp = float(shape['amplitude_m']), float(shape['wavelength_m']), float(shape['ramp_m'])
+        w = np.clip(xs / ramp, 0.0, 1.0)
+        ys = a * np.sin(2 * np.pi * xs / lam) * w * w * (3 - 2 * w)
+    else:
+        raise ValueError(f'Unknown path shape type {kind!r}')
+    x0, y0, th = start
+    c, s = math.cos(th), math.sin(th)
+    return [[float(x0 + c * x - s * y), float(y0 + s * x + c * y)] for x, y in zip(xs, ys)]
+
+
+class PathFrame:
+    """Arc-length parametrisation of a polyline (extrapolated along the end tangents)."""
+
+    def __init__(self, points):
+        self.p = np.asarray(points, dtype=float)
+        seg = np.diff(self.p, axis=0)
+        self.seg_len = np.hypot(seg[:, 0], seg[:, 1])
+        self.s = np.concatenate([[0.0], np.cumsum(self.seg_len)])
+        self.length = float(self.s[-1])
+
+    def pose(self, s):
+        i = int(np.clip(np.searchsorted(self.s, s, side='right') - 1, 0, len(self.seg_len) - 1))
+        d = (self.p[i + 1] - self.p[i]) / self.seg_len[i]
+        q = self.p[i] + d * (s - self.s[i])
+        return q, d, np.array([-d[1], d[0]])  # point, tangent, left normal
+
+    def distance(self, q):
+        a, b = self.p[:-1], self.p[1:]
+        ab = b - a
+        t = np.clip(((q - a) * ab).sum(1) / (ab * ab).sum(1), 0.0, 1.0)
+        return float(np.min(np.hypot(*(a + ab * t[:, None] - q).T)))
+
+
+def pdist(frame, q):
+    """(distance, arc length) of q projected on a PathFrame polyline."""
+    a, b = frame.p[:-1], frame.p[1:]
+    ab = b - a
+    t = np.clip(((q - a) * ab).sum(1) / (ab * ab).sum(1), 0.0, 1.0)
+    d = np.hypot(*(a + ab * t[:, None] - q).T)
+    i = int(np.argmin(d))
+    return float(d[i]), float(frame.s[i] + t[i] * frame.seg_len[i])
+
+
+def _stations(start, end, spacing):
+    return [start + k * spacing for k in range(int(math.floor((end - start) / spacing + 1e-9)) + 1)]
+
+
+def _route(points):
+    """HuNav goals along points with the heading of travel; collinear interior points dropped."""
+    keep = [points[0]]
+    for prev, cur, nxt in zip(points, points[1:], points[2:]):
+        u, v = cur - prev, nxt - cur
+        if abs(u[0] * v[1] - u[1] * v[0]) > 1e-6 * np.linalg.norm(u) * np.linalg.norm(v):
+            keep.append(cur)
+    keep.append(points[-1])
+    return keep
+
+
+def _goals(agent, init, route):
+    """Set init pose and goals (heading towards each goal) of a HuNav agent."""
+    heading = lambda a, b: round(math.atan2(b[1] - a[1], b[0] - a[0]), 5)
+    agent['init_pose'] = {**agent['init_pose'], 'x': round(float(init[0]), 4), 'y': round(float(init[1]), 4),
+                          'h': heading(init, route[0])}
+    for key in agent['goals']:
+        agent.pop(key, None)
+    agent['goals'] = [f'g{k}' for k in range(len(route))]
+    prev = init
+    for k, q in enumerate(route):
+        agent[f'g{k}'] = {'x': round(float(q[0]), 4), 'y': round(float(q[1]), 4), 'h': heading(prev, q)}
+        prev = q
+
+
+def layout_agents(document, layout, density, path, path_shape='line', seed=None):
+    """Place the agents relative to the reference path for a density level.
+    static: stationary agents every spacing_m along the path, alternating sides at lateral_m
+            (normal to the path); a station closer than min_center_distance_m to an
+            already placed agent (inside of a tight bend) goes to the other side, or is
+            skipped if both sides are taken.
+    crowd : walkers crossing the path at stations every crossing_spacing_m, all in the
+            direction normal to the start-end chord (parallel crossings), plus walkers
+            moving along the path at a lateral offset.
+    Agent i reuses the HuNav parameters of template i (cycled); medium on the
+    line reproduces the hand-written layout.
+    lateral_m may be a number or a mapping per path shape.
+    seed_variation (any seed except baseline_seed):
+      static: each obstacle moves along_m / lateral_m (uniform +-) along / normal to the path;
+      crowd : each walker starts at a random point of its route (start_fraction of the first
+              leg) and gets random HuNav forces (configuration 3) and a speed scale."""
+    result = copy.deepcopy(document)
+    params = result['hunav_loader']['ros__parameters']
+    level = layout['density'][density]
+    frame = PathFrame(path)
+    originals = {name: copy.deepcopy(params[name]) for name in params['agents']}
+    for name in params['agents']:
+        del params[name]
+    next_id = max(a['id'] for a in originals.values()) + 1
+    used, placed = set(), []
+    variation = layout.get('seed_variation') or {}
+    vary = seed is not None and variation and seed != variation.get('baseline_seed', 1)
+    rng = random.Random(f'agent-layout-v1:{seed}')
+    lateral = layout.get('lateral_m')
+    starts = []
+
+    def pick_start(a, b, nominal, along=None):
+        """Random start on the segment a-b, or on the polyline `along` (start_fraction of its
+        length), at least min_center_distance_m
+        from the other walkers' starts and 1.5 m from the path start (the robot); if no
+        draw of 100 satisfies both, the draw farthest from the other starts."""
+        gap = layout.get('min_center_distance_m', 0.9)
+        sep = lambda c: min([np.hypot(*(c - o)) for o in starts] or [np.inf])
+        choice = nominal
+        if vary:
+            best = None
+            for _ in range(100):
+                t = rng.uniform(0.0, variation['start_fraction'])
+                c = a + t * (b - a) if along is None else PathFrame(along).pose(t * PathFrame(along).length)[0]
+                if np.hypot(*(c - frame.p[0])) < 1.5:
+                    continue
+                if best is None or sep(c) > sep(best):
+                    best = c
+                if sep(c) >= gap:
+                    break
+            choice = best if best is not None else nominal
+        starts.append(choice)
+        return choice
+    if isinstance(lateral, dict):
+        lateral = lateral[path_shape]
+
+    def new_agent(templates, index):
+        nonlocal next_id
+        name = templates[index] if index < len(templates) else None
+        template = originals[templates[index % len(templates)]]
+        agent = copy.deepcopy(template)
+        if name is None or name in used:
+            name = f'walker{next_id}'
+            agent['id'] = next_id
+            agent['skin'] = (template['skin'] + index) % 6
+            next_id += 1
+        used.add(name)
+        params[name] = agent
+        placed.append(name)
+        return agent
+
+    if layout['kind'] == 'static':
+        sign = 1.0 if layout.get('first_side', 'left') == 'left' else -1.0
+        points = []
+        for s_k in _stations(layout['start_s'], layout['end_s'], level['spacing_m']):
+            ds = rng.uniform(-variation['along_m'], variation['along_m']) if vary else 0.0
+            dl = rng.uniform(-variation['lateral_m'], variation['lateral_m']) if vary else 0.0
+            s_k = min(max(s_k + ds, 0.0), frame.length)
+            q, _, n = frame.pose(s_k)
+            offset = lateral + dl
+            free = lambda c: all(np.hypot(*(c - o)) >= layout.get('min_center_distance_m', 0.9) for o in points)
+            point = q + sign * offset * n
+            if not free(point):  # inside of a tight bend: try the other side, else skip
+                if free(q - sign * offset * n):
+                    sign = -sign
+                    point = q + sign * offset * n
+                else:
+                    sign = -sign
+                    continue
+            k = len(points)
+            points.append(point)
+            clearance = frame.distance(point)
+            if clearance < offset - 0.05:
+                raise ValueError(f'static obstacle at s={s_k:.2f} is {clearance:.2f} m from the path '
+                                 f'(< lateral offset {offset:.2f}); the path bends too tightly')
+            agent = new_agent(layout['templates'], k)
+            _goals(agent, point, [point])
+            # stationary agents face along / against the path as in the hand-written layout
+            heading = math.atan2(*(frame.pose(s_k)[1][::-1])) + (0.0 if sign > 0 else math.pi)
+            agent['init_pose']['h'] = agent['g0']['h'] = round(math.remainder(heading, 2 * math.pi), 5)
+            sign = -sign
+    elif layout['kind'] == 'crowd':
+        cross = layout['crossing']
+        chord = frame.p[-1] - frame.p[0]
+        n = np.array([-chord[1], chord[0]]) / np.hypot(*chord)
+        for k, s_k in enumerate(_stations(cross['start_s'], cross['end_s'], level['crossing_spacing_m'])):
+            q = frame.pose(s_k)[0]
+            side = -1.0 if k % 2 == 0 else 1.0
+            a, b = q + side * cross['half_width_m'] * n, q - side * cross['half_width_m'] * n
+            start = pick_start(a, b, a)
+            _goals(new_agent(cross['templates'], k), start, [b, a])
+        par = layout['parallel']
+        for j in range(level['parallel']):
+            stations = np.linspace(par['start_s'], par['end_s'], max(2, int(math.ceil((par['end_s'] - par['start_s']) / 0.5)) + 1))
+            line = [frame.pose(sv)[0] + par['lateral_m'][j] * frame.pose(sv)[2] for sv in stations]
+            if par['backward'][j]:
+                line = line[::-1]
+            forward = _route(line)
+            back = _route(line[::-1])
+            start = pick_start(None, None, forward[0], along=line)
+            if start is forward[0]:
+                route = forward[1:] + back[1:]
+            else:  # continue forward from the random start, then back and forth as before
+                fr_line = PathFrame(line)
+                _, s0 = pdist(fr_line, start)
+                rest = [q for q, sq in zip(line, fr_line.s) if sq > s0 + 1e-6]
+                route = _route([start] + rest)[1:] + back[1:]
+            _goals(new_agent(par['templates'], j), start, route)
+    else:
+        raise ValueError(f'Unknown agent_layout.kind {layout["kind"]!r}')
+    if vary and layout['kind'] == 'crowd':
+        for name in placed:
+            behavior = params[name]['behavior']
+            behavior['configuration'] = 3  # random HuNav forces, drawn from the seed below
+            scale = rng.uniform(*variation['speed_scale'])
+            behavior['vel'] = round(behavior['vel'] * scale, 3)
+            params[name]['max_vel'] = round(max(params[name]['max_vel'], behavior['vel']), 3)
+    params['agents'] = placed
+    return result
+
+
+def vary_agents(document, variation, seed, robot_start):
+    """Seed variation of hand-written agents (scenarios without agent_layout); seed
+    variation['baseline_seed'] (default 1) is left unchanged.
+    moving agents (max_vel > static_below_mps): random start on the first leg of their route
+      (init -> first goal, uniform in [0, start_fraction]) at least 1.5 m from the robot start,
+      random HuNav forces (configuration 3) and speed x U(speed_scale);
+    slow / standing agents: shifted by U(+-shift_xy_m), a whole group (group_id >= 0) together."""
+    result = copy.deepcopy(document)
+    if seed == variation.get('baseline_seed', 1):
+        return result
+    params = result['hunav_loader']['ros__parameters']
+    rng = random.Random(f'agent-variation-v1:{seed}')
+    group_shift = {}
+    for name in params['agents']:
+        agent = params[name]
+        behavior = agent['behavior']
+        init = np.array([agent['init_pose']['x'], agent['init_pose']['y']], dtype=float)
+        if float(agent['max_vel']) > variation.get('static_below_mps', 0.1):
+            goal = np.array([agent[agent['goals'][0]]['x'], agent[agent['goals'][0]]['y']], dtype=float)
+            for _ in range(100):
+                start = init + rng.uniform(0.0, variation['start_fraction']) * (goal - init)
+                if np.hypot(*(start - np.asarray(robot_start[:2]))) >= 1.5:
+                    break
+            else:
+                start = init
+            agent['init_pose']['x'], agent['init_pose']['y'] = round(float(start[0]), 4), round(float(start[1]), 4)
+            behavior['configuration'] = 3
+            scale = rng.uniform(*variation['speed_scale'])
+            behavior['vel'] = round(float(behavior['vel']) * scale, 3)
+            agent['max_vel'] = round(max(float(agent['max_vel']), behavior['vel']), 3)
+        else:
+            key = agent['group_id'] if int(agent['group_id']) >= 0 else name
+            if key not in group_shift:
+                group_shift[key] = (rng.uniform(-variation['shift_x_m'], variation['shift_x_m']),
+                                    rng.uniform(-variation['shift_y_m'], variation['shift_y_m']))
+            dx, dy = group_shift[key]
+            for point in [agent['init_pose']] + [agent[g] for g in agent['goals']]:
+                point['x'] = round(float(point['x']) + dx, 4)
+                point['y'] = round(float(point['y']) + dy, 4)
+    return result
+
+
 def _materialize_random_agents(document, seed, cfg):
     """Replace HuNav's random_device modes with reproducible custom parameters."""
     result = copy.deepcopy(document)
@@ -245,16 +513,21 @@ def _materialize_goal_variation(document, seed, scenario):
         goals = [agent[key] for key in agent['goals']]
         if len(goals) < 2:
             raise ValueError(f'goal_variation: {name} needs at least two goals')
-        xs, ys = [float(g['x']) for g in goals], [float(g['y']) for g in goals]
-        dx, dy = max(xs)-min(xs), max(ys)-min(ys)
-        if dx <= 1e-9 and dy > 1e-9:
-            transverse_axis = 'x'
-        elif dy <= 1e-9 and dx > 1e-9:
-            transverse_axis = 'y'
-        else:
-            raise ValueError(f'goal_variation: {name} needs an axis-aligned crossing')
+        # transverse direction = perpendicular to the farthest goal pair (the walking
+        # direction); for an axis-aligned crossing this is the other axis, as before
+        pts = [(float(g['x']), float(g['y'])) for g in goals]
+        a, b = max(((p, q) for p in pts for q in pts), key=lambda pq: math.dist(*pq))
+        if math.dist(a, b) <= 1e-9:
+            raise ValueError(f'goal_variation: {name} needs distinct goals')
+        tx, ty = -(b[1] - a[1]), b[0] - a[0]
+        norm = math.hypot(tx, ty)
+        tx, ty = tx / norm, ty / norm
+        if tx + ty < 0 or (abs(tx + ty) < 1e-12 and tx < 0):
+            tx, ty = -tx, -ty
         for goal in goals:
-            goal[transverse_axis] = float(goal[transverse_axis]) + rng.uniform(-offset, offset)
+            d = rng.uniform(-offset, offset)
+            goal['x'] = float(goal['x']) + d * tx
+            goal['y'] = float(goal['y']) + d * ty
     return result
 
 
@@ -457,7 +730,8 @@ def append_description_geometry(link, robot, frames, description, laser_frame):
 
 def prepare(description, wrapper, target, experiment_config=None, headless=None,
             scenario=None, scenario_config=None, seed=None, controller=None,
-            require_intended_user_support=False, variant=None):
+            require_intended_user_support=False, variant=None, density=None, path_shape=None,
+            wait_for_recorder=False, jump=None, correspondence=None):
     description, wrapper, target = Path(description), Path(wrapper), Path(target)
     config_path = (Path(experiment_config) if experiment_config else
                    Path(__file__).resolve().parents[1]/'config/experiment.yaml')
@@ -482,6 +756,28 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
     scenario_data = _load_scenario(package_root, scenario, scenario_config, cfg['experiment'])
     agents_document = _load_agents(
         scenario_data['_agents_path'], scenario_data['intended_user'])
+    density = runtime.get('density', 'medium') if density is None else density
+    path_shape = runtime.get('path_shape', 'line') if path_shape is None else path_shape
+    if density not in runtime.get('densities', ['medium']):
+        raise ValueError(f'density must be one of {runtime.get("densities")}, got {density!r}')
+    if path_shape not in runtime.get('path_shapes', ['line']):
+        raise ValueError(f'path_shape must be one of {runtime.get("path_shapes")}, got {path_shape!r}')
+    shapes = scenario_data['robot'].get('path_shapes')
+    if shapes:
+        if path_shape not in shapes:
+            raise ValueError(f'Scenario {scenario_data["name"]!r} has no path shape {path_shape!r}')
+        scenario_data['robot']['path_xy'] = build_path(shapes[path_shape], scenario_data['robot']['initial_pose'])
+    elif path_shape != 'line':
+        raise ValueError(f'Scenario {scenario_data["name"]!r} only supports path_shape=line')
+    layout = scenario_data.get('agent_layout')
+    if layout:
+        agents_document = layout_agents(agents_document, layout, density, scenario_data['robot']['path_xy'],
+                                        path_shape, seed)
+    elif density != 'medium':
+        raise ValueError(f'Scenario {scenario_data["name"]!r} has a fixed density (only density=medium)')
+    if not layout and scenario_data.get('seed_variation'):
+        agents_document = vary_agents(agents_document, scenario_data['seed_variation'], seed,
+                                      scenario_data['robot']['initial_pose'])
     if require_intended_user_support and scenario_data['intended_user']['enabled']:
         raise ValueError(
             f'Scenario {scenario_data["name"]!r} requires intended-user tracking/front-following; '
@@ -563,7 +859,17 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
     for k,v in {'update_rate':cfg['simulation']['planar_base']['update_rate'],'publish_rate':cfg['simulation']['planar_base']['publish_rate'],'odometry_frame':exp['frames']['global'],'robot_base_frame':exp['frames']['base'], 'publish_odom':cfg['simulation']['planar_base']['publish_odom'],'publish_odom_tf':cfg['simulation']['planar_base']['publish_odom_tf']}.items(): add(plugin,k,v)
     tree.write(target/'scenario.world', encoding='unicode')
     limits, timeouts = exp['limits'], exp['timeouts']
-    dwal_config, dynamic_config = exp['dwal'], exp['dynamic_dwal']
+    dwal_config, dynamic_config = exp['dwal'], dict(exp['dynamic_dwal'])
+    # runtime overrides (JUMP / CORRESPONDENCE): experiments sweep them without editing the yaml
+    if jump not in (None, ''):
+        jump = float(jump)
+        if not (math.isfinite(jump) and jump > 0):
+            raise ValueError('jump must be positive and finite')
+        dynamic_config['length_jump_threshold'] = jump
+    if correspondence not in (None, ''):
+        if correspondence not in ('upstream', 'tracking'):
+            raise ValueError("correspondence must be 'upstream' or 'tracking'")
+        dynamic_config['correspondence'] = correspondence
     # The configured conservative envelope also expands the URDF-derived bounds.
     if abs(float(dwal_config['front_extent']) - xmax) > 0.03 or abs(float(dwal_config['rear_extent']) + xmin) > 0.03:
         raise ValueError(f'experiment.yaml iWalk extents disagree: configured front={dwal_config["front_extent"]}, rear={dwal_config["rear_extent"]}; derived front={xmax}, rear={-xmin}')
@@ -608,6 +914,9 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
     costmap=costmap_parameters(footprint, False, cfg=cfg)
     (target/'costmap.yaml').write_text(dump_yaml({'/costmap/costmap':{'ros__parameters':costmap}}))
     reference = common_controller(limits, evaluation['goal_tolerance'], cfg=cfg)
+    # never-give-up reference (see controllers/reference.yaml)
+    reference['progress_checker']['movement_time_allowance'] = float(cfg['reference']['movement_time_allowance'])
+    reference['failure_tolerance'] = float(cfg['reference']['failure_tolerance'])
     reference['FollowPath'] = {
         'plugin': cfg['reference']['plugin'],
         'desired_linear_vel': limits['max_linear'], 'lookahead_dist': cfg['reference']['lookahead_dist'],
@@ -672,8 +981,6 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         'variable_length': variable_dwal,
         'inplace_via_collision_monitor': cfg['shared_common']['inplace_via_collision_monitor'],
         'intent_reference_radius': levels[-1] if variable_dwal else cfg['shared_common']['intent_reference_radius']['when_false'],
-        # Correspondence "tracking": the estimator shares a parent's belief among overlapping children.
-        'intent.split_by_overlap': bool(variable_dwal and dynamic_config['correspondence'] == 'tracking'),
         'a_brake': limits['deceleration'],
         'reaction_time': dynamic_config['reaction_time'],
         'stop_margin': dynamic_config['longitudinal_margin'],
@@ -694,7 +1001,9 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
     path_xy = [value for point in scenario_data['robot']['path_xy'] for value in point]
     task = {'global_frame': exp['frames']['global'], 'use_sim_time': cfg['runtime']['use_sim_time'], 'path_xy': path_xy,
             'timeout': evaluation['timeout'],
-            'odom_topic': cfg['experiment']['topics']['odom'], 'path_topic': cfg['experiment']['topics']['path']}
+            'odom_topic': cfg['experiment']['topics']['odom'], 'path_topic': cfg['experiment']['topics']['path'],
+            'actual_path_topic': cfg['experiment']['topics']['actual_path'],
+            'wait_for_recorder': bool(wait_for_recorder)}
     (target/'task.yaml').write_text(dump_yaml(ros_params('/local_task', task)))
 
     (target/'agents.yaml').write_text(dump_yaml(runtime_agents))
@@ -727,7 +1036,8 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         'evaluation': evaluation,
         'runtime_world': str(target/'scenario.world'),
         'runtime_agents': str(target/'agents.yaml'),
-        'goal_variation': scenario_data.get('goal_variation')}))
+        'goal_variation': scenario_data.get('goal_variation'),
+        'density': density, 'path_shape': path_shape}))
     (target/'evaluation.json').write_text(__import__('json').dumps({
         **evaluation_cfg, 'variant': variant,
         'duration_s': float(evaluation_cfg['duration_s']),
@@ -738,6 +1048,13 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         'odom_timeout_s': float(timeouts['odom']),
         'global_frame': exp['frames']['global'],
         'reference_radius_m': float(evaluation_cfg['reference_radius_m']),
+        'density': density, 'path_shape': path_shape,
+        # clustering parameters of this run (fixed DWAL: correspondence upstream, no jump)
+        'correspondence': dynamic_config['correspondence'] if variable_dwal else 'upstream',
+        'length_jump_threshold': (float(dynamic_config['length_jump_threshold'])
+                                  if variable_dwal and variant == 'dynamic_split' else None),
+        'reference_path_xy': scenario_data['robot']['path_xy'],
+        'goal_tolerance_m': float(evaluation['goal_tolerance']),
     }, indent=2))
     (target/'resolved_config.yaml').write_text(dump_yaml({**cfg, 'selection': {'controller': 'dynamic_dwal' if variable_dwal else controller_name, 'scenario': scenario_data['name'], 'seed': seed, 'headless': headless, 'variant': variant}}))
     return target
@@ -756,7 +1073,9 @@ if __name__ == '__main__':
     p.add_argument('--headless', action=argparse.BooleanOptionalAction, default=None)
     p.add_argument('--controller')
     p.add_argument('--require-intended-user-support', action='store_true')
+    p.add_argument('--density')
+    p.add_argument('--path-shape')
     a = p.parse_args()
     prepare(a.description, a.wrapper, a.output, a.experiment_config, a.headless,
             a.scenario, a.scenario_config, a.seed, a.controller,
-            a.require_intended_user_support)
+            a.require_intended_user_support, density=a.density, path_shape=a.path_shape)

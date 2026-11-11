@@ -2,8 +2,11 @@
 """Animated r(phi,t) and S(phi,t) from a recorded bag; Space=play/pause."""
 import argparse
 import bisect
+import io
 import json
 import math
+from pathlib import Path
+import time
 
 
 def plot_bag_main():
@@ -75,13 +78,7 @@ def plot_bag_main():
     draw(0);plt.show()
 
 
-#!/usr/bin/env python3
-"""Live r(phi,t)/S(phi,t) from ROS topics. Independent of rosbag recording."""
-import argparse
-import json
-import math
-from pathlib import Path
-import time
+# --- Live r(phi,t)/S(phi,t) from ROS topics. Independent of rosbag recording.
 
 # Same eight RGB entries as upstream setColor(id % 8).
 PALETTE=[(1,0,0),(0,1,0),(0,0,1),(1,1,0),(0,1,1),(1,0,1),(.5,.5,.2),(.8,.1,.4)]
@@ -191,10 +188,7 @@ def plot_live_main():
         node.destroy_node()
         if rclpy.ok():rclpy.shutdown()
 
-#!/usr/bin/env python3
-"""Exercise compiled Matplotlib extensions, actual rendering, and optional X11 GUI."""
-import argparse
-import io
+# --- Exercise compiled Matplotlib extensions, actual rendering, and optional X11 GUI.
 
 
 def check_main():
