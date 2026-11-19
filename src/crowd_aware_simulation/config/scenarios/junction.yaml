@@ -32,6 +32,15 @@ scenario:
       - 0.0
     - - 10.0
       - 0.0
+    # step 3 paths (input2.md decision N): world-frame waypoints, smooth spline;
+    # the robot starts at the first waypoint, heading along the path
+    path_shapes:
+      left_turn:  # along the corridor to the centre, quarter circle r = 1 m, out to the north
+        type: points
+        points: [[0, 0], [3, 0], [4, 0], [4.707, 0.293], [5, 1], [5, 2], [5, 4]]
+      straight_right:  # straight through the junction, keeping right
+        type: points
+        points: [[0, -0.4], [9.5, -0.4]]
   evaluation:
     timeout: 110.0
   seed_variation:

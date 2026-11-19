@@ -26,6 +26,12 @@ scenario:
       - 0.0
     - - 8.0
       - 0.0
+    # step 3 paths (input2.md decision N): world-frame waypoints, smooth spline;
+    # the robot starts at the first waypoint, heading along the path
+    path_shapes:
+      keep_right:  # straight, keeping to the right side of the corridor
+        type: points
+        points: [[0, -0.4], [8, -0.4]]
   evaluation:
     timeout: 100.0
   seed_variation:

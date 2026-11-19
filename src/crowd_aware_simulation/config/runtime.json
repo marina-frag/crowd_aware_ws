@@ -36,6 +36,14 @@
   "path_shapes": [
     "line",
     "s_curve",
-    "hard_curve"
+    "hard_curve",
+    "side_approach",
+    "u_turn",
+    "keep_right",
+    "left_turn",
+    "straight_right",
+    "between_tables",
+    "hard_curve_1m",
+    "detour_left"
   ]
 }

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Experiment runner, one mode per protocol step (doc/input2.md), then metrics.
+# Experiment runner, one mode per protocol step (doc/input3.md), then metrics.
 #
 #   bash ~/crowd_aware_ws/scripts/run_experiments.sh deviation [seeds...]  # step 1: path deviation (auto)
 #   bash ~/crowd_aware_ws/scripts/run_experiments.sh jump      [seeds...]  # step 2: jump sweep, dynamic_split tracking
-#   JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh compare [seeds...]  # step 3: 3 methods, sim
+#   JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh compare [seeds...]  # step 3: fixed vs tracking, sim
 #   JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh scand                # step 4: 3 methods, SCAND
 #   JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh broad   [seeds...]  # step 6: all scenarios
 #
@@ -12,10 +12,8 @@
 #              PATHS="line s_curve hard_curve", seeds 1 2 3
 #   jump:      SCENARIOS="dense_crowd dense_static" DENSITIES="sparse medium dense" PATHS="line"
 #              JUMPS="0.1 0.2 0.3 0.5 0.7 1.0", seeds 101..105 (tuning seeds, never reused in compare)
-#   compare:   every scenario in config/scenarios, seeds 1..10; JUMP required (the step-2 result).
-#              dense_crowd, dense_static: DENSITIES="sparse medium dense" x PATHS="line s_curve hard_curve";
-#              the other (hand-written) scenarios have no density or path shapes: medium, line only
-#              (input2.md decision M)
+#   compare:   CONDITIONS (scenario:path, all at medium density; input3.md decision N), seeds 1..10;
+#              JUMP required (the step-2 result). 13 conditions x 2 methods x 10 seeds = 260 runs
 #   broad:     every scenario in config/scenarios, medium, line, seeds 11..60 (1..10 are in compare);
 #              JUMP required
 # Methods (deviation, compare, broad): METHODS="fixed tracking" (add "upstream" for
@@ -40,8 +38,7 @@ mode=${1:-}; shift || true
 case "$mode" in
   deviation) d_sc="open_area"; d_den="medium"; d_path="line s_curve hard_curve"; d_seeds="1 2 3";;
   jump)      d_sc="dense_crowd dense_static"; d_den="sparse medium dense"; d_path="line"; d_seeds="101 102 103 104 105";;
-  compare)   d_sc="$(ls "$WS"/src/crowd_aware_simulation/config/scenarios/*.yaml | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')"
-             d_den="sparse medium dense"; d_path="line s_curve hard_curve"; d_seeds="$(seq -s ' ' 1 10)";;
+  compare)   d_sc="-"; d_den="medium"; d_path="-"; d_seeds="$(seq -s ' ' 1 10)";;
   broad)     d_sc="$(ls "$WS"/src/crowd_aware_simulation/config/scenarios/*.yaml | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')"
              d_den="medium"; d_path="line"; d_seeds="$(seq -s ' ' 11 60)";;
   scand) ;;
@@ -137,13 +134,18 @@ scand_run(){  # controller correspondence (SCAND reads config/experiment.yaml)
   docker stop -t 10 scand_dwal >/dev/null 2>&1; wait
 }
 
-# Scenarios with a density layout and path shapes; the others run medium / line only.
-LAYOUT_SCENARIOS="dense_crowd dense_static"
+# Step 3 conditions (scenario:path shape), all at medium density (input3.md decision N).
+CONDITIONS=${CONDITIONS:-"dense_crowd:hard_curve dense_static:hard_curve dense_static:hard_curve_1m open_area:hard_curve crossing:line
+  group_blocking:line group_blocking:detour_left doorway:side_approach doorway:u_turn narrow_corridor:keep_right junction:left_turn
+  junction:straight_right cafe:between_tables"}
+if [[ $mode == compare ]]; then
+  for seed in "${seeds[@]}"; do for c in $CONDITIONS; do methods "${c%%:*}" medium "${c#*:}" "$seed"; done; done
+fi
 for seed in "${seeds[@]}"; do
+  [[ $mode == compare ]] && break
   for sc in $SCENARIOS; do for den in $DENSITIES; do for path in $PATHS; do
-    if [[ " $LAYOUT_SCENARIOS " != *" $sc "* ]] && [[ $den != medium || $path != line ]]; then continue; fi
     case "$mode" in
-      deviation|compare|broad) methods "$sc" "$den" "$path" "$seed";;
+      deviation|broad) methods "$sc" "$den" "$path" "$seed";;
       jump) for j in ${JUMPS:-0.1 0.2 0.3 0.5 0.7 1.0}; do
               sim_run "$sc" "$den" "$path" dynamic_dwal dynamic_split tracking "$j" "$seed"; done;;
     esac

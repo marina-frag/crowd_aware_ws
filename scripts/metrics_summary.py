@@ -37,7 +37,7 @@ REPO = Path(__file__).resolve().parents[1]
 PACKAGE = REPO/'src'/'crowd_aware_simulation'
 CONTAINER_PACKAGE = '/opt/dwal_ws/src/crowd_aware_simulation'
 LAMBDAS = (1.0, 1.0, 1.0)  # Loss(tau) weights: under_split, over_split, cluster_instability (--lambdas)
-SCHEMA = 8  # evaluation.py metrics.json schema_version this summary expects
+SCHEMA = 10  # evaluation.py metrics.json schema_version this summary expects (10: completeness before min_span, decision Ο)
 CODES = [('clustered', 'cluster'), ('invalid_or_filtered', '-1'), ('braking_rejected', '-2'),
          ('outside_slice', '-3'), ('min_span_rejected', '-4')]
 
@@ -165,7 +165,7 @@ def rows_for(run, data):
     values['cost_applied'] = cost.get('applied')
     for group, v in (off.get('clustering') or {}).items():
         if not isinstance(v, dict): continue
-        for key in ('mixed_cluster_fraction', 'choice_violation_fraction', 'pass_oversplit_fraction', 'oversplit_run_fraction', 'flicker_per_min', 'count_changes_per_min',
+        for key in ('mixed_cluster_fraction', 'choice_violation_fraction', 'pass_oversplit_fraction', 'oversplit_run_fraction', 'completeness_violation_fraction', 'completeness_class_cut_fraction', 'flicker_per_min', 'count_changes_per_min',
                     'stability_ari_mean', 'replica_agreement_fraction'):
             values[f'cl_{group}_{key}'] = v.get(key)
         for src in ('recorded', 'replay_upstream', 'replay_tracking'):
@@ -240,14 +240,15 @@ def deviation_only(runs, a):
     return '\n'.join(out) + '\n', rows
 
 
-VIOLATION_MAX = 0.25  # definition filter (input2.md decisions K, Λ): per scenario x density cell
+VIOLATION_MAX = 0.25  # definition filter (input3.md decisions K, Λ): per scenario x density cell
 
 
 def jump_selection(rows, table, out, lambdas=(1.0, 1.0, 1.0)):
-    """Loss(tau) = l_under*under_split + l_over*over_split + l_switch*cluster_instability over the
-    dynamic_split + tracking runs, each term divided by its largest value over the tau values
-    (so all three are in [0, 1] and the weights compare like with like)."""
-    terms = (('under_split', 'cl_far_choice_violation_fraction'), ('over_split', 'cl_far_oversplit_run_fraction'),
+    """Loss(tau) = l_under*homogeneity_violation + l_over*completeness_violation + l_switch*cluster_instability
+    over the dynamic_split + tracking runs, each term divided by its largest value over the tau values
+    (so all three are in [0, 1] and the weights compare like with like). Homogeneity / completeness in the
+    sense of Rosenberg & Hirschberg (2007), on the motion choices of decision K (input3.md, decision Ξ)."""
+    terms = (('under_split', 'cl_far_choice_violation_fraction'), ('over_split', 'cl_far_completeness_violation_fraction'),
              ('cluster_instability', 'id_far_recorded_id_switches_per_min'))
     by_tau = {}
     for r in rows:
@@ -281,20 +282,23 @@ def jump_selection(rows, table, out, lambdas=(1.0, 1.0, 1.0)):
         best = min((t for t in candidates if loss[t] - low < 0.02), key=lambda t: means[t][2])  # tie: smaller S
     table('Επιλογή jump (dynamic_split + tracking)',
           ['τ [m]', 'Runs', 'Ασφάλεια (0 συγκρ., στόχος)', f'Ορισμός (χειρότερο κελί ≤ {VIOLATION_MAX:g})',
-           'Αποδεκτό', 'under_split (παραβίαση ορισμού)', 'mixed (παλιό, ενημερωτικά)', 'over_split',
-           'ID switches / min (S)', 'Loss(τ)'],
+           'Αποδεκτό', 'homogeneity: παραβίαση (under)', 'completeness: παραβίαση (over)',
+           'ID switches / min (S)', 'Loss(τ)', 'mixed (παλιό, ενημερωτικά)', 'oversplit_run (παλιό, ενημερωτικά)'],
           [[f'{tau:g}' + (' ✔' if tau == best else ''), len(by_tau[tau]),
             f"{'ναι' if safe[tau] else 'όχι'} ({sum(ok_run(r) for r in by_tau[tau])}/{len(by_tau[tau])})",
             f"{'ναι' if defined[tau] else 'όχι'} ({num(worst[tau][0], 3)}, {worst[tau][1]})",
             'ναι' if admissible[tau] else 'όχι',
-            num(means[tau][0], 3), num(mean_of([r.get('cl_far_mixed_cluster_fraction') for r in by_tau[tau]]), 3),
-            num(means[tau][1], 3), num(means[tau][2], 2), num(loss[tau], 3)] for tau in sorted(by_tau)])
+            num(means[tau][0], 3), num(means[tau][1], 3), num(means[tau][2], 2), num(loss[tau], 3),
+            num(mean_of([r.get('cl_far_mixed_cluster_fraction') for r in by_tau[tau]]), 3),
+            num(mean_of([r.get('cl_far_oversplit_run_fraction') for r in by_tau[tau]]), 3)] for tau in sorted(by_tau)])
     out.append(f'\nLoss(τ) = {lambdas[0]:g}·under/max + {lambdas[1]:g}·over/max + {lambdas[2]:g}·switches/max '
                '(μέσοι όροι όλων των runs με αυτό το τ· κάθε όρος διαιρείται με τη μέγιστη τιμή του στα τ). '
-               'under = choice_violation_fraction (clusters με διαδρομές σε ≥ 2 επιλογές κίνησης: brake ή pass k), '
-               'over = oversplit_run_fraction, switches = ID switches των δημοσιευμένων clusters. Αποδεκτά τ: όλα '
+               'under = παραβίαση homogeneity = choice_violation_fraction (clusters με διαδρομές σε ≥ 2 επιλογές '
+               'κίνησης: brake ή pass k)· over = παραβίαση completeness = completeness_violation_fraction (από τα '
+               'γειτονικά ζεύγη διαδρομών της ίδιας επιλογής που περνούν το φίλτρο του clustering, όσα χωρίζονται σε '
+               'διαφορετικά clusters πριν το min_cluster_span· input3.md, αποφάσεις Ξ, Ο)· switches = ID switches των δημοσιευμένων clusters. Αποδεκτά τ: όλα '
                f'τα runs χωρίς σύγκρουση και με στόχο, και μέση παραβίαση ορισμού ≤ {VIOLATION_MAX:g} σε κάθε κελί '
-               '(σενάριο × πυκνότητα· input2.md, απόφαση Κ). Αν κανένα τ δεν είναι αποδεκτό, δεν επιλέγεται τ. '
+               '(σενάριο × πυκνότητα· input3.md, αποφάσεις Κ, Λ). Αν κανένα τ δεν είναι αποδεκτό, δεν επιλέγεται τ. '
                '✔ = ελάχιστο Loss· ισοπαλία (διαφορά < 0.02) → μικρότερο S.')
 
 
@@ -389,12 +393,12 @@ def extended(rows, table, out):
     cells = []
     for i, r in enumerate(rows, 1):
         for g in ('near', 'far'):
-            if r.get(f'cl_{g}_mixed_cluster_fraction') is None and r.get(f'cl_{g}_flicker_per_min') is None: continue
-            cells.append([f'R{i}', g, pct(r.get(f'cl_{g}_mixed_cluster_fraction')), pct(r.get(f'cl_{g}_oversplit_run_fraction')),
+            if r.get(f'cl_{g}_choice_violation_fraction') is None and r.get(f'cl_{g}_flicker_per_min') is None: continue
+            cells.append([f'R{i}', g, pct(r.get(f'cl_{g}_choice_violation_fraction')), pct(r.get(f'cl_{g}_completeness_violation_fraction')),
                           pair(r.get(f'cl_{g}_flicker_per_min'), r.get(f'cl_{g}_count_changes_per_min'), 1),
                           num(r.get(f'cl_{g}_stability_ari_mean')), pct(r.get(f'cl_{g}_replica_agreement_fraction'))])
     if cells:
-        table('Clustering χωρίς ground truth', ['Run', 'Ομάδα', 'Mixed clusters', 'Over-split', 'Flicker / αλλαγές πλήθους [ανά λεπτό]',
+        table('Clustering (ground truth: επιλογές κίνησης, απόφαση Κ)', ['Run', 'Ομάδα', 'Underclustering (παραβίαση homogeneity)', 'Overclustering (παραβίαση completeness)', 'Flicker / αλλαγές πλήθους [ανά λεπτό]',
                                                 'Σταθερότητα (ARI)', 'Συμφωνία αντιγράφου'], cells)
     cells = []
     for i, r in enumerate(rows, 1):
@@ -431,7 +435,11 @@ def extended(rows, table, out):
 
 STAT_METRICS = [('standstill_s', 'Ακινησία [s]'), ('collisions', 'Συγκρούσεις'), ('zone_time_s', 'Προσωπική ζώνη [s]'),
                 ('human_min_m', 'Min απόσταση ανθρώπου [m]'), ('obstacle_min_m', 'Min απόσταση εμποδίου [m]'),
-                ('linear_jerk_mean_abs', 'Γραμμικό jerk [m/s³]'), ('chain_final_mps', 'Μέση ταχύτητα [m/s]')]
+                ('linear_jerk_mean_abs', 'Γραμμικό jerk [m/s³]'), ('chain_final_mps', 'Μέση ταχύτητα [m/s]'),
+                # clustering quality, descriptive only (decision Π: not a primary test)
+                ('cl_far_choice_violation_fraction', 'Underclustering (homogeneity, far)'),
+                ('cl_far_completeness_violation_fraction', 'Overclustering (completeness, far)'),
+                ('id_far_recorded_id_switches_per_min', 'ID switches / min (όπως δημοσιεύτηκαν, far)')]
 # Scenarios with standing people placed beside the robot path (dense_static: y = ±1.0 m, robot on y = 0).
 # Every controller spends ~100% of the run in the personal zone at ~1.0 m, so the human metrics there
 # describe the layout, not the controller; they are left out of the paired statistics.
@@ -487,9 +495,10 @@ def holm(pvalues):
 
 
 def primary_hypotheses(rows, groups, table, out, scenario=None):
-    """The three pre-declared primary tests (doc/input2.md, step 3), Holm over the three.
-    H1 standstill and H2 mixed: fixed vs dynamic_split+tracking, paired by (scenario, density,
-    path, seed, semantics). H3 ID switches: offline replay of upstream vs tracking correspondence
+    """The two pre-declared primary tests (doc/input3.md, step 3, decision Π), Holm over the two.
+    H1 standstill: fixed vs dynamic_split+tracking, paired by (scenario, density, path, seed,
+    semantics). H2 (mixed clusters) is no longer primary: fixed mixed is 0 by construction and
+    the methods cluster different paths; homogeneity / completeness are descriptive (STAT_METRICS). H3 ID switches: offline replay of upstream vs tracking correspondence
     on the SAME recorded clusters of every dynamic_split+tracking run (paired within the run)."""
     if scenario is None:  # main analysis, then the secondary analysis per scenario
         primary_hypotheses(rows, groups, table, out, scenario=False)
@@ -498,8 +507,7 @@ def primary_hypotheses(rows, groups, table, out, scenario=None):
                                {k: g for k, g in groups.items() if k[0] == sc}, table, out, scenario=sc)
         return
     tests = []
-    for name, metric, better in (('H1 ακινησία [s]', 'standstill_s', 'μικρότερο'),
-                                 ('H2 mixed clusters (far)', 'cl_far_mixed_cluster_fraction', 'μικρότερο')):
+    for name, metric, better in (('H1 ακινησία [s]', 'standstill_s', 'μικρότερο'),):
         diffs = [g['dynamic_split+tracking'][metric] - g['fixed'][metric] for g in groups.values()
                  if 'fixed' in g and 'dynamic_split+tracking' in g
                  and g['fixed'].get(metric) is not None and g['dynamic_split+tracking'].get(metric) is not None]
@@ -519,7 +527,7 @@ def primary_hypotheses(rows, groups, table, out, scenario=None):
         cells.append([name, comp, len(d), f'{med:.3f}', f'[{lo:.3f}, {hi:.3f}]', 'n/a' if p is None else f'{p:.4f}',
                       'n/a' if effect is None else f'{effect:+.2f}', 'n/a' if padj is None else f'{padj:.4f}'])
     if all(c[2] < 2 for c in cells): return
-    title = ('Κύριες υποθέσεις (προδηλωμένες, Holm στις τρεις)' if scenario is False else
+    title = ('Κύριες υποθέσεις (προδηλωμένες, H1 και H3, Holm στις δύο)' if scenario is False else
              f'Κύριες υποθέσεις ανά σενάριο (δευτερεύουσα): {scenario}')
     table(title,
           ['Υπόθεση', 'Σύγκριση', 'Ζεύγη', 'Διάμεση διαφορά', 'Bootstrap 95% CI', 'Wilcoxon p', 'Rank-biserial r', 'Holm p'],

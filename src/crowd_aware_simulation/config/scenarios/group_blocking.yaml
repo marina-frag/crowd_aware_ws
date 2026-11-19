@@ -26,6 +26,11 @@ scenario:
       - 0.0
     - - 8.0
       - 0.0
+    # step 3 paths (input2.md decision N): world-frame waypoints, smooth spline
+    path_shapes:
+      detour_left:  # the user goes around the group on the left, then back to the line
+        type: points
+        points: [[0, 0], [1.5, 0], [2.5, 0.9], [4, 1.9], [5.5, 0.9], [6.5, 0], [8, 0]]
   evaluation:
     timeout: 120.0
   seed_variation:

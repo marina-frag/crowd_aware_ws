@@ -114,7 +114,7 @@ done
 
 contains_runtime_value reference_modes "$reference_mode" || { echo "Invalid REFERENCE_MODE: $reference_mode"; exit 2; }
 contains_runtime_value densities "$density" || { echo "Invalid DENSITY: $density (sparse|medium|dense)"; exit 2; }
-contains_runtime_value path_shapes "$path_shape" || { echo "Invalid PATH_SHAPE: $path_shape (line|s_curve|hard_curve)"; exit 2; }
+contains_runtime_value path_shapes "$path_shape" || { echo "Invalid PATH_SHAPE: $path_shape (see path_shapes in config/runtime.json)"; exit 2; }
 mkdir -p "$repo_dir/rosbags"
 
 docker_args=(--rm -it --name iwalk_dwal -e "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-$(runtime_default ros_domain_id)}" -v "$repo_dir/rosbags:/rosbags"

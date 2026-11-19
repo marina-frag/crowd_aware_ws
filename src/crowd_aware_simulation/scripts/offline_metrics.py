@@ -116,10 +116,27 @@ def mean(values):
 
 
 # ------------------------------------------------- clustering (Python replicas)
+def free_fixed(paths, R):
+    """Indices the fixed clustering may use: free extent beyond the level radius R."""
+    return [k for k, p in enumerate(paths) if p['collision_r'] > R]
+
+
+def free_variable(paths, L, required, margin):
+    """Indices the variable clustering may use: finite free length L whose usable part
+    (capped by the 90-degree arc) covers the braking requirement."""
+    if required is None or not math.isfinite(required):
+        return []
+
+    def usable(k):
+        c = abs(paths[k]['curvature'])
+        return min(L[k], margin + math.pi / 2 / c) if c > 1e-9 else L[k]
+    return [k for k in range(len(paths)) if math.isfinite(L[k]) and usable(k) >= required]
+
+
 def cluster_fixed(paths, R, separation, min_span):
     """Upstream fixed-level clustering, including the 3..5-gap behaviour (B1).
     paths: list of dicts with curvature, collision_r. Returns lists of indices."""
-    free = [k for k, p in enumerate(paths) if p['collision_r'] > R]
+    free = free_fixed(paths, R)
     if not free:
         return []
     out, cl = [], [free[0]]
@@ -142,13 +159,7 @@ def cluster_variable(paths, R, separation, min_span, jump, required, margin, len
     """Variable-length (dynamic) clustering of the patch: braking filter with the
     90-degree arc cap, index gap or length jump splits, minimum chord at R."""
     L = lengths if lengths is not None else [p['length'] for p in paths]
-
-    def usable(k):
-        c = abs(paths[k]['curvature'])
-        return min(L[k], margin + math.pi / 2 / c) if c > 1e-9 else L[k]
-    if required is None or not math.isfinite(required):
-        return []
-    free = [k for k in range(len(paths)) if math.isfinite(L[k]) and usable(k) >= required]
+    free = free_variable(paths, L, required, margin)
     out, cl = [], []
 
     def finish():
@@ -172,6 +183,43 @@ def replicate(paths, settings, R_level, required, lengths=None):
     if lengths is not None:  # perturb the free extent by the same amount as the length
         paths = [dict(p, collision_r=p['collision_r'] + lengths[i] - p['length']) for i, p in enumerate(paths)]
     return cluster_fixed(paths, R_level, settings['separation'], settings['min_span'])
+
+
+def clusterable(paths, settings, R_level, required):
+    """Indices that pass the run's clustering filter (braking requirement or level radius)."""
+    if settings['variable']:
+        return set(free_variable(paths, [p['length'] for p in paths], required, settings['margin']))
+    return set(free_fixed(paths, R_level))
+
+
+def choice_class_cuts(order, is_pass, admitted, owner):
+    """Completeness of one frame (input3.md, decisions Ξ, Ο). Classes = maximal runs of one type
+    (pass / brake) along `order` (all sampled paths in curvature order); brake runs are
+    numbered like pass runs. A neighbour pair = two consecutive paths of one class, both
+    admitted by the clustering filter; it is cut when they are not in the same cluster
+    (owner: path -> cluster of the partition before min_span, decision Ο; an admitted path
+    in no cluster is possible only in the fixed 3..5-gap behaviour). Skipped pairs: next to a path the filter excluded (that cut is the filter's,
+    not the length jump's) and pairs with no clustered path. Primary measure = cut pairs /
+    judged pairs (graded: a class cut into 8 pieces counts more than one cut once); the
+    per-class version (class cut at least once) is kept for reference.
+    Returns (pairs judged, pairs cut, classes judged, classes cut)."""
+    cls, c = {}, 0
+    for i, k in enumerate(order):
+        c += bool(i) and is_pass[k] != is_pass[order[i - 1]]
+        cls[k] = c
+    pairs = cut_pairs = 0
+    judged, cut = set(), set()
+    for a, b in zip(order, order[1:]):
+        if cls[a] != cls[b] or a not in admitted or b not in admitted:
+            continue
+        if owner.get(a) is None and owner.get(b) is None:
+            continue
+        pairs += 1
+        judged.add(cls[a])
+        if owner.get(a) != owner.get(b):
+            cut_pairs += 1
+            cut.add(cls[a])
+    return pairs, cut_pairs, len(judged), len(cut)
 
 
 # ------------------------------------------------------- correspondence replicas
@@ -400,6 +448,8 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
             continue
         mixed = clusters_total = runs = oversplit = 0
         violation = pass_choices = pass_split = 0
+        pairs_judged = pairs_cut = classes_judged = classes_cut = 0
+        raw_frames = labelled_frames = 0
         counts, ari_values, agree, recheck_err = [], [], [], []
         recorded_ids = []
         replay = {'upstream': [], 'tracking': []}
@@ -472,6 +522,24 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
                         owners.setdefault(c, set()).add(n)
             pass_choices += len(owners)
             pass_split += sum(len(ns) >= 2 for ns in owners.values())
+            # completeness on the partition BEFORE min_span (decision Ο): the replica with
+            # min_span = 0, so a piece the length jump cut and min_span then dropped counts in
+            # full; the recorded clusters when the replica does not reproduce the bag
+            if f['replica_match']:
+                raw = replicate(paths, dict(settings, min_span=0.0), f['R_level'], f['required'])
+                raw_frames += 1
+            else:
+                raw = [members for _, members in clusters]
+            cuts = choice_class_cuts(
+                sorted(range(len(paths)), key=lambda k: paths[k]['curvature']),
+                {k: lab == 'free' for k, lab in label.items()},
+                clusterable(paths, settings, f['R_level'], f['required']),
+                {k: n for n, members in enumerate(raw) for k in members})
+            labelled_frames += 1
+            pairs_judged += cuts[0]
+            pairs_cut += cuts[1]
+            classes_judged += cuts[2]
+            classes_cut += cuts[3]
             ordered = sorted((k, n) for n, (_, members) in enumerate(clusters) for k in members)
             run_clusters, run_label = set(), None
             for k, n in ordered + [(None, None)]:
@@ -502,6 +570,10 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
             'oversplit_run_fraction': oversplit / runs if runs else None,
             'choice_violation_fraction': violation / clusters_total if clusters_total else None,
             'pass_oversplit_fraction': pass_split / pass_choices if pass_choices else None,
+            'completeness_violation_fraction': pairs_cut / pairs_judged if pairs_judged else None,
+            'completeness_pairs': pairs_judged,
+            'completeness_before_min_span_fraction': raw_frames / labelled_frames if labelled_frames else None,
+            'completeness_class_cut_fraction': classes_cut / classes_judged if classes_judged else None,
             'labelled_clusters': clusters_total,
             'count_changes_per_min': changes / minutes if minutes else None,
             'flicker_per_min': flicker / minutes if minutes else None,
@@ -519,7 +591,14 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
         'paths with one label that span >= 2 clusters. Motion choice of a path (cluster definition): '
         '"brake" if it ends at any obstacle, else "pass k" = k-th run of consecutive free paths in '
         'curvature order over all sampled paths; choice_violation = clusters whose members belong to '
-        '>= 2 choices; pass_oversplit = pass choices whose paths span >= 2 clusters. Flicker = cluster-count change undone within 0.5 s. '
+        '>= 2 choices (= homogeneity violation); pass_oversplit = pass choices whose paths span >= 2 clusters. '
+        'completeness_violation (decision Xi) = cut neighbour pairs / judged neighbour pairs; class = maximal '
+        'run of one type (pass / brake, brake runs numbered) in curvature order over all sampled paths; '
+        'neighbour pair = two consecutive paths of one class that both pass the clustering filter, cut when '
+        'they are not in the same cluster of the partition BEFORE min_span (decision Omicron: replica with '
+        'min_span = 0, recorded clusters when the replica does not reproduce the bag; '
+        'completeness_before_min_span_fraction = share of frames judged on the replica); pairs next to a '
+        'filtered-out path, or with no clustered path, are skipped; completeness_class_cut_fraction = classes with >= 1 cut pair. Flicker = cluster-count change undone within 0.5 s. '
         f'Stability = ARI between the clustering (Python replica) of the same sampled paths with free '
         f'lengths re-checked (footprint vs scan points, step {settings["scan_noise_step"]} m, up to the '
         f'longest recorded path) on the clean scan and on the scan with Gaussian range noise '

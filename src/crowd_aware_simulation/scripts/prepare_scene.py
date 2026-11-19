@@ -167,10 +167,40 @@ def _load_agents(path, intended_user):
 
 
 # ------------------------------------------------ reference path and agent layout
+def smooth_points(points, step=0.05):
+    """Catmull-Rom spline through the waypoints (passes through every one), resampled
+    every step metres of arc length."""
+    p = np.asarray(points, dtype=float)
+    if len(p) < 2:
+        raise ValueError('a points path needs at least two waypoints')
+    p = np.vstack([p[0], p, p[-1]])
+    out = []
+    for i in range(1, len(p) - 2):
+        a, b, c, d = p[i - 1], p[i], p[i + 1], p[i + 2]
+        for t in np.linspace(0.0, 1.0, 40, endpoint=False):
+            out.append(0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t
+                              + (3 * b - a - 3 * c + d) * t ** 3))
+    out.append(p[-2])
+    out = np.asarray(out)
+    s = np.concatenate([[0.0], np.cumsum(np.hypot(*np.diff(out, axis=0).T))])
+    q = np.append(np.arange(0.0, s[-1], step), s[-1])
+    return [[float(np.interp(v, s, out[:, 0])), float(np.interp(v, s, out[:, 1]))] for v in q]
+
+
+def path_start_pose(path):
+    """Initial robot pose (x, y, yaw) of a path: its first point, heading along it."""
+    (x0, y0), (x1, y1) = path[0], next(q for q in path[1:] if q != path[0])
+    return [float(x0), float(y0), float(math.atan2(y1 - y0, x1 - x0))]
+
+
 def build_path(shape, start):
     """Reference path points [[x, y], ...] (every 0.05 m in x) of a path shape:
     line, lane_change (smooth S, zero heading at both ends) or slalom (sine with a
-    smooth ramp from zero heading). Coordinates relative to start (x, y, yaw)."""
+    smooth ramp from zero heading). Coordinates relative to start (x, y, yaw).
+    points: world-frame waypoints joined by a smooth spline (start is ignored; the
+    robot starts at the first waypoint, heading along the path)."""
+    if shape['type'] == 'points':
+        return smooth_points(shape['points'])
     kind, length = shape['type'], float(shape['length_m'])
     xs = np.linspace(0.0, length, int(round(length / 0.05)) + 1)
     if kind == 'line':
@@ -767,8 +797,10 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         if path_shape not in shapes:
             raise ValueError(f'Scenario {scenario_data["name"]!r} has no path shape {path_shape!r}')
         scenario_data['robot']['path_xy'] = build_path(shapes[path_shape], scenario_data['robot']['initial_pose'])
+        if shapes[path_shape]['type'] == 'points':  # the robot starts where this path starts
+            scenario_data['robot']['initial_pose'] = path_start_pose(scenario_data['robot']['path_xy'])
     elif path_shape != 'line':
-        raise ValueError(f'Scenario {scenario_data["name"]!r} only supports path_shape=line')
+        raise ValueError(f'Scenario {scenario_data["name"]!r} has no path_shapes, only path_shape=line')
     layout = scenario_data.get('agent_layout')
     if layout:
         agents_document = layout_agents(agents_document, layout, density, scenario_data['robot']['path_xy'],
