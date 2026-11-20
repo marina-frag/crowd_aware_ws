@@ -10,6 +10,8 @@ Tests
 8. Demos
 
 
+
+
 # currently working on
 
 SOS πριν τρέξεις SCAND πειράματα να βεβειωθείς ενδιαφέρον περιβάλλον και cmd_vel του χρήστη όχι μόνο να παίρνει οδομετρία
@@ -25,8 +27,13 @@ $ SCENARIO=dense_crowd DENSITY=medium PATH_SHAPE=hard_curve REFERENCE_MODE=auton
 
 Report
 
-Clusteting???? -> dbscan? 
+Clusteting???? -> dbscan? feedαρε το διαγραμμα pca vs kmeans
 correspondance
+
+μέση τιμή πλήθους cluster για κάθε σενάριο
+γεωμετρία κύκλος και τετράγωνο
+
+ νέες σημειώσεις
 
 
 ---
@@ -488,7 +495,7 @@ python3 ~/crowd_aware_ws/scripts/metrics_summary.py ~/crowd_aware_ws/rosbags_tes
 
 ----
 
-## Βήμα 2 — Επιλογή τ (μόνο dynamic tracking) 🟡
+## Βήμα 2 — Επιλογή τ (μόνο dynamic tracking) ✅
 **Ερώτηση:** ποιο κατώφλι άλματος μήκους τ χωρίζει καλύτερα τις επιλογές;
 
 Κανόνας επιλογής (`metrics_summary.py: jump_selection`), με τη σειρά:
@@ -496,7 +503,17 @@ python3 ~/crowd_aware_ws/scripts/metrics_summary.py ~/crowd_aware_ws/rosbags_tes
 2. **Φίλτρο homogeneity:** σε **κάθε** κελί σενάριο × πυκνότητα, η μέση παραβίαση homogeneity (`choice_violation_fraction`) πρέπει να είναι ≤ 0.25, δηλαδή το πολύ 1 στα 4 clusters να ανακατεύει ≥ 2 επιλογές (αποφάσεις Κ, Λ). Περνούν τα 0.1, 0.2, 0.3 (χειρότερο κελί 0.051 / 0.101 / 0.176). Κόβονται τα 0.5 (0.260), 0.7 (0.351) και 1.0 (0.559).
 3. **Loss:** ανάμεσα σε όσα περνούν, κερδίζει το μικρότερο Loss = homogeneity (under) + completeness (over) + ID switches, ο καθένας διαιρεμένος με το μέγιστό του. Ισοπαλία (< 0.02) → μικρότερο S.
 
-**Κατάσταση (2026-11-19):** με τον παλιό όρο over (`oversplit_run_fraction`) κέρδιζε το **0.1** (Loss 1.493, έναντι 1.617 για 0.3 και 1.686 για 0.2). Με το completeness πριν το `min_cluster_span` (αποφάσεις Ξ, Ο) το αποτέλεσμα **εκκρεμεί**: θέλει επαναξιολόγηση των 180 bags (~1 h), χωρίς νέα προσομοίωση. Τα seeds 101–105 δεν ξαναχρησιμοποιούνται στο βήμα 3.
+**Κατάσταση (2026-11-19): κλειδωμένο, τ = 0.3** ✅ (επαναξιολόγηση των 180 bags, schema 10, αποφάσεις Ξ, Ο). Περνούν το φίλτρο τα 0.1, 0.2, 0.3. Loss: **0.3 = 0.919**, 0.2 = 1.014, 0.1 = 1.493 (διαφορά 0.095 > 0.02, όχι ισοπαλία).
+
+| τ | U homogeneity | O completeness | S ID switches/min | Loss |
+|---|---|---|---|---|
+| 0.1 | 0.037 | 0.028 | 0.33 | 1.493 |
+| 0.2 | 0.086 | 0.007 | 0.47 | 1.014 |
+| **0.3** | 0.133 | 0.003 | 0.40 | **0.919** |
+
+Με τον παλιό όρο over (`oversplit_run_fraction`: 0.045 / 0.040 / 0.036) κέρδιζε το 0.1, γιατί δεν έβλεπε τον θρυμματισμό του 0.1. Το completeness τον βλέπει (0.028, ~4× το 0.2 και ~9× το 0.3). Αποτέλεσμα αρχείο: `rosbags/results/summary_jump.md` (παλιό: `summary_jump_oversplit.md`).
+
+**Ανάλυση ευαισθησίας (ενημερωτικά, δεν αλλάζει την επιλογή):** ο κανόνας διαιρεί κάθε όρο με το μέγιστό του σε **όλα** τα τ (όπως δηλώθηκε και υλοποιήθηκε πριν τον υπολογισμό). Αν διαιρούσαμε μόνο με τα τ που περνούν το φίλτρο, θα κέρδιζε οριακά το 0.2 (1.90 έναντι 1.96 για 0.3 και 1.98 για 0.1). Τα ID switches δεν είναι μονότονα στο τ (0.83 στο 0.5, 0.10 στο 1.0), άρα είναι θορυβώδη. Τα seeds 101–105 δεν ξαναχρησιμοποιούνται στο βήμα 3.
 
 Εντολή επαναξιολόγησης (ξαναϋπολογίζει όσα runs έχουν `metrics.json` παλιότερο από schema 10):
 
@@ -531,14 +548,22 @@ $$\mathrm{Loss}(\tau)=\frac{U(\tau)}{\max_\tau U}+\frac{O(\tau)}{\max_\tau O}+\f
 U, O, S = μέσος όρος όλων των runs με αυτό το τ. Κάθε όρος διαιρείται με τη μέγιστη τιμή του στα τ, ώστε και οι τρεις να είναι στο [0, 1].
 
 
-## Βήμα 3 — Σύγκριση fixed έναντι dynamic tracking, simulation 🟡
+## Βήμα 3 — Σύγκριση fixed έναντι dynamic tracking, simulation ✅
 
 | | |
 |---|---|
 | Runs | {fixed, tracking} × 13 συνθήκες (σενάριο:διαδρομή, medium) × seeds **1–10** = **260 runs ≈ 11.3 h** (απόφαση Ν) |
 | Συνθήκες | dense_crowd:hard_curve, dense_static:hard_curve (εμπόδια 1.3 m), dense_static:hard_curve_1m (εμπόδια 1.0 m, stress test), open_area:hard_curve, crossing:line, group_blocking:line, group_blocking:detour_left, doorway:side_approach, doorway:u_turn, narrow_corridor:keep_right, junction:left_turn, junction:straight_right, cafe:between_tables (`run_experiments.sh: CONDITIONS`) |
-| Εντολή | `JUMP=<τ βήματος 2> VIEW=1 bash ~/crowd_aware_ws/scripts/run_experiments.sh compare` |
-| Ανάλυση | `python3 ~/crowd_aware_ws/scripts/metrics_summary.py --step compare --evaluate --markdown summary.md --csv summary.csv` |
+| Εντολή | `JUMP=0.3 VIEW=1 bash ~/crowd_aware_ws/scripts/run_experiments.sh compare` |
+| Ανάλυση | `python3 ~/crowd_aware_ws/scripts/metrics_summary.py ~/crowd_aware_ws/rosbags --step compare --evaluate --markdown ~/crowd_aware_ws/rosbags/results/summary_compare.md --csv ~/crowd_aware_ws/rosbags/results/summary_compare.csv` |
+
+**Κατάσταση (2026-11-20):** έτρεξαν τα 240 από τα 260 runs (batch 2026-11-20 00:08, image `ba229e…`). Η συνθήκη **group_blocking:line απέτυχε και στα 20 runs** πριν ξεκινήσει η προσομοίωση (`Scenario 'group_blocking' has no path shape 'line'`): το σενάριο είχε `path_shapes` μόνο με `detour_left`, και τότε το `line` πρέπει να δηλώνεται ρητά. Διορθώθηκε στο `config/scenarios/group_blocking.yaml` (`line`: (0, 0) → (8, 0), ίδια γεωμετρία με το `path_xy`). Το config διαβάζεται από τον host, άρα δεν χρειάζεται rebuild και τα 20 runs τρέχουν με το ίδιο image. Άλλα 7 runs απέτυχαν για λόγους υποδομής (lifecycle node ανενεργός ή reference που δεν ξεκίνησε). Επαναλήφθηκαν αυτόματα, και τα αποτυχημένα bags είναι στο `rosbags_failed/`, εκτός ανάλυσης. Τα 20 runs που έλειπαν έτρεξαν στις 12:32–13:23 με το ίδιο image (1 επανάληψη για λόγους υποδομής):
+
+```bash
+CONDITIONS="group_blocking:line" JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh compare   # 20 runs, ~55 min
+```
+
+**260/260 runs, αξιολογημένα (2026-11-20).** Αποτέλεσμα αρχείο: `rosbags/results/summary_compare.md` / `.csv`. Οι στατιστικοί πίνακες ξαναβγήκαν μετά τη διόρθωση της απόφασης Σ (τα metrics ανά run δεν άλλαξαν).
 
 **Κύριες μετρικές (δηλωμένες πριν τρέξουμε)**, πίνακας «Κύριες υποθέσεις» (`metrics_summary.py: primary_hypotheses`):
 
@@ -564,12 +589,66 @@ U, O, S = μέσος όρος όλων των runs με αυτό το τ. Κάθ
 3. Τα 10 seeds δίνουν λοιπόν αξιόπιστο **συνολικό** συμπέρασμα, και ανά σενάριο ή συνθήκη μόνο για μεγάλες διαφορές. Το βήμα 6 υπάρχει για τα λεπτότερα συμπεράσματα.
 - Περιορισμός: δεν είναι τυπική ανάλυση ισχύος, γιατί δεν έχουμε εκτίμηση του πραγματικού μεγέθους επίδρασης. Η προϋπόθεση ότι τα seeds διαφέρουν πραγματικά ικανοποιείται πια (§2.4).
 
+### Αποτελέσματα βήματος 3 (2026-11-20)
+260/260 runs, 130 ζεύγη, ίδιοι agents μέσα σε κάθε ζεύγος, όλοι οι recorders εντάξει. Αρχείο: `rosbags/results/summary_compare.md` / `.csv`. Αναφορά για παρουσίαση: `doc/step3_compare_report.md`.
+
+**Κύριες υποθέσεις** (όλα τα ζεύγη, Holm στις δύο):
+
+| Υπόθεση | Ζεύγη | Διάμεση διαφορά | Bootstrap 95% CI | Wilcoxon p | r | Holm p |
+|---|---|---|---|---|---|---|
+| H1 ακινησία [s], tracking − fixed | 130 | −0.10 | [−1.25, 0.00] | < 0.0001 | −0.56 | < 0.0001 |
+| H3 ID switches/min, replay tracking − replay upstream | 130 | 0.00 | [0.00, 0.00] | 0.36 | −0.22 | 0.36 |
+
+**H1 ανά συνθήκη** (περιγραφικά· διάμεσος ακινησίας, στόχος = runs που έφτασαν στον στόχο από 10):
+
+| Συνθήκη | Στόχος fixed / tracking | Ακινησία fixed / tracking [s] | Χρόνος ως τον στόχο fixed / tracking [s] |
+|---|---|---|---|
+| junction:left_turn | 0 / 9 | 58.6 / 0.2 | – / 35.5 |
+| junction:straight_right | 1 / 10 | 57.0 / 0.1 | 51.3 / 33.2 |
+| doorway:side_approach | 1 / 6 | 31.5 / 0.2 | 32.8 / 30.6 |
+| narrow_corridor:keep_right | 3 / 10 | 28.4 / 0.1 | 30.4 / 27.1 |
+| doorway:u_turn | 3 / 8 | 17.9 / 0.2 | 49.2 / 31.1 |
+| dense_crowd:hard_curve | 3 / 10 | 6.6 / 0.1 | 56.6 / 30.9 |
+| dense_static:hard_curve_1m (stress) | 0 / 10 | 4.7 / 0.1 | – / 30.1 |
+| cafe:between_tables | 6 / 9 | 1.9 / 0.4 | 34.7 / 28.9 |
+| group_blocking:detour_left | 9 / 10 | 0.2 / 0.1 | 38.8 / 34.8 |
+| dense_static:hard_curve | 10 / 10 | 0.1 / 0.1 | 43.4 / 31.1 |
+| crossing:line | 10 / 10 | 0.1 / 0.1 | 27.9 / 27.1 |
+| open_area:hard_curve | 10 / 10 | 0.1 / 0.1 | 30.8 / 30.8 |
+| group_blocking:line | 0 / 0 | 41.0 / 49.5 | – / – |
+| **Σύνολο** | **56 / 112** | μέσος 18.3 / 6.9 | |
+
+**H1 ανά σενάριο (δευτερεύουσα, Holm στα 2 τεστ του σεναρίου):** βελτίωση στα junction (−56.5 s, Holm p < 0.001), narrow_corridor (−28.3 s, 0.023) και dense_crowd (−6.6 s, 0.004). Καμία σημαντική διαφορά στα open_area, crossing, dense_static, doorway (−0.85 s, CI [−30.2, 6.5]) και cafe (−0.65 s, Holm p 0.125). Το doorway είναι μικτό: στα περισσότερα ζεύγη ο fixed κολλά και το tracking περνά, αλλά σε 6/20 κολλά το tracking (ακινησία 40–52 s, 9–16 cm από εμπόδιο). **Αντίθετη κατεύθυνση στο group_blocking** (+3.2 s, Holm p 0.007), όπου το line είναι μπλοκαρισμένο εκ σχεδιασμού (3 άνθρωποι στο x = 4 m καλύπτουν y ∈ [−1.15, 1.15] για όλο το run) και καμία μέθοδος δεν φτάνει στον στόχο. Εκεί η ακινησία είναι η σωστή συμπεριφορά.
+
+**Ασφάλεια (συνθήκη για το H1)**, tracking − fixed:
+
+| Μετρική | Ζεύγη | Διάμεση διαφορά | 95% CI | Holm p |
+|---|---|---|---|---|
+| Συγκρούσεις | 130 | 0 (0 και στις δύο μεθόδους) | – | – |
+| Min απόσταση ανθρώπου [m] | 84 | −0.020 | [−0.037, 0.000] | 0.011 |
+| Min απόσταση εμποδίου [m] | 80 | −0.062 | [−0.086, −0.048] | < 0.001 |
+| Προσωπική ζώνη [s] | 110 | 0.000 | [0.000, 0.000] | 0.60 |
+
+**Δευτερεύουσες (περιγραφικά):** γραμμικό jerk −0.064 m/s³ (Holm p < 0.001, μέσος 0.140 → 0.080). Μέση ταχύτητα +0.002 m/s (πρακτικά ίδια). Homogeneity παραβίαση 0.005 (fixed) / 0.175 (tracking), completeness 0.000 / 0.002: δεν συγκρίνονται δίκαια, γιατί οι μέθοδοι βάζουν σε cluster διαφορετικά paths (απόφαση Π). Τα H3 replay ID switches είναι σπάνια: 0 σε 110/130 runs για το upstream και σε 113/130 για το tracking, και 105/130 ζεύγη ισοπαλία. Τα `duplicate_id_frames` είναι 0 και στους δύο τρόπους.
+
+**Ελέγχοι εκ των υστέρων (δεν κρίνουν τις υποθέσεις, μόνο εξηγούν):**
+- Στα 56 ζεύγη όπου φτάνουν και οι δύο στον στόχο, το tracking είναι **πιο μακριά** από τους ανθρώπους (+0.015 m, πιο μακριά σε 22, πιο κοντά σε 10). Άρα το −0.020 m οφείλεται κυρίως στο ότι ο fixed μένει πίσω. Από τα εμπόδια το tracking μένει πιο κοντά και εκεί (−0.062 m, πιο κοντά σε 19 από 24): περνά από στενότερα κενά, όπως προβλέπει ο μηχανισμός.
+- Χωρίς το group_blocking:line (120 ζεύγη), το H1 δίνει CI [−3.2, −0.05]. Η συνθήκη ήταν δηλωμένη από πριν, άρα μένει στην κύρια ανάλυση.
+- Τα fragmentations στο replay (ίδια clusters) πέφτουν από 2.97 σε 1.69 ανά λεπτό με το tracking (Wilcoxon p < 0.001, r = −0.73). Δεν ήταν δηλωμένη μετρική.
+
+**Τα 30 ζεύγη όπου το tracking έχει περισσότερη ακινησία:** 11 με διαφορά ≤ 0.2 s (θόρυβος), 10 του group_blocking:line (μπλοκαρισμένο), 6 του doorway με μεγάλη διαφορά (13–50 s), και 3 άλλα (cafe 3.6 s, dense_static_1m 1.7 s, ένα < 1 s).
+
+**Ανοιχτά για έλεγχο σε replay:**
+1. Στο group_blocking:line το laser δείχνει εμπόδιο στα 0.05–0.11 m, ενώ το κέντρο του κοντινότερου ανθρώπου είναι ≥ 1.3 m και ο κόσμος δεν έχει άλλα εμπόδια.
+2. **Αδιέξοδο του tracking στο doorway:** στα 6 runs όπου δεν φτάνει στον στόχο (side_approach seeds 3, 4, 5, 7· u_turn seeds 7, 8), μένει ακίνητο 40–52 s στο 22–65% της διαδρομής, με ελάχιστη απόσταση εμποδίου 0.09–0.16 m. Μοιάζει να μπαίνει πολύ κοντά στο κούφωμα και να κολλά εκεί.
+3. Σε μερικά runs του fixed στο doorway (side_approach seeds 4, 5· u_turn seed 8) η reference ζητά κίνηση μόνο 20–32 s, και το ρομπότ δεν φτάνει στον στόχο χωρίς μεγάλη ακινησία.
+
 ## Βήμα 4 — Σύγκριση 3 μεθόδων, SCAND 🟡
 
 | | |
 |---|---|
 | Runs | fixed, dynamic upstream, dynamic tracking × 1 καταγραφή |
-| Εντολή | `JUMP=<τ> bash ~/crowd_aware_ws/scripts/run_experiments.sh scand` |
+| Εντολή | `JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh scand` |
 
 Το SCAND διαβάζει το `experiment.yaml`, οπότε το script γράφει εκεί προσωρινά τα `correspondence` και `length_jump_threshold` και τα επαναφέρει στο τέλος. Είναι open loop: όλες οι μέθοδοι βλέπουν ακριβώς τα ίδια δεδομένα, οπότε δεν υπάρχουν seeds. Η σύγκριση είναι περιγραφική ανά frame.
 
@@ -583,12 +662,21 @@ U, O, S = μέσος όρος όλων των runs με αυτό το τ. Κάθ
 3. **Καμία μετρική ασφάλειας χειρότερη**: η διάμεση διαφορά σε συγκρούσεις και ελάχιστες αποστάσεις δεν είναι σημαντικά χειρότερη για τη νέα μέθοδο (Holm p < 0.05 προς τη λάθος κατεύθυνση). Αλλιώς η «βελτίωση» μπορεί απλώς να σημαίνει ότι η μέθοδος παίρνει περισσότερα ρίσκα.
 
 Αν μια υπόθεση δεν επιβεβαιωθεί, γράφεται ως αποτέλεσμα, όχι ως αποτυχία. Αν επιβεβαιωθεί τουλάχιστον μία, προχωράμε σε βήμα 6 και paper.
+
+**Εφαρμογή στο βήμα 3 (2026-11-20, sim):**
+
+| Υπόθεση | 1. Holm p < 0.05 | 2. CI χωρίς το 0 | 3. Ασφάλεια όχι χειρότερη | Εμφανής βελτίωση |
+|---|---|---|---|---|
+| H1 ακινησία | ✅ p < 0.0001 | ❌ [−1.25, 0.00] | ❌ min απόσταση εμποδίου −0.062 m (Holm p < 0.001), ανθρώπου −0.020 m (0.011) | **όχι** |
+| H3 ID switches | ❌ p = 0.36 | ❌ [0, 0] | – | **όχι** |
+
+Με τον κανόνα όπως δηλώθηκε, καμία υπόθεση δεν επιβεβαιώνεται ως εμφανής βελτίωση, και αυτό γράφεται ως αποτέλεσμα. Περιγραφικά, το tracking φτάνει στον στόχο 112/130 φορές έναντι 56/130, χωρίς συγκρούσεις (§ Αποτελέσματα βήματος 3). **Εκκρεμεί η απόφαση για το βήμα 6** (μαζί με την επίβλεψη). Το βήμα 4 (SCAND) δεν έχει τρέξει.
 ## Βήμα 6 — Ευρεία επιβεβαίωση: 50 seeds, όλα τα σενάρια (μόνο αν το βήμα 5 είναι θετικό) 🟡
 
 |        |                                                                                                                                                                                      |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Runs   | {fixed, tracking} × 9 σενάρια × medium × line × seeds **11–60** = **900 runs ≈ 39 h (≈ 1.6 μέρες)**. Τα seeds 1–10 είναι ήδη στο βήμα 3, γι' αυτό το βήμα 6 παίρνει άλλα (απόφαση Μ) |
-| Εντολή | `JUMP=<τ> bash ~/crowd_aware_ws/scripts/run_experiments.sh broad`                                                                                                                    |
+| Εντολή | `JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh broad`                                                                                                                    |
 
 Μόνο τα dense_crowd και dense_static έχουν πυκνότητα και διαδρομές. Τα υπόλοιπα 7 τρέχουν με τη χειρόγραφη διάταξή τους, και όλα αλλάζουν πια με το seed (§2.4).
 
@@ -643,21 +731,29 @@ SCENARIO=open_area DENSITY=medium PATH_SHAPE=hard_curve REFERENCE_MODE=autonomou
 # βήματα
 bash ~/crowd_aware_ws/scripts/run_experiments.sh deviation
 bash ~/crowd_aware_ws/scripts/run_experiments.sh jump
-JUMP=<τ> VIEW=1 bash ~/crowd_aware_ws/scripts/run_experiments.sh compare
-JUMP=<τ> bash ~/crowd_aware_ws/scripts/run_experiments.sh scand
-JUMP=<τ> bash ~/crowd_aware_ws/scripts/run_experiments.sh broad
+JUMP=0.3 VIEW=1 bash ~/crowd_aware_ws/scripts/run_experiments.sh compare
+JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh scand
+JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh broad
 # μετρικές
 python3 ~/crowd_aware_ws/scripts/metrics_summary.py --metrics path_deviation --evaluate   # μόνο απόκλιση
 python3 ~/crowd_aware_ws/scripts/metrics_summary.py ~/crowd_aware_ws/rosbags --step jump --evaluate --markdown ~/crowd_aware_ws/rosbags/results/summary_jump.md --csv ~/crowd_aware_ws/rosbags/results/summary_jump.csv   # βήμα 2, επιλογή τ
 python3 ~/crowd_aware_ws/scripts/metrics_summary.py ~/crowd_aware_ws/rosbags ~/scand_ws/results --evaluate   # όλες
 # replay
 bash ~/crowd_aware_ws/scripts/replay_rviz.sh <run>
+
+
+
+bash ~/crowd_aware_ws/scripts/run_dwal_cafe.sh teleop
+
+#**3. Live διαγράμματα**, σε τρίτο terminal:
+
+bash ~/crowd_aware_ws/scripts/plot_dwal_live.sh
 ```
 Κάθε mode δέχεται τα δικά του seeds στο τέλος και τα `SCENARIOS`, `DENSITIES`, `PATHS`, `JUMPS`, `METHODS` (`fixed`, `upstream`, `tracking`) για να περιοριστεί.
 
 ---
 
-# Αποφάσεις (οριστικές· Α–Ι 2026-11-10, Κ–Ρ αργότερα)
+# Αποφάσεις (οριστικές· Α–Ι 2026-11-10, Κ–Σ αργότερα)
 
 |                                          | Απόφαση                                   | Τι ισχύει                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Πού στον κώδικα                                                                |
 | ---------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -679,6 +775,7 @@ bash ~/crowd_aware_ws/scripts/replay_rviz.sh <run>
 | **Ο** (2026-11-19, πριν τον υπολογισμό)  | Completeness πριν το `min_cluster_span`   | Το completeness κρίνεται στο clustering **πριν** το `min_cluster_span` (replica με `min_cluster_span` = 0· αν η replica δεν αναπαράγει το bag, τα καταγεγραμμένα clusters). Αιτία: κομμάτια που έκοψε το τ και πέταξε το `min_cluster_span` δεν μετρούσαν πλήρως (ζεύγη χωρίς path σε cluster παραλείπονταν), οπότε το μικρό τ φαινόταν καλύτερο (συνθετικό frame τοίχου: 0.02–0.03 αντί 0.03–0.07). Δεν μετράμε κάθε πεταμένο path ως δικό του cluster, γιατί τότε ένα πραγματικά στενό άνοιγμα θα μετρούσε κόψιμο σε κάθε τ. Μόνο επαναξιολόγηση (schema 10). | `offline_metrics.py: clustering_metrics`, `replicate` |
 | **Π** (2026-11-19, πριν το βήμα 3)       | Το H2 βγαίνει από τις κύριες              | Κύριες υποθέσεις βήματος 3: H1 και H3, Holm στα 2. Αιτία: στον fixed το `mixed_cluster_fraction` είναι 0 εκ κατασκευής, και οι δύο μέθοδοι βάζουν σε cluster διαφορετικά paths, άρα δεν υπάρχει δίκαιη κύρια σύγκριση ποιότητας clusters. Homogeneity και completeness αναφέρονται περιγραφικά ανά μέθοδο. | `metrics_summary.py: primary_hypotheses` |
 | **Ρ** (2026-11-19)                       | Βήμα 2 χωρίς τοίχους                      | Το βήμα 2 δεν ξανατρέχει με τοίχους. Αιτία (συνθετικό frame με πραγματικές παραμέτρους): το τ κόβει τον τοίχο μόνο με τ = 0.1 και μόνο σε κομμάτια ενός path· η παραβίαση homogeneity στη μετάβαση pass→brake δεν διορθώνεται με κανένα τ (όριο της Κ). Οι τοίχοι κρίνονται στο βήμα 3 (6 από 13 συνθήκες), ως εύρημα. | — |
+| **Σ** (2026-11-20, μετά το βήμα 3)       | Διόρθωση θορύβου float στα στατιστικά     | Οι ζευγαρωτές διαφορές στρογγυλοποιούνται στο 1e-9 πριν το Wilcoxon και το bootstrap. Αιτία: π.χ. ακινησία 0.0999999 s έναντι 0.1 s έδινε −1.8e-15 και μετρούσε ως αρνητική διαφορά αντί για ισοπαλία (18 από τα 130 ζεύγη του H1). Έτσι το άνω όριο του CI του H1 τυπωνόταν −0.000 αντί για 0. Είναι διόρθωση αριθμητικού σφάλματος, όχι αλλαγή κανόνα: οι κανόνες του βήματος 5 μένουν ίδιοι. Άλλαξαν μόνο οι στατιστικοί πίνακες του βήματος 3. Το `summary_jump` βγαίνει πανομοιότυπο. | `metrics_summary.py: clean_diffs` |
 
 
 
@@ -717,5 +814,5 @@ bash ~/crowd_aware_ws/scripts/replay_rviz.sh <run>
 | Kerby, *The simple difference formula: an approach to teaching nonparametric correlation*, Comprehensive Psychology, 2014 💡🔎                                                                                                                 | Matched-pairs rank-biserial ως μέγεθος επίδρασης για Wilcoxon                                                                                                                                                                      | §10.4                                    | —                                                                                                        |     |                              |                                                    |     |
 | Schöller et al., *What the constant velocity model can teach us about pedestrian motion prediction*, RA-L 5(2), 2020 💡🔎                                                                                                                      | Το CVM ως εύλογο μοντέλο πρόβλεψης πεζών                                                                                                                                                                                           | §5.6                                     | Τα νευρωνικά μοντέλα που συγκρίνει                                                                       |     |                              |                                                    |     |
 | Hall, *The Hidden Dimension*, 1966 💡🔎                                                                                                                                                                                                        | Ζώνες προσωπικού χώρου (personal 0.45–1.2 m)                                                                                                                                                                                       | §8 #12 (`σ = 0.8 m`)                     | —                                                                                                        |     |                              |                                                    |     |
-| Rosenberg & Hirschberg, *V-Measure: A conditional entropy-based external cluster evaluation measure*, EMNLP-CoNLL, 2007 🔎 | Ορισμοί **homogeneity** (κάθε cluster μία κατηγορία) και **completeness** (κάθε κατηγορία ένα cluster) | § Cluster definition, βήμα 2 (απόφαση Ξ) | Τον τύπο με την εντροπία (V-measure): μετράμε ποσοστά παραβιάσεων |
+| Rosenberg & Hirschberg, *V-Measure: A conditional entropy-based external cluster evaluation measure*, EMNLP-CoNLL, 2007 🔎                                                                                                                     | Ορισμοί **homogeneity** (κάθε cluster μία κατηγορία) και **completeness** (κάθε κατηγορία ένα cluster)                                                                                                                             | § Cluster definition, βήμα 2 (απόφαση Ξ) | Τον τύπο με την εντροπία (V-measure): μετράμε ποσοστά παραβιάσεων                                        |     |                              |                                                    |     |
 | `nikolaslps/human_detection_fusion` (GitHub README) ✅                                                                                                                                                                                          | Τι θα δίνει ο πραγματικός ανιχνευτής: θέσεις ROS4HRI, nearest-neighbour IDs, **όχι ταχύτητα**                                                                                                                                      | §5.7                                     | —                                                                                                        |     |                              |                                                    |     |

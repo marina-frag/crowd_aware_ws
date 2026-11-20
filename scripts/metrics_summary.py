@@ -447,10 +447,17 @@ LAYOUT_BOUND_HUMAN_SCENARIOS = {'dense_static'}
 LAYOUT_BOUND_HUMAN_METRICS = {'zone_time_s', 'human_min_m'}
 
 
+def clean_diffs(diffs):
+    """Paired differences rounded to 1e-9, so float noise counts as a tie: e.g. a standstill of
+    0.0999999 s vs 0.1 s gives -1.8e-15, not a negative difference (it made a CI upper bound
+    print as -0.000 instead of 0). +0.0 turns -0.0 into 0.0."""
+    return [round(x, 9) + 0.0 for x in diffs]
+
+
 def wilcoxon(diffs):
     """Wilcoxon signed-rank (zero differences dropped, average ranks for ties): W+, exact two-sided p,
     matched-pairs rank-biserial correlation."""
-    d = [x for x in diffs if x != 0]
+    d = [x for x in clean_diffs(diffs) if x != 0]
     n = len(d)
     if n == 0: return None, None, None
     order = sorted(range(n), key=lambda i: abs(d[i]))
@@ -478,6 +485,7 @@ def wilcoxon(diffs):
 
 
 def bootstrap_median(diffs, rounds=10000, seed=0):
+    diffs = clean_diffs(diffs)
     rng = random.Random(seed)
     med = lambda v: sorted(v)[len(v)//2] if len(v) % 2 else sum(sorted(v)[len(v)//2-1:len(v)//2+1])/2
     samples = sorted(med([rng.choice(diffs) for _ in diffs]) for _ in range(rounds))
