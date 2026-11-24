@@ -561,10 +561,10 @@
   \item Το tracking φτάνει στον στόχο στα διπλάσια runs (112 έναντι 56), χωρίς σύγκρουση.
   \item Το κέρδος φαίνεται κυρίως σε junction, corridor και πυκνό πλήθος. Στις ανοιχτές σκηνές οι μέθοδοι είναι ίδιες.
   \item Το κόστος είναι ότι περνά πιο κοντά σε εμπόδια, κατά $4.7$ cm στη διάμεσο.
-  \item Στο doorway το tracking κολλά σε 6 από τα 20 runs. Είναι η πιο σημαντική αδυναμία του.
+  \item Στο doorway το tracking κολλά σε 6 από τα 20 runs. Με τον τωρινό κώδικα φτάνει και στα 20 (ίδια seeds).
   \item Το H3 δεν επιβεβαιώθηκε: τα ID switches είναι σπάνια και 105 από τα 130 ζεύγη είναι ισοπαλία.
   \item Στο 3.1 μένει το $\tau = 0.3$ για έναν στόχο διαφορά από το $\varepsilon = 0.15$.
-  \item Διερευνητικά, το $\varepsilon = 0.15$ σε 130 ζεύγη: 117 έναντι 112 στόχων, όλοι οι επιπλέον στο doorway (14/20 $\to$ 19/20). Άλλο Docker image, άρα δεν αποδίδεται ακόμη στο clustering.
+  \item Διερευνητικά, το $\varepsilon = 0.15$ σε 130 ζεύγη: 117 έναντι 112 στόχων, όλοι οι επιπλέον στο doorway. Στο ίδιο image το $\tau = 0.3$ φτάνει 20/20 και το $\varepsilon$ 19/20, άρα η διαφορά ήταν ο κώδικας, όχι το clustering.
 \end{itemize}
 \end{frame}
 
@@ -591,7 +591,6 @@
   \textbf{How to read the replay}
   \begin{itemize}\setlength{\itemsep}{2pt}
     \item \textbf{Colored lines:} clusters, traced by \texttt{base\_link}.
-    \item \textbf{Light gray extensions:} where the \textbf{robot front} reaches at the end of each path.
     \item \textbf{Orange cylinders:} humans.
   \end{itemize}
 \end{frame}
@@ -632,7 +631,7 @@
         \item Re-test $\beta$ and $\varepsilon$ on \textbf{new seeds}.
         \item Confirm H1 on \textbf{new seeds}.
         \item Evaluate on \textbf{SCAND} recordings.
-        \item Resolve the doorway deadlock.
+        \item Find which code change fixed the doorway deadlock.
         \item Validate on the \textbf{real iWalk robot}.
       \end{itemize}
     \end{column}
@@ -644,7 +643,7 @@
   \item Το βασικό εύρημα είναι ότι το ρομπότ σταματά πολύ λιγότερο και φτάνει συχνότερα στον στόχο, χωρίς συγκρούσεις στην προσομοίωση.
   \item Για να γίνει ισχυρός ισχυρισμός χρειάζονται νέα seeds και πειράματα στο πραγματικό ρομπότ.
   \item Η απόσταση από εμπόδια θέλει περισσότερο έλεγχο, γιατί μετριέται από το laser και όχι από το περίγραμμα του ρομπότ.
-  \item Το αδιέξοδο στο doorway είναι το πιο άμεσο πρόβλημα προς διόρθωση.
+  \item Το αδιέξοδο στο doorway δεν εμφανίζεται με τον τωρινό κώδικα (20/20). Μένει να βρεθεί ποια αλλαγή το έλυσε και να ξανατρέξει το fixed για δίκαιη σύγκριση.
 \end{itemize}
 \end{frame}
 

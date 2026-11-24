@@ -59,6 +59,8 @@ def main():
     p.add_argument('--tau', default='rosbags/results/summary_compare.csv')
     p.add_argument('--db', default='rosbags/results/summary_compare_db.csv')
     p.add_argument('--markdown', default='rosbags/results/paired_db_vs_tau.md')
+    p.add_argument('--same-image', action='store_true',
+                   help='both batches ran on the same iwalk_dwal image (e.g. compare_tau_doorway vs compare_db)')
     a = p.parse_args()
     tau = load(a.tau, lambda r: r.get('variant') == 'dynamic_split' and r.get('correspondence') == 'tracking'
                and r.get('jump') == 0.3 and r.get('split_method') in (None, 'jump'))
@@ -67,10 +69,12 @@ def main():
     keys = sorted(set(tau) & set(db), key=str)
     out = ['# Ζευγαρωτή σύγκριση: DBSCAN ε = 0.15 − jump τ = 0.3 (διερευνητική)', '',
            f'Runs: τ = 0.3 {len(tau)}, ε = 0.15 {len(db)}, ζεύγη {len(keys)} '
-           f'(μόνο τ: {len(set(tau) - set(db))}, μόνο ε: {len(set(db) - set(tau))}). '
+           f'(χωρίς ζεύγος: τ {len(set(tau) - set(db))}, ε {len(set(db) - set(tau))}). '
            'Ζεύγος = ίδιο σενάριο, πυκνότητα, διαδρομή, seed, semantics.', '',
-           '**Όριο:** τα δύο batches έτρεξαν σε διαφορετικό Docker image, άρα η διαφορά δεν οφείλεται '
-           'αποδεδειγμένα μόνο στο clustering. Το τ = 0.3 μένει κλειδωμένο.', '']
+           ('Τα δύο batches έτρεξαν στο ίδιο Docker image, άρα η διαφορά οφείλεται στο clustering. '
+            if a.same_image else
+            '**Όριο:** τα δύο batches έτρεξαν σε διαφορετικό Docker image, άρα η διαφορά δεν οφείλεται '
+            'αποδεδειγμένα μόνο στο clustering. ') + 'Το τ = 0.3 μένει κλειδωμένο.', '']
     same_agents = sum(tau[k].get('agents_sha256') == db[k].get('agents_sha256') for k in keys)
     out.append(f'Ίδιοι agents στο ζεύγος: {same_agents}/{len(keys)}.')
     out.append('')
