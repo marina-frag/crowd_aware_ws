@@ -36,7 +36,7 @@ Visualization Manager:
     Alpha: 0.6
   - Class: rviz_default_plugins/MarkerArray
     Name: DWAL costmap-free prefixes (all samples)
-    Enabled: true
+    Enabled: false
     Topic:
       Value: /dwal_planner/sampled_pathMarkers
   - Class: rviz_default_plugins/MarkerArray

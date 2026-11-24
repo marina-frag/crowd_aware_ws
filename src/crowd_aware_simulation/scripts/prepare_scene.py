@@ -761,7 +761,7 @@ def append_description_geometry(link, robot, frames, description, laser_frame):
 def prepare(description, wrapper, target, experiment_config=None, headless=None,
             scenario=None, scenario_config=None, seed=None, controller=None,
             require_intended_user_support=False, variant=None, density=None, path_shape=None,
-            wait_for_recorder=False, jump=None, correspondence=None):
+            wait_for_recorder=False, jump=None, correspondence=None, split_method=None, beta=None, eps=None):
     description, wrapper, target = Path(description), Path(wrapper), Path(target)
     config_path = (Path(experiment_config) if experiment_config else
                    Path(__file__).resolve().parents[1]/'config/experiment.yaml')
@@ -902,6 +902,22 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         if correspondence not in ('upstream', 'tracking'):
             raise ValueError("correspondence must be 'upstream' or 'tracking'")
         dynamic_config['correspondence'] = correspondence
+    if split_method not in (None, ''):
+        if split_method not in ('jump', 'change_point', 'dbscan'):
+            raise ValueError("split_method must be 'jump', 'change_point' or 'dbscan'")
+        dynamic_config['split_method'] = split_method
+    if beta not in (None, ''):
+        beta = float(beta)
+        if not (math.isfinite(beta) and beta > 0):
+            raise ValueError('beta must be positive and finite')
+        dynamic_config['change_point_penalty'] = beta
+    if eps not in (None, ''):
+        eps = float(eps)
+        if not (math.isfinite(eps) and eps > 0):
+            raise ValueError('eps must be positive and finite')
+        dynamic_config['dbscan_eps'] = eps
+    # dynamic_no_split has no cuts by definition
+    active_split = str(dynamic_config.get('split_method', 'jump')) if variant != 'dynamic_no_split' else 'jump'
     # The configured conservative envelope also expands the URDF-derived bounds.
     if abs(float(dwal_config['front_extent']) - xmax) > 0.03 or abs(float(dwal_config['rear_extent']) + xmin) > 0.03:
         raise ValueError(f'experiment.yaml iWalk extents disagree: configured front={dwal_config["front_extent"]}, rear={dwal_config["rear_extent"]}; derived front={xmax}, rear={-xmin}')
@@ -931,6 +947,11 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
     clustering={**common,
         'dwal_clustering/length_jump_threshold': (float(dynamic_config['length_jump_threshold'])
             if variant != 'dynamic_no_split' else float.fromhex('0x1.fffffffffffffp+1023')),
+        'dwal_clustering/split_method': active_split,
+        'dwal_clustering/change_point_penalty': float(dynamic_config.get('change_point_penalty', 0.2)),
+        'dwal_clustering/change_point_min_paths': int(dynamic_config.get('change_point_min_paths', 3)),
+        'dwal_clustering/dbscan_eps': float(dynamic_config.get('dbscan_eps', 0.15)),
+        'dwal_clustering/dbscan_min_points': int(dynamic_config.get('dbscan_min_points', 3)),
         'dwal_clustering/correspondence': str(dynamic_config['correspondence']),
         'dwal_clustering/correspondence_gate': float(dynamic_config['correspondence_gate']),
         'dwal_clustering/track_keep_frames': int(dynamic_config['track_keep_frames']),
@@ -1084,7 +1105,12 @@ def prepare(description, wrapper, target, experiment_config=None, headless=None,
         # clustering parameters of this run (fixed DWAL: correspondence upstream, no jump)
         'correspondence': dynamic_config['correspondence'] if variable_dwal else 'upstream',
         'length_jump_threshold': (float(dynamic_config['length_jump_threshold'])
-                                  if variable_dwal and variant == 'dynamic_split' else None),
+                                  if variable_dwal and variant == 'dynamic_split' and active_split == 'jump' else None),
+        'split_method': active_split if variable_dwal and variant == 'dynamic_split' else None,
+        'change_point_penalty': (float(dynamic_config.get('change_point_penalty', 0.2))
+                                 if variable_dwal and variant == 'dynamic_split' and active_split == 'change_point' else None),
+        'dbscan_eps': (float(dynamic_config.get('dbscan_eps', 0.15))
+                       if variable_dwal and variant == 'dynamic_split' and active_split == 'dbscan' else None),
         'reference_path_xy': scenario_data['robot']['path_xy'],
         'goal_tolerance_m': float(evaluation['goal_tolerance']),
     }, indent=2))

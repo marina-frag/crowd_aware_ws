@@ -96,7 +96,10 @@ def setup(context):
         density=density, path_shape=path_shape,
         wait_for_recorder=truth(context, 'wait_for_recorder'),
         jump=LaunchConfiguration('jump').perform(context) or None,
-        correspondence=LaunchConfiguration('correspondence').perform(context) or None)
+        correspondence=LaunchConfiguration('correspondence').perform(context) or None,
+        split_method=LaunchConfiguration('split_method').perform(context) or None,
+        beta=LaunchConfiguration('beta').perform(context) or None,
+        eps=LaunchConfiguration('eps').perform(context) or None)
     resolved = cfg | {'selection': {'controller': controller, 'semantics': semantics,
         'reference_mode': reference_mode, 'scenario': scenario, 'seed': int(seed),
         'density': density, 'path_shape': path_shape,
@@ -283,4 +286,7 @@ def generate_launch_description():
         DeclareLaunchArgument('wait_for_recorder', default_value='false'),
         DeclareLaunchArgument('jump', default_value=''),
         DeclareLaunchArgument('correspondence', default_value=''),
+        DeclareLaunchArgument('split_method', default_value=''),
+        DeclareLaunchArgument('beta', default_value=''),
+        DeclareLaunchArgument('eps', default_value=''),
         OpaqueFunction(function=setup)])

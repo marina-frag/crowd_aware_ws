@@ -1,3 +1,127 @@
+diff --git a/include/dwal_planner/change_point.h b/include/dwal_planner/change_point.h
+new file mode 100644
+index 0000000..eff92b0
+--- /dev/null
++++ b/include/dwal_planner/change_point.h
+@@ -0,0 +1,62 @@
++#ifndef DWAL_PLANNER_CHANGE_POINT_H
++#define DWAL_PLANNER_CHANGE_POINT_H
++
++#include <algorithm>
++#include <cstddef>
++#include <limits>
++#include <vector>
++
++namespace dwal_change_point
++{
++
++// Piecewise-linear change-point detection by optimal partitioning (Jackson et al. 2005).
++// Minimizes: sum over segments of the least-squares error of a line y = a*i + b
++//            + penalty * number of cuts,
++// with at least min_length samples per segment. Returns the first position of every
++// segment after the first, in increasing order. No ROS dependency.
++inline std::vector<size_t> cuts(const std::vector<double>& y, double penalty, size_t min_length)
++{
++  const size_t n = y.size();
++  if (min_length == 0 || n < 2 * min_length) return {};
++
++  std::vector<double> sx(n + 1, 0.0), sy(n + 1, 0.0), sxx(n + 1, 0.0), sxy(n + 1, 0.0), syy(n + 1, 0.0);
++  for (size_t i = 0; i < n; ++i) {
++    const double x = static_cast<double>(i);
++    sx[i + 1] = sx[i] + x;
++    sy[i + 1] = sy[i] + y[i];
++    sxx[i + 1] = sxx[i] + x * x;
++    sxy[i + 1] = sxy[i] + x * y[i];
++    syy[i + 1] = syy[i] + y[i] * y[i];
++  }
++  const auto segment_error = [&](size_t a, size_t b) {
++    const double count = static_cast<double>(b - a);
++    const double dx = sx[b] - sx[a], dy = sy[b] - sy[a];
++    const double xx = sxx[b] - sxx[a] - dx * dx / count;
++    const double xy = sxy[b] - sxy[a] - dx * dy / count;
++    const double yy = syy[b] - syy[a] - dy * dy / count;
++    return std::max(yy - (xx > 1e-9 ? xy * xy / xx : 0.0), 0.0);
++  };
++
++  std::vector<double> best(n + 1, std::numeric_limits<double>::infinity());
++  std::vector<size_t> last(n + 1, 0);
++  best[0] = -penalty;  // the first segment is not a cut
++  for (size_t end = min_length; end <= n; ++end) {
++    for (size_t start = 0; start + min_length <= end; ++start) {
++      if (best[start] == std::numeric_limits<double>::infinity()) continue;
++      const double value = best[start] + segment_error(start, end) + penalty;
++      if (value < best[end]) {
++        best[end] = value;
++        last[end] = start;
++      }
++    }
++  }
++
++  std::vector<size_t> out;
++  for (size_t end = n; last[end] > 0; end = last[end]) out.push_back(last[end]);
++  std::reverse(out.begin(), out.end());
++  return out;
++}
++
++}  // namespace dwal_change_point
++
++#endif  // DWAL_PLANNER_CHANGE_POINT_H
+diff --git a/include/dwal_planner/dbscan.h b/include/dwal_planner/dbscan.h
+new file mode 100644
+index 0000000..d36bce1
+--- /dev/null
++++ b/include/dwal_planner/dbscan.h
+@@ -0,0 +1,50 @@
++#ifndef DWAL_PLANNER_DBSCAN_H
++#define DWAL_PLANNER_DBSCAN_H
++
++#include <cmath>
++#include <cstddef>
++#include <vector>
++
++namespace dwal_dbscan
++{
++
++// DBSCAN (Ester et al. 1996) on 2D points. A point is core if at least min_points points,
++// itself included, lie within eps. Returns one label per point: >= 0 cluster, -1 noise.
++// No ROS dependency.
++inline std::vector<int> labels(const std::vector<double>& x, const std::vector<double>& y,
++                               double eps, int min_points)
++{
++  const size_t n = x.size();
++  std::vector<std::vector<size_t>> neighbours(n);
++  for (size_t i = 0; i < n; ++i)
++    for (size_t j = 0; j < n; ++j)
++      if (std::hypot(x[i] - x[j], y[i] - y[j]) <= eps) neighbours[i].push_back(j);
++
++  const auto is_core = [&](size_t i) {
++    return neighbours[i].size() >= static_cast<size_t>(min_points);
++  };
++  std::vector<int> out(n, -1);
++  int cluster = 0;
++  for (size_t i = 0; i < n; ++i) {
++    if (out[i] != -1 || !is_core(i)) continue;
++    out[i] = cluster;
++    std::vector<size_t> stack{i};
++    while (!stack.empty()) {
++      const size_t p = stack.back();
++      stack.pop_back();
++      if (!is_core(p)) continue;
++      for (size_t q : neighbours[p]) {
++        if (out[q] == -1) {
++          out[q] = cluster;
++          stack.push_back(q);
++        }
++      }
++    }
++    ++cluster;
++  }
++  return out;
++}
++
++}  // namespace dwal_dbscan
++
++#endif  // DWAL_PLANNER_DBSCAN_H
 diff --git a/include/dwal_planner/libdwal_cluster.h b/include/dwal_planner/libdwal_cluster.h
 index ff845b4..193f0c3 100755
 --- a/include/dwal_planner/libdwal_cluster.h
@@ -79,7 +203,7 @@ index 4fbb8bb..535b4cf 100644
 +float64 available_length
 +float64 available_radius
 diff --git a/src/clustering.cpp b/src/clustering.cpp
-index 1fb1a5a..ffecf88 100644
+index 1fb1a5a..6917887 100644
 --- a/src/clustering.cpp
 +++ b/src/clustering.cpp
 @@ -1,4 +1,10 @@
@@ -93,7 +217,16 @@ index 1fb1a5a..ffecf88 100644
  #include <string>
  #include <vector>
  #include <map>
-@@ -37,6 +43,7 @@ double colors[] = {
+@@ -6,6 +12,8 @@
+ #include <cmath>
+ 
+ #include <dwal_planner/libdwal_cluster.h>
++#include <dwal_planner/change_point.h>
++#include <dwal_planner/dbscan.h>
+ 
+ #include <rclcpp/rclcpp.hpp>
+ #include <rclcpp/qos.hpp>
+@@ -37,6 +45,7 @@ double colors[] = {
  
  void setColor(visualization_msgs::msg::Marker & path_marker, int c, double cost)
  {
@@ -101,7 +234,7 @@ index 1fb1a5a..ffecf88 100644
    path_marker.color.r = colors[3 * c] * cost;
    path_marker.color.g = colors[3 * c + 1] * cost;
    path_marker.color.b = colors[3 * c + 2] * cost;
-@@ -57,23 +64,27 @@ public:
+@@ -57,23 +66,38 @@ public:
  
      node_->get_parameter("dwal_clustering/min_cluster_span", min_cluster_span);
      node_->get_parameter("dwal_clustering/cluster_separation", cluster_separation);
@@ -111,6 +244,17 @@ index 1fb1a5a..ffecf88 100644
 +    node_->get_parameter("dwal_clustering/length_jump_threshold", length_jump_threshold);
 +    if (!std::isfinite(length_jump_threshold) || length_jump_threshold <= 0.0)
 +      throw std::invalid_argument("length_jump_threshold must be positive and finite");
++    node_->get_parameter("dwal_clustering/split_method", split_method);
++    node_->get_parameter("dwal_clustering/change_point_penalty", change_point_penalty);
++    node_->get_parameter("dwal_clustering/change_point_min_paths", change_point_min_paths);
++    node_->get_parameter("dwal_clustering/dbscan_eps", dbscan_eps);
++    node_->get_parameter("dwal_clustering/dbscan_min_points", dbscan_min_points);
++    if (split_method != "jump" && split_method != "change_point" && split_method != "dbscan")
++      throw std::invalid_argument("dwal_clustering/split_method must be 'jump', 'change_point' or 'dbscan'");
++    if (!std::isfinite(dbscan_eps) || dbscan_eps <= 0.0 || dbscan_min_points < 1)
++      throw std::invalid_argument("dbscan_eps must be positive and dbscan_min_points >= 1");
++    if (!std::isfinite(change_point_penalty) || change_point_penalty <= 0.0 || change_point_min_paths < 1)
++      throw std::invalid_argument("change_point_penalty must be positive and change_point_min_paths >= 1");
 +    node_->get_parameter("dwal_clustering/correspondence", correspondence_mode);
 +    node_->get_parameter("dwal_clustering/correspondence_gate", correspondence_gate);
 +    node_->get_parameter("dwal_clustering/track_keep_frames", track_keep_frames);
@@ -141,7 +285,7 @@ index 1fb1a5a..ffecf88 100644
      // Init marker template
      path_marker.header.frame_id = odom_frame;
      path_marker.header.stamp = node_->now();
-@@ -102,17 +113,348 @@ public:
+@@ -102,17 +126,409 @@ public:
    {
      markers_publisher = node_->create_publisher<visualization_msgs::msg::MarkerArray>(marker_topic, rclcpp::QoS(2));
      group_publisher   = node_->create_publisher<dwal_planner::msg::ClusterGroup>(cluster_topic, rclcpp::QoS(2));
@@ -266,6 +410,7 @@ index 1fb1a5a..ffecf88 100644
 +    Rcl = levels[static_cast<size_t>(level_index)];
 +    path_num = static_cast<int>(msg->paths.size());
 +    diagnostic_codes.assign(msg->paths.size(), -1);
++    diagnostic_segments.assign(msg->paths.size(), -1);
 +    diagnostic_required = required_length;
 +    current_yaw_ = msg->pose0.size() >= 3 ? msg->pose0[2] : std::numeric_limits<double>::quiet_NaN();
 +    free_path_indexes.clear();
@@ -393,26 +538,86 @@ index 1fb1a5a..ffecf88 100644
 +
 +    // Group original sample indices. Width is measured at the configured far
 +    // reference level, never at the shortest member's clipped endpoint.
++    int segment = 0;  // diagnostics only: partition before min_cluster_span
 +    const auto finish = [&]() {
 +      if (cluster_indexes.empty()) return;
++      for (int index : cluster_indexes) diagnostic_segments[static_cast<size_t>(index)] = segment;
++      ++segment;
 +      const double width = cluster_lib::clusterChord(levels.back(),
 +        cluster_lib::curv2phi(msg->paths[cluster_indexes.back()].curvature, levels.back()) -
 +        cluster_lib::curv2phi(msg->paths[cluster_indexes.front()].curvature, levels.back()));
 +      if (width >= min_cluster_span) cluster_vecs.push_back(cluster_indexes);
 +      cluster_indexes.clear();
 +    };
-+    for (int index : free_path_indexes) {
-+      if (!cluster_indexes.empty()) {
-+        const int previous = cluster_indexes.back();
-+        const bool index_gap = index - previous > cluster_separation;
-+        const bool length_jump = variable_length &&
-+          std::abs(available_lengths[static_cast<size_t>(index)] -
-+                   available_lengths[static_cast<size_t>(previous)]) > length_jump_threshold;
-+        if (index_gap || length_jump) finish();
++    if (split_method == "change_point") {
++      // Inside each run of admitted paths (index gap rule unchanged), cut the free radius r
++      // into line segments by optimal partitioning.
++      std::vector<int> run;
++      const auto finish_run = [&]() {
++        std::vector<double> radii;
++        radii.reserve(run.size());
++        for (int index : run) {
++          const auto& end = msg->paths[static_cast<size_t>(index)].poses.back();
++          radii.push_back(std::hypot(end.x - msg->pose0[0], end.y - msg->pose0[1]));
++        }
++        const auto cuts = dwal_change_point::cuts(radii, change_point_penalty,
++                                                  static_cast<size_t>(change_point_min_paths));
++        size_t next_cut = 0;
++        for (size_t position = 0; position < run.size(); ++position) {
++          if (next_cut < cuts.size() && position == cuts[next_cut]) {
++            finish();
++            ++next_cut;
++          }
++          cluster_indexes.push_back(run[position]);
++        }
++        finish();
++        run.clear();
++      };
++      for (int index : free_path_indexes) {
++        if (!run.empty() && index - run.back() > cluster_separation) finish_run();
++        run.push_back(index);
 +      }
-+      cluster_indexes.push_back(index);
++      finish_run();
++    } else if (split_method == "dbscan") {
++      // DBSCAN on the path endpoints. The controller uses front()/back() as cluster limits, so
++      // a cluster is also cut where its label changes or at an index gap. Noise is dropped.
++      std::vector<double> end_x, end_y;
++      end_x.reserve(free_path_indexes.size());
++      end_y.reserve(free_path_indexes.size());
++      for (int index : free_path_indexes) {
++        const auto& end = msg->paths[static_cast<size_t>(index)].poses.back();
++        end_x.push_back(end.x);
++        end_y.push_back(end.y);
++      }
++      const auto labels = dwal_dbscan::labels(end_x, end_y, dbscan_eps, dbscan_min_points);
++      int current_label = -1;
++      const auto close_piece = [&]() {
++        if (current_label >= 0) finish();
++        else cluster_indexes.clear();
++      };
++      for (size_t i = 0; i < free_path_indexes.size(); ++i) {
++        const int index = free_path_indexes[i];
++        if (!cluster_indexes.empty() &&
++            (labels[i] != current_label || index - cluster_indexes.back() > cluster_separation))
++          close_piece();
++        cluster_indexes.push_back(index);
++        current_label = labels[i];
++      }
++      close_piece();
++    } else {
++      for (int index : free_path_indexes) {
++        if (!cluster_indexes.empty()) {
++          const int previous = cluster_indexes.back();
++          const bool index_gap = index - previous > cluster_separation;
++          const bool length_jump = variable_length &&
++            std::abs(available_lengths[static_cast<size_t>(index)] -
++                     available_lengths[static_cast<size_t>(previous)]) > length_jump_threshold;
++          if (index_gap || length_jump) finish();
++        }
++        cluster_indexes.push_back(index);
++      }
++      finish();
 +    }
-+    finish();
 +
 +    cluster_num = static_cast<int>(cluster_vecs.size());
 +    //////--- end clustering -----------------------------------------------------------
@@ -491,7 +696,7 @@ index 1fb1a5a..ffecf88 100644
    {
      corresp_matrix.clear();
      if (cluster_num == 0) //current frame empty
-@@ -210,7 +552,7 @@ public:
+@@ -210,7 +626,7 @@ public:
        prev_ids.push_back(static_cast<unsigned int>(group.clusters[static_cast<size_t>(i)].id));
    }
  
@@ -500,11 +705,12 @@ index 1fb1a5a..ffecf88 100644
    {
      //msg contains all sampled paths, for the given level, up to their collision point (if one exists)
      cluster_num = 0;
-@@ -220,19 +562,28 @@ public:
+@@ -220,19 +636,29 @@ public:
      cluster_indexes.clear();
      cluster_vecs.clear();
      group.clusters.clear();
 +    diagnostic_codes.assign(msg->paths.size(), -1);  // diagnostics only
++    diagnostic_segments.clear();  // diagnostics only
 +    diagnostic_required = std::numeric_limits<double>::quiet_NaN();
 +    while (marker_num < path_num) {  // markers grow from samples (no startup handshake)
 +      path_marker.id = marker_num++;
@@ -530,7 +736,7 @@ index 1fb1a5a..ffecf88 100644
        return;
      }
  
-@@ -270,6 +621,9 @@ public:
+@@ -270,6 +696,9 @@ public:
              msg->paths[static_cast<size_t>(k)].curvature <= max_curv_slice)
            sliced_path_indexes.push_back(k);
  
@@ -540,7 +746,7 @@ index 1fb1a5a..ffecf88 100644
        free_path_indexes = sliced_path_indexes;
        sliced_path_indexes.clear();
      }
-@@ -340,7 +694,10 @@ public:
+@@ -340,7 +769,10 @@ public:
        group.clusters.push_back(tmp_cluster);
      }
  
@@ -552,7 +758,7 @@ index 1fb1a5a..ffecf88 100644
  
      if (*spin != 0)
      {
-@@ -354,9 +711,143 @@ public:
+@@ -354,9 +786,160 @@ public:
  
      //publish markers & groups
      group_publisher->publish(group);
@@ -572,7 +778,18 @@ index 1fb1a5a..ffecf88 100644
 +      if (i) data << ',';
 +      data << diagnostic_codes[i];
 +    }
-+    data << "]}";
++    data << "]";
++    // Partition before min_cluster_span, written by the clustering itself, so the
++    // offline metrics do not need a replica of the clustering rule.
++    if (!diagnostic_segments.empty()) {
++      data << ",\"segments\":[";
++      for (size_t i=0; i<diagnostic_segments.size(); ++i) {
++        if (i) data << ',';
++        data << diagnostic_segments[i];
++      }
++      data << "]";
++    }
++    data << "}";
 +    std_msgs::msg::String diagnostic;
 +    diagnostic.data = data.str();
 +    if (diagnostics_publisher) diagnostics_publisher->publish(diagnostic);
@@ -584,10 +801,16 @@ index 1fb1a5a..ffecf88 100644
      markers_publisher->publish(path_array_marker);
    }
 +  std::vector<int> diagnostic_codes;
++  std::vector<int> diagnostic_segments;
 +  double diagnostic_required{0.0};
 +  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr diagnostics_publisher;
 +  bool variable_length{false};
 +  double length_jump_threshold{0.0};
++  std::string split_method{"jump"};
++  double change_point_penalty{0.2};
++  int change_point_min_paths{3};
++  double dbscan_eps{0.15};
++  int dbscan_min_points{3};
 +  double braking_margin{0.0};  // stop margin of the braking model, from the heartbeat
 +
 +  // ---- Correspondence "tracking" mode (variable_length only) ----
@@ -696,13 +919,20 @@ index 1fb1a5a..ffecf88 100644
    std::vector<int>::iterator spin;
    int level_index{0};
    std::vector<double> levels;
-@@ -409,6 +900,40 @@ public:
+@@ -409,6 +992,47 @@ public:
      ros_node->declare_parameter<std::vector<std::string>>("dwal_clustering/postfix", {});
      ros_node->declare_parameter<std::vector<double>>("common/levels", {});
      ros_node->declare_parameter<std::vector<int64_t>>("dwal_clustering/spin", {});
 +    ros_node->declare_parameter<bool>("dwal_clustering/variable_length", false);
 +    // One default, in metres; override this parameter to tune length discontinuities.
 +    ros_node->declare_parameter<double>("dwal_clustering/length_jump_threshold", 0.30);
++    // How admitted paths are cut: "jump" = |dL| > threshold, "change_point" = piecewise-linear
++    // optimal partitioning of the free radius (penalty per cut), "dbscan" = DBSCAN on endpoints.
++    ros_node->declare_parameter<std::string>("dwal_clustering/split_method", "jump");
++    ros_node->declare_parameter<double>("dwal_clustering/change_point_penalty", 0.2);
++    ros_node->declare_parameter<int>("dwal_clustering/change_point_min_paths", 3);
++    ros_node->declare_parameter<double>("dwal_clustering/dbscan_eps", 0.15);
++    ros_node->declare_parameter<int>("dwal_clustering/dbscan_min_points", 3);
 +    // Cluster ID correspondence between frames (variable_length only):
 +    // "upstream" = greedy mean-angle matching, "tracking" = steps 1-6 (see Clustering).
 +    ros_node->declare_parameter<std::string>("dwal_clustering/correspondence", "upstream");
@@ -737,7 +967,7 @@ index 1fb1a5a..ffecf88 100644
      ros_node->declare_parameter<double>("dwal_clustering/min_cluster_span", 0.5);
      ros_node->declare_parameter<int>("dwal_clustering/cluster_separation", 5);
      ros_node->declare_parameter<int>("dwal_clustering/Marker_num", -1);
-@@ -434,7 +959,11 @@ public:
+@@ -434,7 +1058,11 @@ public:
        return;
      }
      RCLCPP_INFO(ros_node->get_logger(), "Cluster groups to be created: %zu", group_num);
@@ -750,7 +980,7 @@ index 1fb1a5a..ffecf88 100644
  
      do_slice = false;
      group_objects.reserve(group_num);
-@@ -447,6 +976,8 @@ public:
+@@ -447,6 +1075,8 @@ public:
        const std::string marker_topic  = markerTopic  + postfixes[k];
        const std::string clusters_topic = clusterTopic + postfixes[k];
        group_objects[k].set_publishers(marker_topic, clusters_topic);
@@ -759,7 +989,7 @@ index 1fb1a5a..ffecf88 100644
      }
  
      // Subscriber
-@@ -470,6 +1001,24 @@ public:
+@@ -470,6 +1100,24 @@ public:
        [this](const std::shared_ptr<dwal_planner::srv::ToggleSlice::Request> req,
               std::shared_ptr<dwal_planner::srv::ToggleSlice::Response> res)
        {
@@ -784,7 +1014,7 @@ index 1fb1a5a..ffecf88 100644
          clustering_order.clear();
          clustering_order.push_back(req->source_group_index);
          clustering_order.push_back(req->target_group_index);
-@@ -492,14 +1041,15 @@ public:
+@@ -492,14 +1140,15 @@ public:
        });
    }
  
@@ -802,7 +1032,7 @@ index 1fb1a5a..ffecf88 100644
        trg_cluster.source_slice_group_ptr = &src_cluster.group;
  
        // check to see if prev src frame was empty
-@@ -507,26 +1057,67 @@ public:
+@@ -507,26 +1156,67 @@ public:
        {
          trg_cluster.source_slice_cluster_index =
            static_cast<int>(src_cluster.corresp_matrix[static_cast<unsigned int>(trg_cluster.source_slice_cluster_id)]);

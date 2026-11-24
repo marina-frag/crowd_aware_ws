@@ -192,6 +192,27 @@ def clusterable(paths, settings, R_level, required):
     return set(free_fixed(paths, R_level))
 
 
+def recorded_partition(rows, now, paths, members, settings, R_level):
+    """The diagnostics row of this clusters message: same paths, same published clusters (by ID)
+    and same filter result. rows: [(time, codes, segments, required)] in time order. Depends on
+    the braking filter only, never on the rule that cuts clusters. Returns the row or None."""
+    wanted = {cid: sorted(ks) for cid, ks in members}
+    times = [r[0] for r in rows]
+    a, b = bisect.bisect_left(times, now - 0.25), bisect.bisect_right(times, now + 0.25)
+    for row in sorted(rows[a:b], key=lambda r: abs(r[0] - now)):
+        _, codes, segments, required = row
+        if len(codes) != len(paths) or len(segments) != len(paths):
+            continue
+        got = {}
+        for k, code in enumerate(codes):
+            if code >= 0:
+                got.setdefault(code, []).append(k)
+        if got == wanted and clusterable(paths, settings, R_level, required) == {
+                k for k, code in enumerate(codes) if code >= 0 or code in (-3, -4)}:
+            return row
+    return None
+
+
 def choice_class_cuts(order, is_pass, admitted, owner):
     """Completeness of one frame (input3.md, decisions Ξ, Ο). Classes = maximal runs of one type
     (pass / brake) along `order` (all sampled paths in curvature order); brake runs are
@@ -470,7 +491,8 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
             # stability (ARI): clustering of the same paths with free lengths re-checked
             # against the clean scan and against the scan with Gaussian range noise
             scan = scan_at(f['time']) if scan_at is not None else None
-            if scan is not None and paths:
+            # needs a replica of the cutting rule, which exists only for the jump rule
+            if scan is not None and paths and settings.get('split_method', 'jump') == 'jump':
                 origin, points = scan
                 rel = points - origin
                 r = np.hypot(rel[:, 0], rel[:, 1])
@@ -522,19 +544,24 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
                         owners.setdefault(c, set()).add(n)
             pass_choices += len(owners)
             pass_split += sum(len(ns) >= 2 for ns in owners.values())
-            # completeness on the partition BEFORE min_span (decision Ο): the replica with
-            # min_span = 0, so a piece the length jump cut and min_span then dropped counts in
-            # full; the recorded clusters when the replica does not reproduce the bag
-            if f['replica_match']:
+            # completeness on the partition BEFORE min_span (decision Ο), so a piece that was cut
+            # and then dropped by min_span counts in full. Source: the partition recorded by the
+            # clustering itself; in older bags the replica with min_span = 0; the published
+            # clusters when neither is available
+            if f.get('segments') is not None:
+                owner = {k: s for k, s in enumerate(f['segments']) if s >= 0}
+                raw_frames += 1
+            elif f['replica_match'] and settings.get('split_method', 'jump') == 'jump':
                 raw = replicate(paths, dict(settings, min_span=0.0), f['R_level'], f['required'])
+                owner = {k: n for n, members in enumerate(raw) for k in members}
                 raw_frames += 1
             else:
-                raw = [members for _, members in clusters]
+                owner = {k: n for n, (_, members) in enumerate(clusters) for k in members}
             cuts = choice_class_cuts(
                 sorted(range(len(paths)), key=lambda k: paths[k]['curvature']),
                 {k: lab == 'free' for k, lab in label.items()},
                 clusterable(paths, settings, f['R_level'], f['required']),
-                {k: n for n, members in enumerate(raw) for k in members})
+                owner)
             labelled_frames += 1
             pairs_judged += cuts[0]
             pairs_cut += cuts[1]
@@ -567,6 +594,7 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
             'frames': len(frames),
             'replica_agreement_fraction': mean([float(a) for a in agree]),
             'mixed_cluster_fraction': mixed / clusters_total if clusters_total else None,
+            'mixed_clusters_per_frame': mixed / labelled_frames if labelled_frames else None,
             'oversplit_run_fraction': oversplit / runs if runs else None,
             'choice_violation_fraction': violation / clusters_total if clusters_total else None,
             'pass_oversplit_fraction': pass_split / pass_choices if pass_choices else None,
@@ -595,10 +623,12 @@ def clustering_metrics(groups, settings, costmaps, footprint, duration_s, seed=0
         'completeness_violation (decision Xi) = cut neighbour pairs / judged neighbour pairs; class = maximal '
         'run of one type (pass / brake, brake runs numbered) in curvature order over all sampled paths; '
         'neighbour pair = two consecutive paths of one class that both pass the clustering filter, cut when '
-        'they are not in the same cluster of the partition BEFORE min_span (decision Omicron: replica with '
-        'min_span = 0, recorded clusters when the replica does not reproduce the bag; '
-        'completeness_before_min_span_fraction = share of frames judged on the replica); pairs next to a '
+        'they are not in the same cluster of the partition BEFORE min_span (decision Omicron: the partition '
+        'recorded by the clustering when the bag has it, otherwise the replica with min_span = 0, otherwise '
+        'the published clusters; completeness_before_min_span_fraction = share of frames judged on a partition '
+        'before min_span); pairs next to a '
         'filtered-out path, or with no clustered path, are skipped; completeness_class_cut_fraction = classes with >= 1 cut pair. Flicker = cluster-count change undone within 0.5 s. '
+        'Stability is computed for the jump rule only (None for change_point). '
         f'Stability = ARI between the clustering (Python replica) of the same sampled paths with free '
         f'lengths re-checked (footprint vs scan points, step {settings["scan_noise_step"]} m, up to the '
         f'longest recorded path) on the clean scan and on the scan with Gaussian range noise '
@@ -805,6 +835,7 @@ class Collector:
         self.shared = _params(bag_dir, ('shared_control_off.yaml', 'shared_control_on.yaml',
                                         'shared_controller_parameters.yaml'), 'shared_controller') or {}
         self.sampled, self.clusters, self.required, self.costmaps, self.diags = [], {}, {}, [], []
+        self.partitions = {}  # group -> [(time, codes, segments)], only in bags that record the partition
         self.chain = {k: [] for k in ('reference', 'selected', 'smoothed', 'safe', 'final')}
         self.receipts = {k: [] for k in ('scan', 'costmap', 'sampled', 'clusters', 'selected', 'smoothed', 'safe', 'final')}
         self.stamps = {'costmap': []}
@@ -861,10 +892,14 @@ class Collector:
                        for c in msg.clusters]))
         elif topic in self.diag_topics and topic is not None:
             try:
-                req = _json.loads(msg.data).get('required_length')
-            except (ValueError, TypeError):
+                row = _json.loads(msg.data)
+                req = row.get('required_length')
+            except (ValueError, TypeError, AttributeError):
                 return
             self.required.setdefault(self.diag_topics[topic], []).append((now, req))
+            if row.get('segments') is not None:
+                self.partitions.setdefault(self.diag_topics[topic], []).append(
+                    (now, row.get('codes', []), row['segments'], req))
         elif topic == self.t.get('intent_diagnostics'):
             try:
                 self.diags.append((now, _json.loads(msg.data)))
@@ -889,6 +924,7 @@ class Collector:
                     'width_radius': levels[-1], 'separation': int(self.dwal.get('dwal_clustering/cluster_separation', 5)),
                     'min_span': float(self.dwal.get('dwal_clustering/min_cluster_span', 0.2)),
                     'jump': float(self.dwal.get('dwal_clustering/length_jump_threshold', 0.3)),
+                    'split_method': str(self.dwal.get('dwal_clustering/split_method', 'jump')),
                     'margin': float(self.shared.get('stop_margin', 0.05)),
                     'gate': float(self.dwal.get('dwal_clustering/correspondence_gate', 0.2)),
                     'keep': int(self.dwal.get('dwal_clustering/track_keep_frames', 2)),
@@ -908,8 +944,9 @@ class Collector:
                 required = req_rows[j][1] if j >= 0 and now - rt[j] <= 0.2 else None
                 # The clusters come from a sampled_paths message received just before or
                 # (large message, 0.1 s recorder clock step) just after them. Take the
-                # newest whose clustering the replica reproduces, else the newest that
-                # contains every member.
+                # newest that the recorded partition confirms (older bags: whose clustering
+                # the replica reproduces), else the newest that contains every member.
+                partition_rows = self.partitions.get(name, [])
                 chosen = None
                 i = bisect.bisect_right(st, now + 0.15) - 1
                 while i >= 0 and now - st[i] <= 0.25:
@@ -918,21 +955,29 @@ class Collector:
                     index = {p['curvature']: k for k, p in enumerate(paths)}
                     members = [(cid, [index.get(c) for c in curvatures]) for cid, curvatures, _ in clusters]
                     if all(ks and None not in ks for _, ks in members):
-                        match = (sorted(map(tuple, replicate(paths, settings, R_level, required))) ==
-                                 sorted(tuple(ks) for _, ks in members))
+                        row = None
+                        if partition_rows:
+                            row = recorded_partition(partition_rows, now, paths, members, settings, R_level)
+                            match = row is not None
+                        elif settings['split_method'] != 'jump':
+                            match = False  # no replica of this rule: only the recorded partition counts
+                        else:
+                            match = (sorted(map(tuple, replicate(paths, settings, R_level, required))) ==
+                                     sorted(tuple(ks) for _, ks in members))
                         if chosen is None or (match and not chosen[3]):
-                            chosen = (pose0, paths, members, match)
+                            chosen = (pose0, paths, members, match, row)
                         if match:
                             break
                     i -= 1
                 if chosen is None:
                     continue
-                pose0, paths, members, match = chosen
+                pose0, paths, members, match, row = chosen
                 yaw = pose0[2]
                 for p in paths:
                     p['reach'] = (p['end_radius'] >= R_level - 0.05) if variable else (p['collision_r'] >= R_level)
                 frames.append({'time': now, 'yaw': yaw, 'pose0': pose0, 'R_level': R_level, 'paths': paths,
-                               'clusters': members, 'required': required, 'replica_match': match})
+                               'clusters': members, 'required': row[3] if row else required,
+                               'replica_match': match, 'segments': row[2] if row else None})
             groups[name] = frames
         if groups:
             out['clustering'] = clustering_metrics(groups, settings, self.costmaps, self.footprint(), duration,

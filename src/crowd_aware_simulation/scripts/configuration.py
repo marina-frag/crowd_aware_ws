@@ -37,6 +37,14 @@ def load_configuration(experiment_path):
     dynamic = cfg['experiment']['dynamic_dwal']
     if not (math.isfinite(dynamic['length_jump_threshold']) and dynamic['length_jump_threshold'] > 0):
         raise ValueError('dynamic_dwal.length_jump_threshold must be positive and finite')
+    if dynamic.get('split_method', 'jump') not in ('jump', 'change_point', 'dbscan'):
+        raise ValueError("dynamic_dwal.split_method must be 'jump', 'change_point' or 'dbscan'")
+    if not (math.isfinite(dynamic.get('dbscan_eps', 0.15)) and dynamic.get('dbscan_eps', 0.15) > 0
+            and int(dynamic.get('dbscan_min_points', 3)) >= 1):
+        raise ValueError('dynamic_dwal.dbscan_eps must be positive, dbscan_min_points >= 1')
+    if not (math.isfinite(dynamic.get('change_point_penalty', 0.2)) and dynamic.get('change_point_penalty', 0.2) > 0
+            and int(dynamic.get('change_point_min_paths', 3)) >= 1):
+        raise ValueError('dynamic_dwal.change_point_penalty must be positive, change_point_min_paths >= 1')
     if dynamic['correspondence'] not in ('upstream', 'tracking'):
         raise ValueError("dynamic_dwal.correspondence must be 'upstream' or 'tracking'")
     if not 0 < dynamic['correspondence_gate'] <= 1 or int(dynamic['track_keep_frames']) < 0:

@@ -55,6 +55,16 @@ experiment:
     # discontinuity, Nearness Diagram). Runtime value, no build needed; the
     # dynamic_no_split variant disables it.
     length_jump_threshold: 0.3
+    # How a run of admitted paths is cut (step 3.1):
+    #   jump: |dL| > length_jump_threshold
+    #   change_point: piecewise-linear optimal partitioning of the free radius r,
+    #                 minimizing line error + change_point_penalty per cut
+    #   dbscan: DBSCAN on the path endpoints (dbscan_eps in m), contiguous in phi
+    split_method: jump
+    change_point_penalty: 0.2
+    change_point_min_paths: 3
+    dbscan_eps: 0.15
+    dbscan_min_points: 3
     # Cluster ID correspondence between frames:
     #   upstream: greedy matching of mean cluster angles (original dwal_planner,
     #             with the duplicate-ID bug fixed)

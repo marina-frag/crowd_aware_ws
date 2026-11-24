@@ -161,7 +161,9 @@ class Metrics:
             'condition': {**{k:self.cfg.get(k) for k in ('controller','variant','semantics','scenario','seed')},
                           # None: SCAND, or a simulation run from before these options (= medium, line)
                           'density': self.cfg.get('density'), 'path_shape': self.cfg.get('path_shape'),
-                          'correspondence': self.cfg.get('correspondence'), 'jump': self.cfg.get('length_jump_threshold')},
+                          'correspondence': self.cfg.get('correspondence'), 'jump': self.cfg.get('length_jump_threshold'),
+                          'split_method': self.cfg.get('split_method'), 'beta': self.cfg.get('change_point_penalty'),
+                          'eps': self.cfg.get('dbscan_eps')},
             'duration_requested_s': self.duration, 'duration_observed_s': elapsed,
             'complete_window': elapsed >= self.duration-1e-6,
             'collision_episodes': total if contact_ok else None,
@@ -362,6 +364,55 @@ def weighted_mean(values, weights):
     return sum(v*w for v,w in pairs)/total if total > 0 else None
 
 
+OBSTACLE_DISTANCE_VERSION = 2  # 2: a scan with nothing in range counts as range_max (2026-11-24)
+OBSTACLE_DEFINITION = (
+    'Nearest /scan return from the laser origin (any object, humans included). Minimum over all scans, mean '
+    'over the grid. A scan with no return in range (every non-NaN ray +inf or beyond range_max; NaN rays are the '
+    'robot body removed by the self box filter) counts as range_max: nothing within the sensor range is a '
+    'measurement, not missing data. Scans with NaN only are missing. The '
+    'mean is therefore a lower bound when scan_clear_fraction > 0 (version 1 dropped clear scans, so open '
+    'scenes failed the coverage check and lost the metric).')
+
+
+def nearest_return(msg):
+    """(distance, clear) of one LaserScan: nearest valid range, or (range_max, True) when no ray
+    hits anything within range; (None, False) for a scan without usable information."""
+    import numpy as np
+    ranges = np.asarray(msg.ranges, dtype=float)
+    valid = np.isfinite(ranges) & (ranges >= msg.range_min) & (ranges <= msg.range_max)
+    if valid.any(): return float(ranges[valid].min()), False
+    # NaN rays are the robot body removed by the self box filter (190 of 720, the same in every scan);
+    # every other ray is +inf (no hit) here, so nothing is within range_max.
+    seen = ~np.isnan(ranges)
+    beyond = np.isposinf(ranges) | (np.isfinite(ranges) & (ranges > msg.range_max))
+    if seen.any() and beyond[seen].all() and math.isfinite(msg.range_max) and msg.range_max > 0:
+        return float(msg.range_max), True
+    return None, False
+
+
+def obstacle_metrics(scans, times, weights, start, duration, scan_timeout, minimum, version=OBSTACLE_DISTANCE_VERSION):
+    """Obstacle distance fields from scans = [(time, distance, clear)]. version=1 reproduces the old
+    definition (clear scans dropped); it is used only to check a patched run against its stored values."""
+    if version == 1: scans = [row for row in scans if not row[2]]
+    series = Series(scans)
+    grid, clear = [], 0.
+    for t, w in zip(times, weights):
+        b = series.at(t, scan_timeout)
+        grid.append(b[1] if b else None)
+        if b and b[2]: clear += w
+    coverage = sum(w for w, b in zip(weights, grid) if b is not None)/duration
+    scan_ok = coverage >= minimum
+    window = [d for t, d, _ in scans if start <= t < start+duration]
+    fields = {'minimum_obstacle_distance_m': min(window) if scan_ok and window else None,
+              'mean_obstacle_distance_m': weighted_mean(grid, weights) if scan_ok else None,
+              'scan_coverage_fraction': coverage}
+    if version != 1:
+        fields.update({'obstacle_distance_definition': OBSTACLE_DEFINITION,
+                       'obstacle_distance_version': OBSTACLE_DISTANCE_VERSION,
+                       'scan_clear_fraction': clear/duration})
+    return {'fields': fields, 'grid': grid, 'scan_ok': scan_ok}
+
+
 def nearest(xy, centers):
     return min(math.hypot(xy[0]-x, xy[1]-y) for x,y in centers)
 
@@ -472,11 +523,13 @@ class AdditionalMetrics:
 
     def scan(self, now, msg):
         import numpy as np
+        distance, clear = nearest_return(msg)
+        if distance is None: return
+        self.scans.append((now, distance, clear))
+        if clear: return  # no obstacle points to store
         ranges = np.asarray(msg.ranges, dtype=float)
         angles = msg.angle_min+msg.angle_increment*np.arange(len(ranges))
         valid = np.isfinite(ranges) & (ranges >= msg.range_min) & (ranges <= msg.range_max)
-        if not valid.any(): return
-        self.scans.append((now, float(ranges[valid].min())))
         r, a = ranges[valid], angles[valid]
         self.scan_points.append((now, frame(msg.header.frame_id), np.stack([r*np.cos(a), r*np.sin(a)], axis=1)))
 
@@ -586,20 +639,18 @@ class AdditionalMetrics:
         for i in range(n):
             times.append(start+i*dt)
             weights.append(min(dt,start+duration-times[-1]))
-        odom,motion,human,ref,scan = (Series(rows) for rows in
-            (self.odom,self.motion_rows,self.humans,self.reference,self.scans))
-        velocities = []; angular = []; references = []; distances = []; obstacles = []
+        odom,motion,human,ref = (Series(rows) for rows in
+            (self.odom,self.motion_rows,self.humans,self.reference))
+        velocities = []; angular = []; references = []; distances = []
         human_coverage = active_human = zone = 0.
         for t,weight in zip(times,weights):
             o = odom.at(t,odom_timeout)
             m = motion.at(t,odom_timeout)
             h = human.at(t,s['human_timeout_s'])
             r = ref.at(t,cfg['reference_timeout_s'])
-            b = scan.at(t,scan_timeout)
             velocities.append(m[1] if m else None)
             angular.append(m[2] if m else None)
             references.append(r)
-            obstacles.append(b[1] if b else None)
             d = None
             if o is not None and h is not None:
                 human_coverage += weight
@@ -642,9 +693,8 @@ class AdditionalMetrics:
             path_length += step
             h = human.at(b[0],s['human_timeout_s'])
             if h is not None and h[1] and nearest(b[1:3],h[1]) < zone_radius: zone_path += step
-        scan_coverage = sum(w for w,b in zip(weights,obstacles) if b is not None)/duration
-        scan_ok = scan_coverage >= minimum
-        scan_minimum = [d for t,d in self.scans if start <= t < start+duration]
+        obstacle = obstacle_metrics(self.scans, times, weights, start, duration, scan_timeout, minimum)
+        scan_ok = obstacle['scan_ok']
         proposed = self.proposed_paths(times, start, duration, odom_timeout, scan_timeout)
         diagnostics = {topic: diagnostic_summary(rows,start,duration)
                        for topic,rows in self.diagnostic_rows.items()}
@@ -662,10 +712,7 @@ class AdditionalMetrics:
             'human_geometry_definition': 'Planar odometry-origin to HuNav-agent-center distance (nearest human). Minimum at all observed odom/human update times, mean over the grid while humans exist; NOT footprint clearance.',
             'human_joint_coverage_fraction': exposure_coverage,
             'observed_time_with_humans_s': active_human,
-            'minimum_obstacle_distance_m': min(scan_minimum) if scan_ok and scan_minimum else None,
-            'mean_obstacle_distance_m': weighted_mean(obstacles,weights) if scan_ok else None,
-            'obstacle_distance_definition': 'Nearest valid /scan return from the laser origin (any object, humans included). Minimum over all scans, mean over the grid; scans with no return in range are excluded.',
-            'scan_coverage_fraction': scan_coverage,
+            **obstacle['fields'],
             'rejected_frame_messages': self.rejected_frames,
             'smoothness': smooth_results,
             'dwal_diagnostics': diagnostics,
@@ -681,11 +728,65 @@ class AdditionalMetrics:
             writer = csv.writer(stream)
             writer.writerow(['time_s','dt_s','linear_velocity_mps','angular_velocity_radps','human_center_distance_m',
                              'obstacle_distance_m','reference_linear_mps','reference_angular_radps'])
-            for t,w,v,a,d,b,r in zip(times,weights,velocities,angular,distances,obstacles,references):
+            for t,w,v,a,d,b,r in zip(times,weights,velocities,angular,distances,obstacle['grid'],references):
                 writer.writerow([t,w,v,a,d,b,r[1] if r else None,r[2] if r else None])
         result['all_metrics_available'] = bool(human_ok and known_distances and scan_ok and
             all(v is not None for k,v in smooth_results.items() if not k.endswith('coverage_fraction')))
         return result
+def obstacle_main(runs):
+    """Rewrite only the obstacle distance fields of existing metrics.json files (reads /scan only).
+    Before writing, the old definition is recomputed from the same scans and must reproduce the stored
+    values exactly (same window, grid and timeout); otherwise the run is left unchanged. Every other
+    metric stays byte-for-byte as it was."""
+    import csv as csvmod
+    failed = 0
+    for run in runs:
+        try:
+            bag, cfg = locate(run)
+            path = bag.parent/'analysis_v3'/'metrics.json'
+            data = json.loads(path.read_text())
+            x = data.get('additional_metrics', {})
+            if str(cfg.get('scenario', '')).startswith('scand:') or 'scan_coverage_fraction' not in x:
+                print(f'skip {bag.parent.name}: SCAND or no additional metrics'); continue
+            start, duration = data.get('window_start_sim_s'), cfg.get('duration_s')
+            if start is None or not duration: print(f'skip {bag.parent.name}: no window'); continue
+            dt = load_settings()['grid_step_s']
+            minimum = cfg.get('minimum_coverage_fraction', .95)
+            timeout = cfg.get('scan_timeout_s', 0.5)
+            times = [start+i*dt for i in range(int(math.ceil(duration/dt)))]
+            weights = [min(dt, start+duration-t) for t in times]
+            scans = []
+            for now, _, msg in events(str(bag.parent), {cfg['topics']['scan']}):
+                d, clear = nearest_return(msg)
+                if d is not None: scans.append((now, d, clear))
+            old = obstacle_metrics(scans, times, weights, start, duration, timeout, minimum, version=1)['fields']
+            for key, value in old.items():
+                stored = x.get(key)
+                if (stored is None) != (value is None) or (value is not None and abs(stored-value) > 1e-9):
+                    raise ValueError(f'old definition does not reproduce {key}: stored {stored}, recomputed {value}')
+            new = obstacle_metrics(scans, times, weights, start, duration, timeout, minimum)
+            x.update(new['fields'])
+            smooth_ok = all(v is not None for k, v in x.get('smoothness', {}).items() if not k.endswith('coverage_fraction'))
+            x['all_metrics_available'] = bool(x.get('human_joint_coverage_fraction', 0) >= minimum and
+                x.get('minimum_human_center_distance_m') is not None and new['scan_ok'] and smooth_ok)
+            data['all_metrics_comparison_ready'] = bool(data.get('comparison_ready') and x['all_metrics_available'])
+            timeline = path.parent/'additional_timeline.csv'
+            if timeline.exists():
+                rows = list(csvmod.reader(timeline.open()))
+                column = rows[0].index('obstacle_distance_m')
+                if len(rows)-1 != len(new['grid']): raise ValueError('timeline length differs from the grid')
+                for row, b in zip(rows[1:], new['grid']): row[column] = '' if b is None else repr(b)
+                with timeline.open('w', newline='') as stream: csvmod.writer(stream).writerows(rows)
+            path.write_text(json.dumps(data, indent=2, allow_nan=False))
+            f = new['fields']
+            print(f"ok {bag.parent.name}: min {f['minimum_obstacle_distance_m']} mean {f['mean_obstacle_distance_m']} "
+                  f"coverage {f['scan_coverage_fraction']:.3f} clear {f['scan_clear_fraction']:.3f}", flush=True)
+        except Exception as error:
+            failed += 1
+            print(f'FAILED {run}: {error}', flush=True)
+    if failed: raise SystemExit(f'{failed} runs failed (left unchanged)')
+
+
 # --- Command line: export all metrics and validity flags without treating unavailable
 # values as zero.
 def main():
@@ -697,7 +798,11 @@ def main():
     evaluate.add_argument('--output')
     evaluate.add_argument('--metrics-config')
     evaluate.add_argument('--metrics', choices=['all', 'path_deviation'], default='all')
+    obstacle = subparsers.add_parser('obstacle', help='rewrite only the obstacle distance of evaluated runs')
+    obstacle.add_argument('runs', nargs='+')
     args = parser.parse_args()
+    if args.command == 'obstacle':
+        return obstacle_main(args.runs)
     import sys
     sys.argv = [sys.argv[0], args.bag]
     if args.duration is not None: sys.argv += ['--duration', str(args.duration)]

@@ -1,0 +1,651 @@
+% !TEX program = xelatex
+% Compile with: xelatex -interaction=nonstopmode heron_final_presentation.tex
+\documentclass[aspectratio=169,11pt]{beamer}
+
+% ---------- Language and fonts ----------
+\usepackage{fontspec}
+\setsansfont{DejaVu Sans}
+\setmainfont{DejaVu Serif}
+\setmonofont{DejaVu Sans Mono}
+\usepackage{polyglossia}
+\setmainlanguage{english}
+
+% ---------- Packages ----------
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{ragged2e}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,shapes.geometric}
+\usepackage[most]{tcolorbox}
+\usepackage{etoolbox}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% ---------- HERON-inspired colors ----------
+\definecolor{HeronBlue}{HTML}{1497CF}
+\definecolor{HeronDark}{HTML}{4F5156}
+\definecolor{HeronLight}{HTML}{EAF6FC}
+\definecolor{HeronSoft}{HTML}{F7FAFC}
+\definecolor{HeronGreen}{HTML}{2E8B57}
+\definecolor{HeronOrange}{HTML}{D8902F}
+\definecolor{HeronRed}{HTML}{C4514A}
+\definecolor{HeronGray}{HTML}{D9DEE2}
+
+% ---------- Beamer styling ----------
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{blocks}[rounded][shadow=false]
+\setbeamertemplate{itemize items}[circle]
+\setbeamercolor{title}{fg=HeronDark}
+\setbeamercolor{frametitle}{fg=HeronDark}
+\setbeamercolor{normal text}{fg=HeronDark,bg=white}
+\setbeamercolor{structure}{fg=HeronBlue}
+\setbeamerfont{title}{series=\bfseries,size=\LARGE}
+\setbeamerfont{frametitle}{series=\bfseries,size=\large}
+\setbeamerfont{subtitle}{size=\large}
+\setbeamerfont{author}{size=\normalsize}
+\setbeamerfont{caption}{size=\scriptsize}
+\setbeamersize{text margin left=0.55cm,text margin right=0.55cm}
+\setlength{\tabcolsep}{4pt}
+
+\setbeamertemplate{frametitle}{%
+  \vspace{0.12cm}%
+  \insertframetitle\par%
+  \vspace{-0.15cm}%
+  {\color{HeronBlue}\rule{\linewidth}{0.7pt}}%
+}
+
+% ---------- Metadata ----------
+\newcommand{\StudentName}{Marina Fragkouli}
+\newcommand{\StudentEmail}{marina.frag3@gmail.com}
+\newcommand{\GitHub}{https://github.com/marina-frag/crowd\_aware\_ws}
+\newcommand{\InternshipTopic}{Crowd-Aware Front-Following for Assistive Mobile Robots}
+\newcommand{\SupervisorNames}{Georgios Moustris, Andreas Vatistas}
+\newcommand{\MeetingLabel}{Final Presentation}
+\newcommand{\MeetingDate}{25 November 2026}
+
+\title[HERON Internship]{Final Internship Presentation}
+\subtitle{\InternshipTopic}
+\author{\StudentName}
+\institute{HERON -- Hellenic Robotics Center of Excellence}
+\date{\MeetingLabel\;|\;\MeetingDate}
+
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=.80\paperwidth,ht=2.5ex,dp=1ex,leftskip=1.2em]{author in head/foot}%
+      \textcolor{HeronDark}{\insertshorttitle}\hspace{0.7em}\textcolor{HeronBlue}{|}\hspace{0.7em}\MeetingLabel
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.20\paperwidth,ht=2.5ex,dp=1ex,rightskip=1.2em plus1fil]{date in head/foot}%
+      \hfill\textcolor{HeronDark}{\insertframenumber/\inserttotalframenumber}
+    \end{beamercolorbox}%
+  }%
+}
+
+% ---------- Helpers ----------
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\Centering\arraybackslash}p{#1}}
+
+\newtcolorbox{statusbox}[2][]{%
+  enhanced,
+  colback=#2!6,
+  colframe=#2,
+  boxrule=0.7pt,
+  arc=2mm,
+  left=2mm,right=2mm,top=1.2mm,bottom=1.2mm,
+  #1
+}
+
+\newcommand{\takeaway}[1]{%
+  \begin{statusbox}{HeronBlue}
+    \footnotesize\textbf{Takeaway:} #1
+  \end{statusbox}
+}
+
+\newcommand{\done}{\textcolor{HeronGreen}{\textbf{done}}}
+\newcommand{\running}{\textcolor{HeronOrange}{\textbf{running}}}
+\newcommand{\planned}{\textcolor{HeronDark}{planned}}
+
+\begin{document}
+
+% ---------- Title ----------
+\begin{frame}[plain]
+  \vspace{0.2cm}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.28\textwidth}
+      \IfFileExists{heron_logo.png}{%
+        \includegraphics[width=0.88\linewidth]{heron_logo.png}%
+      }{%
+        {\Large\bfseries\textcolor{HeronBlue}{HERON}}%
+      }
+    \end{column}
+    \begin{column}{0.70\textwidth}
+      \raggedleft
+      {\Large\bfseries HERON}\par
+      {\small Hellenic Robotics Center of Excellence}
+    \end{column}
+  \end{columns}
+  \vfill
+  \begin{center}
+    {\usebeamerfont{title}\textcolor{HeronDark}{\inserttitle}}\par\vspace{0.25cm}
+    {\usebeamerfont{subtitle}\textcolor{HeronBlue}{\insertsubtitle}}\par\vspace{0.45cm}
+    {\large \StudentName}\par
+    {\small \StudentEmail}\par\vspace{0.25cm}
+    {\small \GitHub}\par\vspace{0.25cm}
+    {\small Supervisors: \SupervisorNames}\par\vspace{0.25cm}
+    {\bfseries \MeetingLabel}\quad {\MeetingDate}
+  \end{center}
+  \vfill
+\end{frame}
+
+% ---------- Motivation ----------
+\begin{frame}{Motivation}
+  {\centering
+    \includegraphics[width=0.82\linewidth]{images/motivation_dwa_dwal.png}\par
+    \vspace{0.05cm}
+    {\scriptsize\textcolor{HeronBlue}{Figure:} DWA vs Fixed DWAL vs Dynamic DWAL (schematic scene, computed paths)}\par
+  }
+  \vspace{0.12cm}
+  \begin{statusbox}{HeronBlue}
+    \footnotesize\textbf{Contribution:}
+    A Nav2-compatible, crowd-aware local pipeline.
+  \end{statusbox}
+  \vspace{0.15cm}
+\end{frame}
+
+\begin{frame}{Motivation Comments}
+\textbf{DWA $\rightarrow$ DWAL}
+\begin{itemize}
+  \item Το DWA παράγει τόξα σταθερής καμπυλότητας, που δεν ταιριάζουν στην εύρεση ανοιγμάτων, δηλαδή διακριτών διαδρομών.
+  \item Τα τόξα χτυπούν στους τοίχους και έτσι απορρίπτουν έγκυρες κατευθύνσεις κίνησης.
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Fixed DWAL $\rightarrow$ Dynamic DWAL}
+\begin{itemize}
+  \item Σε πειράματα με το πραγματικό ρομπότ σε πλήθος παρατηρήθηκαν εκτεταμένα διαστήματα όπου ζητούνταν κίνηση, υπήρχε χώρος και το ρομπότ έμενε ακίνητο.
+  \item \textbf{Υπόθεση:} η απόρριψη κάθε path που συναντά εμπόδιο πριν τον ορίζοντα είναι υπερβολικά αυστηρή σε πυκνό πλήθος.
+\end{itemize}
+\end{frame}
+
+% ---------- Definitions ----------
+\begin{frame}{Relevant Definitions}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.56\textwidth}
+      \footnotesize
+      \begin{itemize}\setlength{\itemsep}{3pt}
+        \item \textbf{Path:} kinematically feasible \textbf{arc-line}, an arc up to $90^\circ$ and then a tangent line, sampled inside the dynamic window.
+        \item \textbf{Free length $L$:} distance along the path until the robot footprint meets an obstacle or the path ends.
+        \item \textbf{Free radius $r$:} straight distance from the robot to the path endpoint.
+        \item \textbf{Horizon:} paths are evaluated up to $1.8$ m.
+        \item \textbf{Cluster:} contiguous free paths that represent \textbf{the same motion choice}.
+        \item \textbf{Motion choice:} \textbf{pass} (reaches the horizon) or \textbf{brake} (ends at an obstacle).
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \centering
+      \begin{tikzpicture}[x=1.75cm,y=1.75cm]
+        \fill[HeronBlue!25] (0,-0.2) rectangle (0.97,0.2);
+        \draw[HeronBlue,line width=0.9pt] (0,-0.2) rectangle (0.97,0.2);
+        \fill[HeronDark] (0.103,0) circle (1.6pt);
+        \node[font=\tiny,below=2pt] at (0.25,-0.2) {\texttt{base\_link}};
+        \node[font=\tiny,below=2pt] at (0.93,-0.2) {front};
+        \fill[HeronOrange] (2.18,-0.27) rectangle (2.32,0.27);
+        \draw[HeronDark] (2.18,-0.27) rectangle (2.32,0.27);
+        \node[font=\tiny,above=2pt] at (2.25,0.27) {obstacle};
+        \draw[HeronGreen,line width=1.5pt] (0.103,0) -- (1.21,0);
+        \fill[HeronGreen] (1.21,0) circle (1.8pt);
+        \draw[HeronGray!75!black,dashed,line width=1pt] (1.21,0) -- (2.10,0);
+        \draw[{Latex[length=1.4mm]}-{Latex[length=1.4mm]}] (0.103,0.42) -- (1.21,0.42);
+        \node[font=\tiny,above] at (0.66,0.42) {free length $L$};
+        \draw[{Latex[length=1.4mm]}-{Latex[length=1.4mm]}] (1.21,-0.55) -- (2.10,-0.55);
+        \node[font=\tiny,below] at (1.65,-0.55) {$0.885$ m body};
+      \end{tikzpicture}\par
+      \vspace{0.15cm}
+      {\scriptsize The path is traced by \texttt{base\_link}. Its end is where \texttt{base\_link} stops when the \textbf{robot front} reaches the obstacle.\par}
+    \end{column}
+  \end{columns}
+  \vspace{0.1cm}
+  \takeaway{A cluster is a motion option the user can choose: left of, right of, or towards an obstacle.}
+\end{frame}
+
+\begin{frame}{Relevant Definitions Comments}
+\begin{itemize}
+  \item Τα paths εμπνέονται από το DWA: το εύρος τους βγαίνει από το dynamic window, με $\Delta t = 0.2$ s και καμπυλότητα έως $\pm 4$.
+  \item Κάθε path ελέγχεται με όλο το footprint του iWalk, όχι μόνο με ένα σημείο.
+  \item Στο RViz μια ευθεία μπορεί να φαίνεται να σταματά περίπου 1 m πριν από το εμπόδιο. Αυτό είναι σωστό: η γραμμή δείχνει το \texttt{base\_link}, και η μύτη του ρομπότ είναι $0.885$ m μπροστά.
+  \item Όταν υπάρχει εμπόδιο μπροστά, οι επιλογές είναι τρεις: προς το εμπόδιο με φρενάρισμα, δεξιά του ή αριστερά του.
+  \item Το pass και το brake χρησιμοποιούνται μόνο στην αξιολόγηση, ως ground truth.
+\end{itemize}
+\end{frame}
+
+% ---------- Fixed vs Dynamic ----------
+\begin{frame}{Fixed vs Dynamic pipeline}
+  \footnotesize
+  \renewcommand{\arraystretch}{1.28}
+  \begin{tabularx}{\textwidth}{@{}L{2.8cm}YY@{}}
+    \toprule
+    \textbf{Stage} & \textbf{Fixed DWAL} & \textbf{Dynamic DWAL}\\
+    \midrule
+    Path acceptance & Free beyond a fixed radius $R$ ($1.2$ or $1.8$ m) & Free for at least the \textbf{braking distance} at the current speed\\
+    Clustering & Split at gaps between free paths & Gaps \textbf{and} free-length discontinuities $|\Delta L| > \tau$\\
+    Correspondence & Upstream cluster matching & \textbf{Frame-to-frame ID tracking}\\
+    Velocity & Near / far level with speed hysteresis & Paths without forward speed removed by a \textbf{braking model}; otherwise rotate only\\
+    \bottomrule
+  \end{tabularx}
+
+  \vspace{0.25cm}
+  \begin{center}
+    $S_{\mathrm{req}}(v) = vT + \dfrac{v^2}{2a} + m$
+    \qquad {\scriptsize $T=0.4$ s,\; $a=0.5$ m/s$^2$,\; $m=0.05$ m \;$\Rightarrow$\; $0.26$ m at $0.3$ m/s}
+  \end{center}
+  \takeaway{Shorter paths become usable, so clustering can no longer rely on free gaps alone.}
+\end{frame}
+
+\begin{frame}{Fixed vs Dynamic pipeline Comments}
+\begin{itemize}
+  \item \textbf{Μεταβλητό μήκος:} αντί να ζητάμε πάντα ελεύθερο το ίδιο R, ζητάμε όσο χρειάζεται για να φρενάρει το ρομπότ με την τωρινή ταχύτητα.
+  \item \textbf{Clustering:} αφού κρατάμε και κοντά paths, το clustering του fixed δεν αρκεί, γιατί θα ένωνε σε ένα cluster paths που περνούν με paths που σταματούν.
+  \item \textbf{Correspondence:} το ίδιο cluster πρέπει να κρατά το ίδιο ID από frame σε frame, αλλιώς η πρόθεση του χρήστη δεν μένει σταθερή.
+  \item \textbf{Ταχύτητα:} η κίνηση περιορίζεται από το μοντέλο πέδησης, άρα το ρομπότ προχωρά μόνο όσο προλαβαίνει να σταματήσει.
+\end{itemize}
+\end{frame}
+
+% ---------- Clustering ----------
+\begin{frame}{Clustering}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.47\textwidth}
+      \footnotesize
+      \textbf{\textcolor{HeronBlue}{What a good clustering does}}
+      \begin{itemize}\setlength{\itemsep}{3pt}
+        \item \textbf{Homogeneity ($U$):} each cluster contains one motion choice.
+        \item \textbf{Completeness ($O$):} each motion choice stays in one cluster.
+        \item \textbf{Stability ($S$):} few ID switches per minute.
+      \end{itemize}
+      \vspace{0.1cm}
+      \[
+        \mathrm{Loss} = \frac{U}{0.395} + \frac{O}{0.028} + \frac{S}{0.833}
+      \]
+      {\scriptsize Denominators frozen at the step 2 peaks.\par}
+    \end{column}
+    \begin{column}{0.50\textwidth}
+      \footnotesize
+      \textbf{\textcolor{HeronBlue}{Split rules compared (step 3.1)}}\par\vspace{0.12cm}
+      \renewcommand{\arraystretch}{1.25}
+      \begin{tabularx}{\linewidth}{@{}L{1.85cm}YL{1.45cm}@{}}
+        \toprule
+        \textbf{Method} & \textbf{Rule} & \textbf{Values}\\
+        \midrule
+        Length jump & $|\Delta L| > \tau$ & $\tau$: 0.1, 0.2, 0.3\\
+        Change-point & Piecewise-linear fit of $r$, penalty $\beta$ per cut & $\beta$: 0.05, 0.2, 0.4\\
+        DBSCAN & Endpoint density, radius $\varepsilon$, minPts 3 & $\varepsilon$: 0.1, 0.15\\
+        \bottomrule
+      \end{tabularx}
+    \end{column}
+  \end{columns}
+  \vspace{0.2cm}
+  \takeaway{Selection: same runs as $\tau=0.3$, 0 collisions, at least as many goals, then the lowest Loss.}
+\end{frame}
+
+\begin{frame}{Clustering Comments}
+\begin{itemize}
+  \item \textbf{Underclustering:} ένα cluster ενώνει διαφορετικές επιλογές, π.χ. δύο περάσματα γύρω από ένα εμπόδιο.
+  \item \textbf{Overclustering:} μία επιλογή σπάει σε πολλά clusters, οπότε ο χρήστης βλέπει ψεύτικες εναλλακτικές.
+  \item Τα ονόματα homogeneity και completeness είναι από Rosenberg \& Hirschberg (2007). Εμείς μετράμε ποσοστό παραβιάσεων.
+  \item Το K-Means αποκλείστηκε γιατί χρειάζεται να δώσουμε από πριν τον αριθμό των clusters.
+  \item Ισοπαλία στο Loss (διαφορά $< 0.02$): μικρότερο $S$. Αν είναι ίδιο και το $S$, μένει το $\tau = 0.3$.
+\end{itemize}
+\end{frame}
+
+% ---------- Pipeline ----------
+\begin{frame}{Pipeline}
+  \centering
+  \vspace{0.25cm}
+  \resizebox{0.97\linewidth}{!}{%
+  \begin{tikzpicture}[
+    node distance=0.42cm and 0.48cm,
+    box/.style={draw=HeronBlue,rounded corners=2pt,fill=white,minimum width=2.9cm,minimum height=1.05cm,align=center,font=\scriptsize},
+    changed/.style={box,draw=HeronOrange,fill=HeronOrange!12,line width=1.1pt},
+    safety/.style={box,draw=HeronGreen,fill=HeronGreen!8},
+    arrow/.style={-{Latex[length=2mm]},HeronDark,semithick}
+  ]
+    \node[box] (cost) {Local costmap\\+ iWalk footprint};
+    \node[changed,right=of cost] (gen) {\textbf{Path generator}\\variable free length};
+    \node[changed,right=of gen] (clu) {\textbf{Clustering}\\split + ID tracking};
+    \node[box,right=of clu] (intent) {Intent estimator\\selects a cluster};
+    \node[changed,below=0.75cm of intent] (shared) {\textbf{Shared controller}\\path, $v$, $\omega$};
+    \node[safety,left=of shared] (smooth) {Velocity\\smoother};
+    \node[safety,left=of smooth] (monitor) {Collision\\monitor};
+    \node[safety,left=of monitor] (watch) {Watchdog\\$\rightarrow$ robot base};
+    \draw[arrow] (cost) -- (gen);
+    \draw[arrow] (gen) -- (clu);
+    \draw[arrow] (clu) -- (intent);
+    \draw[arrow] (intent) -- (shared);
+    \draw[arrow] (shared) -- (smooth);
+    \draw[arrow] (smooth) -- (monitor);
+    \draw[arrow] (monitor) -- (watch);
+    \draw[arrow,HeronOrange,dashed] (shared.north west) -- node[left,font=\tiny,align=right] {braking\\requirement} (clu.south east);
+  \end{tikzpicture}%
+  }
+
+  \vspace{0.3cm}
+  {\scriptsize
+    \textcolor{HeronOrange}{\rule{0.28cm}{0.18cm}} modified in this work \qquad
+    \textcolor{HeronBlue}{\rule{0.28cm}{0.18cm}} upstream, unchanged \qquad
+    \textcolor{HeronGreen}{\rule{0.28cm}{0.18cm}} safety and command layers\par}
+  \vspace{0.2cm}
+  \raggedright
+  \takeaway{The safety layers stay outside the planner, so the method changes options, not the final safety stack.}
+\end{frame}
+
+\begin{frame}{Pipeline Comments}
+Οι παραπάνω διαφορές καθορίζουν το pipeline στο οποίο καταλήξαμε.
+\begin{itemize}
+  \item Ο generator δίνει τα paths με το ελεύθερο μήκος τους.
+  \item Το clustering χωρίζει τις επιλογές και κρατά σταθερά IDs.
+  \item Ο intent estimator μένει ίδιος και επιλέγει cluster από την εντολή του χρήστη.
+  \item Ο shared controller βγάζει $v$ και $\omega$ και στέλνει πίσω την απαίτηση φρεναρίσματος στο clustering.
+  \item Velocity smoother, collision monitor και watchdog εφαρμόζονται και στις δύο μεθόδους.
+\end{itemize}
+\end{frame}
+
+% ---------- Hypotheses and metrics ----------
+\begin{frame}{Hypothesis and Metrics}
+  \footnotesize
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\textwidth}{@{}L{1.2cm}YL{4.2cm}L{3.1cm}@{}}
+    \toprule
+    & \textbf{Hypothesis} & \textbf{Metric} & \textbf{Role}\\
+    \midrule
+    \textbf{H1} & Variable length reduces standstill while motion is requested & Standstill time [s], tracking $-$ fixed & Primary\\
+    \textbf{H2} & Length-jump clustering separates motion choices & Homogeneity, completeness & Descriptive\\
+    \textbf{H3} & ID tracking reduces ID switches on the same clusters & ID switches/min, offline replay & Primary\\
+    \bottomrule
+  \end{tabularx}
+
+  \vspace{0.2cm}
+  \begin{statusbox}{HeronBlue}
+    \scriptsize\textbf{Statistics:} paired runs (same scenario, path, seed), Wilcoxon signed-rank, rank-biserial $r$, bootstrap 95\% CI, Holm over H1 and H3.\\[2pt]
+    \textbf{Revised H1 rule (post-hoc):} Holm $p<0.05$, CI of the \textbf{mean} difference excludes 0, 0 collisions, personal-zone time not significantly worse. Obstacle distance is always reported as a trade-off.
+  \end{statusbox}
+\end{frame}
+
+\begin{frame}{Hypothesis and Metrics Comments}
+\begin{itemize}
+  \item Το H2 βγήκε από τις κύριες υποθέσεις, γιατί ο fixed έχει 0 ανάμεικτα clusters εκ κατασκευής και η σύγκριση δεν θα ήταν δίκαιη.
+  \item Τα ζεύγη μοιράζονται σενάριο, διαδρομή και seed, γι' αυτό τα τεστ είναι ζευγαρωτά.
+  \item Ο αρχικός κανόνας του H1 ζητούσε CI της διαμέσου χωρίς το 0 και καμία απόσταση χειρότερη.
+  \item Τον αναθεωρήσαμε \textbf{αφού είδαμε τα αποτελέσματα}, γιατί σε πολλά ζεύγη καμία μέθοδος δεν σταματά και η διάμεσος μένει κοντά στο 0.
+  \item Γι' αυτό το αποτέλεσμα αναφέρεται ως post-hoc. Καθαρή επιβεβαίωση δίνουν μόνο νέα seeds.
+\end{itemize}
+\end{frame}
+
+% ---------- Protocol ----------
+\begin{frame}{Evaluation Protocol}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.60\textwidth}
+      \scriptsize
+      \renewcommand{\arraystretch}{1.28}
+      \begin{tabularx}{\linewidth}{@{}L{0.55cm}YL{1.15cm}@{}}
+        \toprule
+        \textbf{Step} & \textbf{Purpose} & \textbf{Status}\\
+        \midrule
+        1 & Path deviation, no obstacles & \done\\
+        2 & Select $\tau$ (180 runs) & \done\\
+        3 & Fixed vs tracking: 13 conditions, seeds 1--10, 260 runs & \done\\
+        3.1 & Tune $\tau$, $\beta$, $\varepsilon$ with and without walls, 480 runs & \done\\
+        4 & Compare methods on SCAND recordings & \planned\\
+        5 & Apply the decision rules & in progress\\
+        6 & Broad confirmation: 50 seeds, 900 runs & \planned\\
+        \bottomrule
+      \end{tabularx}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \centering
+      \includegraphics[height=0.72\textheight]{images/step3_plan.png}\par
+      {\tiny Step 3: 13 scenario conditions\par}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Evaluation Protocol Comments}
+\begin{itemize}
+  \item Το πρωτόκολλο πάει από τον απλό έλεγχο της αλυσίδας στη σύγκριση των μεθόδων.
+  \item Το βήμα 1 δείχνει ότι χωρίς εμπόδια fixed και tracking ακολουθούν την ίδια διαδρομή.
+  \item Το βήμα 2 διαλέγει το $\tau$ και το βήμα 3 συγκρίνει τις μεθόδους με αυτό.
+  \item Το βήμα 3.1 προστέθηκε γιατί το βήμα 2 δεν είχε τοίχους, ενώ 6 από τις 13 συνθήκες του βήματος 3 έχουν.
+  \item Τα βήματα 4 και 6 δεν έχουν τρέξει ακόμα.
+\end{itemize}
+\end{frame}
+
+% ---------- Results ----------
+\begin{frame}{Results per step: Steps 1 and 2}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.48\textwidth}
+      \footnotesize
+      \textbf{\textcolor{HeronBlue}{Step 1: path deviation}}\par\vspace{0.12cm}
+      \scriptsize
+      \begin{tabular}{@{}lcc@{}}
+        \toprule
+        Path & Fixed max [m] & Tracking max [m]\\
+        \midrule
+        line & 0.001 & 0.001\\
+        s\_curve & 0.017 & 0.016\\
+        hard\_curve & 0.091 & 0.092\\
+        \bottomrule
+      \end{tabular}\par
+      \vspace{0.2cm}
+      \footnotesize Without obstacles the two methods follow the same path.
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \footnotesize
+      \textbf{\textcolor{HeronBlue}{Step 2: selecting $\tau$}}\par\vspace{0.12cm}
+      \scriptsize
+      \begin{tabular}{@{}ccccc@{}}
+        \toprule
+        $\tau$ & $U$ & $O$ & $S$ & Loss\\
+        \midrule
+        0.1 & 0.037 & 0.028 & 0.33 & 1.493\\
+        0.2 & 0.086 & 0.007 & 0.47 & 1.014\\
+        \textbf{0.3} & \textbf{0.133} & \textbf{0.003} & \textbf{0.40} & \textbf{0.919}\\
+        \bottomrule
+      \end{tabular}\par
+      \vspace{0.2cm}
+      \footnotesize $\tau = 0.3$ has the lowest Loss.
+    \end{column}
+  \end{columns}
+  \vspace{0.3cm}
+  \takeaway{The control chain is validated, and $\tau = 0.3$ is the reference value for the next steps.}
+\end{frame}
+
+\begin{frame}{Results per step: Step 3}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.53\textwidth}
+      \footnotesize
+      \textbf{H1: tracking reduces standstill} {\scriptsize (130 pairs)}
+      \begin{itemize}\setlength{\itemsep}{2pt}
+        \item Mean standstill: \textbf{18.3 s $\rightarrow$ 6.9 s}
+        \item Difference $-11.4$ s, 95\% CI $[-15.6,\,-7.5]$
+        \item Holm $p < 0.0001$
+        \item Goal reached: \textbf{112/130} vs \textbf{56/130}
+        \item \textbf{0 collisions} with both methods
+        \item Personal-zone time: no significant change
+        \item \textbf{Trade-off:} median obstacle distance $-4.7$ cm
+      \end{itemize}
+      \vspace{0.05cm}
+      \textbf{H3:} not confirmed (Holm $p = 0.36$).
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \centering
+      \begin{tikzpicture}[x=0.052cm,y=0.42cm]
+        \draw[HeronDark] (0,0) -- (62,0);
+        \foreach \v/\l in {0/0,20/20,40/40,60/60} {
+          \draw[HeronGray] (\v,0) -- (\v,5.0);
+          \node[font=\tiny,below] at (\v,0) {\l};
+        }
+        \node[font=\tiny] at (31,-1.05) {median standstill [s]};
+        \foreach \y/\n/\f/\t in {4.3/junction left/58.6/0.2,3.3/junction straight/57.0/0.1,2.3/doorway side/31.5/0.2,1.3/corridor/28.4/0.1,0.4/dense crowd/6.6/0.1} {
+          \fill[HeronGray!85!black] (0,\y) rectangle (\f,\y+0.28);
+          \fill[HeronBlue] (0,\y-0.3) rectangle (\t+0.6,\y-0.02);
+          \node[font=\tiny,left] at (0,\y) {\n};
+        }
+        \fill[HeronGray!85!black] (8,5.45) rectangle (11,5.75);
+        \node[font=\tiny,right] at (11,5.6) {fixed};
+        \fill[HeronBlue] (30,5.45) rectangle (33,5.75);
+        \node[font=\tiny,right] at (33,5.6) {tracking};
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+  \vspace{0.05cm}
+  \begin{statusbox}{HeronOrange}
+    \scriptsize H1 passes the \textbf{revised} criterion, defined after inspecting these results (post-hoc). New seeds are needed for a clean confirmation.
+  \end{statusbox}
+\end{frame}
+
+\begin{frame}{Results per step: Step 3 by condition}
+  \centering
+  \tiny
+  \renewcommand{\arraystretch}{1.02}
+  \begin{tabular}{@{}lcc@{\hspace{1.1cm}}lcc@{}}
+    \toprule
+    \textbf{Condition} & \textbf{Goals F / T} & \textbf{Standstill F / T [s]} & \textbf{Condition} & \textbf{Goals F / T} & \textbf{Standstill F / T [s]}\\
+    \midrule
+    junction:left\_turn & 0 / 9 & 58.6 / 0.2 & cafe:between\_tables & 6 / 9 & 1.9 / 0.4\\
+    junction:straight\_right & 1 / 10 & 57.0 / 0.1 & group\_blocking:detour\_left & 9 / 10 & 0.2 / 0.1\\
+    doorway:side\_approach & 1 / 6 & 31.5 / 0.2 & dense\_static:hard\_curve & 10 / 10 & 0.1 / 0.1\\
+    narrow\_corridor:keep\_right & 3 / 10 & 28.4 / 0.1 & crossing:line & 10 / 10 & 0.1 / 0.1\\
+    doorway:u\_turn & 3 / 8 & 17.9 / 0.2 & open\_area:hard\_curve & 10 / 10 & 0.1 / 0.1\\
+    dense\_crowd:hard\_curve & 3 / 10 & 6.6 / 0.1 & group\_blocking:line & 0 / 0 & 41.0 / 49.5\\
+    dense\_static:hard\_curve\_1m & 0 / 10 & 4.7 / 0.1 & \textbf{Total} & \textbf{56 / 112} & \textbf{mean 18.3 / 6.9}\\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.3cm}
+  \raggedright
+  \takeaway{The gain appears in constrained spaces. Open scenes stay equal, and \texttt{group\_blocking:line} is blocked by design.}
+\end{frame}
+
+\begin{frame}{Results per step: Step 3.1}
+  \begin{statusbox}{HeronGreen}
+    \footnotesize\textbf{We keep $\tau = 0.3$:} the only value that reaches 59/60 goals. No new closed-loop runs needed.
+  \end{statusbox}
+  \vspace{0.05cm}
+  \scriptsize
+  \renewcommand{\arraystretch}{1.08}
+  \begin{tabularx}{\textwidth}{@{}Ycccccc@{}}
+    \toprule
+    \textbf{Value} & \textbf{Collisions} & \textbf{Goals /60} & $U$ & $O$ & $S$ & \textbf{Loss}\\
+    \midrule
+    \textbf{$\boldsymbol{\tau = 0.3}$ (selected)} & \textbf{0} & \textbf{59} & \textbf{0.190} & \textbf{0.003} & \textbf{0.45} & \textbf{1.127}\\
+    $\varepsilon = 0.15$ & 0 & 58 & 0.108 & 0.008 & 0.35 & 0.992\\
+    $\tau = 0.2$ & 0 & 57 & 0.144 & 0.006 & 0.33 & 0.989\\
+    $\beta = 0.2$ & 0 & 57 & 0.146 & 0.007 & 0.40 & 1.112\\
+    $\beta = 0.4$ & 0 & 56 & 0.181 & 0.005 & 0.28 & 0.986\\
+    $\beta = 0.05$ & 0 & 55 & 0.084 & 0.013 & 0.30 & 1.037\\
+    $\varepsilon = 0.1$ & 0 & 55 & 0.068 & 0.014 & 0.42 & 1.189\\
+    $\tau = 0.1$ & 0 & 55 & 0.068 & 0.035 & 0.40 & 1.922\\
+    \bottomrule
+  \end{tabularx}
+
+  \vspace{0.08cm}
+  {\scriptsize \textbf{Rule (locked before results):} same runs, 0 collisions, goals $\geq$ those of $\tau = 0.3$, then lowest Loss.\par
+  \textbf{Not the best clustering:} five values have lower Loss, but each loses at least one goal.\par
+  Obstacle distance for $\tau = 0.3$: mean minimum 0.41 m (60/60 runs).\par}
+\end{frame}
+
+\begin{frame}{Results per step Comments}
+\begin{itemize}
+  \item Το tracking φτάνει στον στόχο στα διπλάσια runs (112 έναντι 56), χωρίς σύγκρουση.
+  \item Το κέρδος φαίνεται κυρίως σε junction, corridor και πυκνό πλήθος. Στις ανοιχτές σκηνές οι μέθοδοι είναι ίδιες.
+  \item Το κόστος είναι ότι περνά πιο κοντά σε εμπόδια, κατά $4.7$ cm στη διάμεσο.
+  \item Στο doorway το tracking κολλά σε 6 από τα 20 runs. Είναι η πιο σημαντική αδυναμία του.
+  \item Το H3 δεν επιβεβαιώθηκε: τα ID switches είναι σπάνια και 105 από τα 130 ζεύγη είναι ισοπαλία.
+  \item Στο 3.1 μένει το $\tau = 0.3$ για έναν στόχο διαφορά από το $\varepsilon = 0.15$.
+  \item Διερευνητικά, το $\varepsilon = 0.15$ σε 130 ζεύγη: 117 έναντι 112 στόχων, όλοι οι επιπλέον στο doorway (14/20 $\to$ 19/20). Άλλο Docker image, άρα δεν αποδίδεται ακόμη στο clustering.
+\end{itemize}
+\end{frame}
+
+% ---------- Demo ----------
+\begin{frame}{Demo}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.49\textwidth}
+      \begin{statusbox}{HeronGreen}
+        \footnotesize\textbf{Where tracking helps}\\[2pt]
+        \scriptsize\texttt{junction:left\_turn}, seed 6\\
+        Fixed vs tracking, same agents
+      \end{statusbox}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \begin{statusbox}{HeronRed}
+        \footnotesize\textbf{Where tracking fails}\\[2pt]
+        \scriptsize\texttt{doorway:side\_approach}, seed 3\\
+        Deadlock close to the door frame
+      \end{statusbox}
+    \end{column}
+  \end{columns}
+  \vspace{0.25cm}
+  \footnotesize
+  \textbf{How to read the replay}
+  \begin{itemize}\setlength{\itemsep}{2pt}
+    \item \textbf{Colored lines:} clusters, traced by \texttt{base\_link}.
+    \item \textbf{Light gray extensions:} where the \textbf{robot front} reaches at the end of each path.
+    \item \textbf{Orange cylinders:} humans.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Demo Comments}
+\footnotesize
+\begin{itemize}
+  \item Τα demos είναι replay καταγεγραμμένων runs, άρα δεν εξαρτώνται από τη ζωντανή προσομοίωση.
+  \item Μετά το πρώτο δευτερόλεπτο τα δύο ρομπότ βρίσκονται σε διαφορετικά σημεία, οπότε τα δύο panels δεν δείχνουν την ίδια στιγμή της σκηνής.
+  \item Να υπάρχει εφεδρικό βίντεο σε περίπτωση που δεν ανοίξει το RViz.
+\end{itemize}
+\vspace{0.15cm}
+\scriptsize
+\texttt{bash scripts/demo\_side\_by\_side.sh compare junction:left\_turn 6}\\[3pt]
+\texttt{bash scripts/demo\_side\_by\_side.sh compare doorway:side\_approach 3}\\[3pt]
+\texttt{TO=40 RECORD=junction.mp4 bash scripts/demo\_side\_by\_side.sh compare junction:left\_turn 6}
+\end{frame}
+
+% ---------- Constraints ----------
+\begin{frame}{Constraints and next steps}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.51\textwidth}
+      \footnotesize
+      \textbf{\textcolor{HeronRed}{Constraints}}
+      \begin{itemize}\setlength{\itemsep}{3pt}
+        \item Results are from \textbf{simulation}.
+        \item The revised H1 rule is \textbf{post-hoc}.
+        \item Doorway deadlock in 6 of 20 tracking runs.
+        \item Tracking passes closer to obstacles.
+        \item Semantics are off in these experiments.
+        \item Paired runs do not share the exact start time of the first command.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \footnotesize
+      \textbf{\textcolor{HeronGreen}{Next steps}}
+      \begin{itemize}\setlength{\itemsep}{3pt}
+        \item Re-test $\beta$ and $\varepsilon$ on \textbf{new seeds}.
+        \item Confirm H1 on \textbf{new seeds}.
+        \item Evaluate on \textbf{SCAND} recordings.
+        \item Resolve the doorway deadlock.
+        \item Validate on the \textbf{real iWalk robot}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Constraints and next steps Comments}
+\begin{itemize}
+  \item Το βασικό εύρημα είναι ότι το ρομπότ σταματά πολύ λιγότερο και φτάνει συχνότερα στον στόχο, χωρίς συγκρούσεις στην προσομοίωση.
+  \item Για να γίνει ισχυρός ισχυρισμός χρειάζονται νέα seeds και πειράματα στο πραγματικό ρομπότ.
+  \item Η απόσταση από εμπόδια θέλει περισσότερο έλεγχο, γιατί μετριέται από το laser και όχι από το περίγραμμα του ρομπότ.
+  \item Το αδιέξοδο στο doorway είναι το πιο άμεσο πρόβλημα προς διόρθωση.
+\end{itemize}
+\end{frame}
+
+\end{document}

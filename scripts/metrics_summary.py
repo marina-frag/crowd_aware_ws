@@ -98,6 +98,31 @@ def evaluate(run, image, metrics='all'):
         print(f'  FAILED: {(done.stderr or done.stdout).strip().splitlines()[-1:]}')
 
 
+OBSTACLE_VERSION = 2  # evaluation.py OBSTACLE_DISTANCE_VERSION: clear scans count as range_max
+
+
+def obstacle_version(data):
+    return (data or {}).get('additional_metrics', {}).get('obstacle_distance_version', 1)
+
+
+def patch_obstacles(runs, image):
+    """evaluation.py obstacle in one container for all runs (each run mounted at /runs/<i>)."""
+    if not runs: print('obstacle distance: every run is already on version 2', flush=True); return
+    print(f'obstacle distance: rewriting {len(runs)} runs ...', flush=True)
+    for start in range(0, len(runs), 200):  # keep the docker command line short
+        chunk = runs[start:start+200]
+        mounts = [arg for i, run in enumerate(chunk) for arg in ('-v', f'{run}:/runs/{i}')]
+        paths = ' '.join(f'/runs/{i}' for i in range(len(chunk)))
+        script = (f'python3 {CONTAINER_PACKAGE}/scripts/evaluation.py obstacle {paths}; code=$?; '
+                  f'for d in {paths}; do chown -R {os.getuid()}:{os.getgid()} $d/analysis_v3; done; exit $code')
+        cmd = ['docker', 'run', '--rm', *mounts,
+               '-v', f'{PACKAGE/"scripts"}:{CONTAINER_PACKAGE}/scripts:ro',
+               '-v', f'{PACKAGE/"config"}:{CONTAINER_PACKAGE}/config:ro',
+               image, 'bash', '/dwal_entrypoint.sh', 'bash', '-c', script]
+        done = subprocess.run(cmd, text=True)
+        if done.returncode != 0: print(f'  obstacle patch reported failures (exit {done.returncode}); see FAILED lines')
+
+
 def num(value, digits=2, scale=1.0):
     return 'n/a' if value is None else f'{value*scale:.{digits}f}'
 
@@ -141,7 +166,10 @@ def rows_for(run, data):
         'zone_path_m': x.get('personal_zone_path_m'), 'zone_path_fraction': x.get('personal_zone_path_fraction'),
         'path_length_m': x.get('path_length_m'),
         'human_min_m': x.get('minimum_human_center_distance_m'), 'human_mean_m': x.get('mean_human_center_distance_m'),
-        'obstacle_min_m': x.get('minimum_obstacle_distance_m'), 'obstacle_mean_m': x.get('mean_obstacle_distance_m')}
+        'obstacle_min_m': x.get('minimum_obstacle_distance_m'), 'obstacle_mean_m': x.get('mean_obstacle_distance_m'),
+        'obstacle_version': obstacle_version(data), 'scan_clear_fraction': x.get('scan_clear_fraction')}
+    if values['obstacle_version'] < OBSTACLE_VERSION:  # old definition: never mix the two
+        values['obstacle_min_m'] = values['obstacle_mean_m'] = None
     values.update(deviation_values(data.get('path_deviation')))
     proposed, intervention = x.get('proposed_path') or {}, x.get('intervention') or {}
     for key in ('shared_clearance_min_m', 'shared_clearance_mean_m', 'human_clearance_min_m',
@@ -165,7 +193,7 @@ def rows_for(run, data):
     values['cost_applied'] = cost.get('applied')
     for group, v in (off.get('clustering') or {}).items():
         if not isinstance(v, dict): continue
-        for key in ('mixed_cluster_fraction', 'choice_violation_fraction', 'pass_oversplit_fraction', 'oversplit_run_fraction', 'completeness_violation_fraction', 'completeness_class_cut_fraction', 'flicker_per_min', 'count_changes_per_min',
+        for key in ('mixed_cluster_fraction', 'mixed_clusters_per_frame', 'choice_violation_fraction', 'pass_oversplit_fraction', 'oversplit_run_fraction', 'completeness_violation_fraction', 'completeness_class_cut_fraction', 'flicker_per_min', 'count_changes_per_min',
                     'stability_ari_mean', 'replica_agreement_fraction'):
             values[f'cl_{group}_{key}'] = v.get(key)
         for src in ('recorded', 'replay_upstream', 'replay_tracking'):
@@ -175,8 +203,11 @@ def rows_for(run, data):
                 values[f'id_{group}_{src}_{key}'] = ids.get(key)
     label['correspondence'] = (off.get('settings') or {}).get('correspondence')
     replay_settings = (off.get('settings') or {}).get('replay') or {}
+    label['split_method'] = c.get('split_method') or ('jump' if label['variant'] == 'dynamic_split' else None)
+    label['beta'] = c.get('beta')
+    label['eps'] = c.get('eps')
     label['jump'] = c.get('jump') if c.get('jump') is not None else (
-        replay_settings.get('jump') if label['variant'] == 'dynamic_split' else None)
+        replay_settings.get('jump') if label['variant'] == 'dynamic_split' and label['split_method'] == 'jump' else None)
     intent = off.get('intent') or {}
     for scope in ('all_frames', 'iwalk_feasible_frames'):
         for key, v in (intent.get(scope) or {}).items(): values[f'intent_{scope}_{key}'] = v
@@ -240,6 +271,7 @@ def deviation_only(runs, a):
     return '\n'.join(out) + '\n', rows
 
 
+STEP = None  # protocol step of this summary (--step)
 VIOLATION_MAX = 0.25  # definition filter (input3.md decisions K, Λ): per scenario x density cell
 
 
@@ -302,6 +334,64 @@ def jump_selection(rows, table, out, lambdas=(1.0, 1.0, 1.0)):
                '✔ = ελάχιστο Loss· ισοπαλία (διαφορά < 0.02) → μικρότερο S.')
 
 
+# Step 3.1: Loss denominators frozen at the step-2 peaks (180 runs, summary_jump.csv), so the
+# Loss of a value does not depend on which other values are in the table.
+LOSS_PEAKS = (0.3945635871078676, 0.027523743105298558, 0.8333333333333334)
+TUNE_REFERENCE = ('τ', 0.3)
+
+
+def tuning_selection(rows, table, out, lambdas=(1.0, 1.0, 1.0)):
+    """Step 3.1. A value is admissible if it has the same runs as τ = 0.3, no collision in any
+    run, and at least as many goals as τ = 0.3. The admissible value with the smallest Loss
+    wins (difference < 0.02: smaller S). No homogeneity filter."""
+    keys = ('cl_far_choice_violation_fraction', 'cl_far_completeness_violation_fraction',
+            'id_far_recorded_id_switches_per_min')
+    groups = {}
+    for r in rows:
+        if r.get('variant') != 'dynamic_split' or r.get('correspondence') != 'tracking': continue
+        if r.get('split_method') == 'change_point' and r.get('beta') is not None: value = ('β', float(r['beta']))
+        elif r.get('split_method') == 'dbscan' and r.get('eps') is not None: value = ('ε', float(r['eps']))
+        elif r.get('jump') is not None: value = ('τ', float(r['jump']))
+        else: continue
+        groups.setdefault(value, {})[(r['scenario'], r.get('density'), r.get('path_shape'), r.get('seed'))] = r
+    if TUNE_REFERENCE not in groups:
+        out.append('\n## Επιλογή τιμής (βήμα 3.1)\n\nΔεν υπάρχουν runs με τ = 0.3, άρα δεν γίνεται επιλογή.')
+        return
+    reference = groups[TUNE_REFERENCE]
+    ref_goals = sum(r.get('pd_goal_reached') is True for r in reference.values())
+    info = {}
+    for value, runs in groups.items():
+        means = [mean_of([r.get(k) for r in runs.values()]) for k in keys]
+        loss = None if any(m is None for m in means) else sum(
+            l * m / p for l, m, p in zip(lambdas, means, LOSS_PEAKS))
+        goals = sum(r.get('pd_goal_reached') is True for r in runs.values())
+        collisions = sum(r.get('collisions') != 0 for r in runs.values())
+        same_runs = set(runs) == set(reference)
+        info[value] = dict(means=means, loss=loss, goals=goals, collisions=collisions, same_runs=same_runs,
+                           admissible=same_runs and collisions == 0 and goals >= ref_goals and loss is not None,
+                           mixed=mean_of([r.get('cl_far_mixed_clusters_per_frame') for r in runs.values()]), n=len(runs))
+    candidates = [v for v, x in info.items() if x['admissible']]
+    best = None
+    if candidates:
+        low = min(info[v]['loss'] for v in candidates)
+        tied = [v for v in candidates if info[v]['loss'] - low < 0.02]
+        smallest_s = min(info[v]['means'][2] for v in tied)
+        tied = [v for v in tied if abs(info[v]['means'][2] - smallest_s) < 1e-9]
+        # Double tie (Loss and S): keep the already locked τ = 0.3, otherwise the smallest Loss.
+        best = TUNE_REFERENCE if TUNE_REFERENCE in tied else min(tied, key=lambda v: (info[v]['loss'], v))
+    table('Επιλογή τιμής (βήμα 3.1)',
+          ['Τιμή', 'Runs', 'Ίδια runs με τ = 0.3', 'Runs με σύγκρουση', f'Στόχοι (τ = 0.3: {ref_goals})', 'Αποδεκτή',
+           'U', 'O', 'S', 'Loss', 'Ανάμεικτα clusters / frame (ενημερωτικά)'],
+          [[f'{v[0]} = {v[1]:g}' + (' ✔' if v == best else ''), x['n'], 'ναι' if x['same_runs'] else 'όχι',
+            x['collisions'], x['goals'], 'ναι' if x['admissible'] else 'όχι', num(x['means'][0], 3), num(x['means'][1], 3),
+            num(x['means'][2], 2), num(x['loss'], 3), num(x['mixed'], 3)] for v, x in sorted(info.items())])
+    out.append(f'\nΦίλτρο: ίδια runs με τ = 0.3, 0 συγκρούσεις, στόχοι ≥ {ref_goals}. Μετά μόνο Loss = '
+               f'{lambdas[0]:g}·U/{LOSS_PEAKS[0]:.3f} + {lambdas[1]:g}·O/{LOSS_PEAKS[1]:.3f} + '
+               f'{lambdas[2]:g}·S/{LOSS_PEAKS[2]:.3f} (παρονομαστές παγωμένοι στο βήμα 2). '
+               '✔ = ελάχιστο Loss· ισοπαλία (διαφορά < 0.02) → μικρότερο S· ίδιο και το S → μένει το τ = 0.3. '
+               'Η απόσταση από εμπόδια αναφέρεται δίπλα στον νικητή και δεν είναι φίλτρο (απόφαση Ω).')
+
+
 def mean_of(values):
     values = [v for v in values if v is not None]
     return sum(values) / len(values) if values else None
@@ -330,7 +420,8 @@ def markdown(rows):
                        if r['standstill_s'] is not None and r['requested_motion_s'] else None, 's')]
            for i, r in enumerate(rows, 1)])
     deviation_table(list(enumerate(rows, 1)), table)
-    jump_selection(rows, table, out, LAMBDAS)
+    if STEP in ('tune', 'tune_test'): tuning_selection(rows, table, out, LAMBDAS)
+    else: jump_selection(rows, table, out, LAMBDAS)
     scand = lambda r: str(r['scenario']).startswith('scand:')
     mark = lambda r: ' †' if scand(r) else ''
     table('Άνθρωποι και εμπόδια',
@@ -492,6 +583,13 @@ def bootstrap_median(diffs, rounds=10000, seed=0):
     return med(diffs), samples[int(0.025*rounds)], samples[int(0.975*rounds)-1]
 
 
+def bootstrap_mean(diffs, rounds=10000, seed=0):
+    diffs = clean_diffs(diffs)
+    rng = random.Random(seed)
+    samples = sorted(sum(rng.choice(diffs) for _ in diffs) / len(diffs) for _ in range(rounds))
+    return sum(diffs) / len(diffs), samples[int(0.025*rounds)], samples[int(0.975*rounds)-1]
+
+
 def holm(pvalues):
     """Holm-Bonferroni adjusted p-values (None stays None), in the input order."""
     order = sorted((i for i, p in enumerate(pvalues) if p is not None), key=lambda i: pvalues[i])
@@ -509,11 +607,12 @@ def primary_hypotheses(rows, groups, table, out, scenario=None):
     the methods cluster different paths; homogeneity / completeness are descriptive (STAT_METRICS). H3 ID switches: offline replay of upstream vs tracking correspondence
     on the SAME recorded clusters of every dynamic_split+tracking run (paired within the run)."""
     if scenario is None:  # main analysis, then the secondary analysis per scenario
-        primary_hypotheses(rows, groups, table, out, scenario=False)
+        h1 = primary_hypotheses(rows, groups, table, out, scenario=False)
         for sc in sorted({k[0] for k in groups}):
             primary_hypotheses([r for r in rows if r.get('scenario') == sc],
                                {k: g for k, g in groups.items() if k[0] == sc}, table, out, scenario=sc)
-        return
+        return h1
+    h1 = None
     tests = []
     for name, metric, better in (('H1 ακινησία [s]', 'standstill_s', 'μικρότερο'),):
         diffs = [g['dynamic_split+tracking'][metric] - g['fixed'][metric] for g in groups.values()
@@ -530,19 +629,53 @@ def primary_hypotheses(rows, groups, table, out, scenario=None):
     cells = []
     for (name, comp, d, better), (w, p, effect), padj in zip(tests, stats, adjusted):
         if len(d) < 2:
-            cells.append([name, comp, len(d), 'n/a', 'n/a', 'n/a', 'n/a', 'n/a']); continue
+            cells.append([name, comp, len(d), 'n/a', 'n/a', 'n/a', 'n/a', 'n/a', 'n/a', 'n/a']); continue
         med, lo, hi = bootstrap_median(d)
-        cells.append([name, comp, len(d), f'{med:.3f}', f'[{lo:.3f}, {hi:.3f}]', 'n/a' if p is None else f'{p:.4f}',
+        # Decision Α′: H1 is judged on the CI of the mean difference.
+        mean_cells = ['n/a', 'n/a']
+        if name.startswith('H1'):
+            average, mean_lo, mean_hi = bootstrap_mean(d)
+            mean_cells = [f'{average:.3f}', f'[{mean_lo:.3f}, {mean_hi:.3f}]']
+            h1 = dict(n=len(d), mean=average, lo=mean_lo, hi=mean_hi, holm=padj)
+        cells.append([name, comp, len(d), f'{med:.3f}', f'[{lo:.3f}, {hi:.3f}]', *mean_cells,
+                      'n/a' if p is None else f'{p:.4f}',
                       'n/a' if effect is None else f'{effect:+.2f}', 'n/a' if padj is None else f'{padj:.4f}'])
-    if all(c[2] < 2 for c in cells): return
+    if all(c[2] < 2 for c in cells): return h1
     title = ('Κύριες υποθέσεις (προδηλωμένες, H1 και H3, Holm στις δύο)' if scenario is False else
              f'Κύριες υποθέσεις ανά σενάριο (δευτερεύουσα): {scenario}')
     table(title,
-          ['Υπόθεση', 'Σύγκριση', 'Ζεύγη', 'Διάμεση διαφορά', 'Bootstrap 95% CI', 'Wilcoxon p', 'Rank-biserial r', 'Holm p'],
+          ['Υπόθεση', 'Σύγκριση', 'Ζεύγη', 'Διάμεση διαφορά', 'Bootstrap 95% CI διαμέσου', 'Μέση διαφορά',
+           'Bootstrap 95% CI μέσης', 'Wilcoxon p', 'Rank-biserial r', 'Holm p'],
           cells)
-    if scenario is not False: return
-    out.append('\nΒελτίωση = αρνητική διαφορά (μικρότερη τιμή για τη νέα μέθοδο). Κανόνας βήματος 5: Holm p < 0.05, '
-               'CI χωρίς το 0, και καμία μετρική ασφάλειας χειρότερη (πίνακας «Στατιστική»).')
+    if scenario is not False: return h1
+    out.append('\nΒελτίωση = αρνητική διαφορά (μικρότερη τιμή για τη νέα μέθοδο). Κανόνας H1 (απόφαση Α′): Holm p < 0.05, '
+               'CI της μέσης διαφοράς χωρίς το 0, 0 συγκρούσεις και χρόνος στην προσωπική ζώνη όχι σημαντικά χειρότερος. '
+               'Η απόσταση από εμπόδια αναφέρεται ως trade-off (πίνακας «Στατιστική»). Για το H3 ισχύει ο αρχικός κανόνας.')
+    return h1
+
+
+def h1_rule(h1, groups, cells, table, out):
+    """Decision Α′: the revised H1 rule, computed from the same statistics that are printed."""
+    if h1 is None: return
+    pairs = [g for g in groups.values() if 'fixed' in g and 'dynamic_split+tracking' in g]
+    collisions = [g[v].get('collisions') for g in pairs for v in ('fixed', 'dynamic_split+tracking')]
+    zone = next((c for c in cells if c[0] == 'dynamic_split+tracking − fixed' and c[1] == 'Προσωπική ζώνη [s]'), None)
+    obstacle = next((c for c in cells if c[0] == 'dynamic_split+tracking − fixed'
+                     and c[1] == 'Min απόσταση εμποδίου [m]'), None)
+    zone_p = zone[7] if zone is not None and len(zone) > 7 else None
+    zone_r = None if zone is None or zone[6] == 'n/a' else float(zone[6])
+    checks = [h1['holm'] is not None and h1['holm'] < 0.05, h1['hi'] < 0 or h1['lo'] > 0,
+              bool(collisions) and all(c == 0 for c in collisions),
+              zone_p is not None and zone_r is not None and not (zone_p < 0.05 and zone_r > 0)]
+    mark = lambda ok: 'ναι' if ok else 'όχι'
+    table('Κανόνας H1 (απόφαση Α′)',
+          ['Κριτήριο', 'Τιμή', 'Πέρασε'],
+          [['Holm p < 0.05', 'n/a' if h1['holm'] is None else f"{h1['holm']:.4f}", mark(checks[0])],
+           ['95% CI μέσης διαφοράς χωρίς το 0', f"{h1['mean']:.3f} [{h1['lo']:.3f}, {h1['hi']:.3f}]", mark(checks[1])],
+           ['0 συγκρούσεις', f"{sum(c != 0 for c in collisions)} runs με σύγκρουση από {len(collisions)}", mark(checks[2])],
+           ['Προσωπική ζώνη όχι σημαντικά χειρότερη', 'n/a' if zone_p is None else f'Holm p = {zone_p:.3f}', mark(checks[3])],
+           ['Απόσταση από εμπόδια (μόνο αναφορά)', 'n/a' if obstacle is None else f'διάμεση διαφορά {obstacle[3]} m', '—'],
+           ['**Αποτέλεσμα**', f"{h1['n']} ζεύγη", '**περνά**' if all(checks) else '**δεν περνά**']])
 
 
 def pairing_check(rows, out):
@@ -580,7 +713,7 @@ def statistics(rows, table, out):
         key = (r['scenario'], r['density'], r['path_shape'], r['seed'], r['semantics'])
         variant = r['variant'] + ('+tracking' if r.get('correspondence') == 'tracking' else '')
         groups.setdefault(key, {})[variant] = r  # latest run per variant (rows are sorted)
-    primary_hypotheses(rows, groups, table, out)
+    h1 = primary_hypotheses(rows, groups, table, out)
     cells = []
     for a, b in (('fixed', 'dynamic_split'), ('dynamic_no_split', 'dynamic_split'),
                  ('dynamic_split', 'dynamic_split+tracking'), ('fixed', 'dynamic_split+tracking')):
@@ -600,6 +733,7 @@ def statistics(rows, table, out):
         for k, c in enumerate(family):
             running = max(running, min(1.0, (len(family) - k) * c[5]))
             c.append(running)
+    h1_rule(h1, groups, cells, table, out)
     for c in cells:
         p = c[5]
         holm = c[7] if len(c) > 7 else None
@@ -629,13 +763,18 @@ def main():
     p.add_argument('--image', default='iwalk_dwal:latest')
     p.add_argument('--markdown', type=Path, help='also write the tables to this file')
     p.add_argument('--csv', type=Path, help='also write one row per run with all values')
-    p.add_argument('--step', choices=['deviation', 'jump', 'compare', 'broad', 'scand'],
+    p.add_argument('--step', choices=['deviation', 'jump', 'tune', 'tune_test', 'compare', 'compare_cp', 'compare_db',
+                                      'compare_tau_doorway', 'broad', 'scand'],
                    help='only the runs of this protocol step (rosbags/results/steps/<step>.txt)')
     p.add_argument('--metrics', choices=['all', 'path_deviation'], default='all',
                    help='path_deviation: only the path deviation of autonomous runs (fast)')
     p.add_argument('--lambdas', default='1,1,1', help='Loss(tau) weights under,over,switch (default 1,1,1)')
+    p.add_argument('--obstacle', action='store_true',
+                   help='first rewrite only the obstacle distance (definition version 2) of runs still on version 1, '
+                        'in one docker container; every other metric is left unchanged')
     a = p.parse_args()
-    global LAMBDAS
+    global LAMBDAS, STEP
+    STEP = a.step
     LAMBDAS = tuple(float(v) for v in a.lambdas.split(','))
     runs, no_bag, incomplete = find_runs(a.roots)
     if a.step:
@@ -657,12 +796,19 @@ def main():
         for run in runs:
             data = load(run)
             if a.force or data is None or data.get('schema_version', 0) < SCHEMA: evaluate(run, a.image)
+    if a.obstacle:
+        patch_obstacles([r for r in runs if (load(r) or {}).get('schema_version', 0) >= SCHEMA
+                         and obstacle_version(load(r)) < OBSTACLE_VERSION], a.image)
     rows, skipped = [], []
     for run in runs:
         data = load(run)
         if data is None or data.get('schema_version', 0) < SCHEMA: skipped.append(run.name)
         else: rows.append(rows_for(run, data))
     text = markdown(rows) if rows else '# Μετρικές runs\n\nΚανένα run με τρέχουσες μετρικές.\n'
+    old_obstacle = [r['run'] for r in rows if r.get('obstacle_version', 1) < OBSTACLE_VERSION]
+    if old_obstacle:
+        text += (f'\nΑπόσταση από εμπόδια με τον παλιό ορισμό σε {len(old_obstacle)} runs: εμφανίζεται n/a '
+                 '(τρέξε με --obstacle).\n')
     if skipped:
         text += ('\nΧωρίς τρέχουσες μετρικές (τρέξε με --evaluate): ' + ', '.join(f'`{s}`' for s in skipped) + '\n')
     if incomplete:

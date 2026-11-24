@@ -3,6 +3,9 @@
 #
 #   bash ~/crowd_aware_ws/scripts/run_experiments.sh deviation [seeds...]  # step 1: path deviation (auto)
 #   bash ~/crowd_aware_ws/scripts/run_experiments.sh jump      [seeds...]  # step 2: jump sweep, dynamic_split tracking
+#   bash ~/crowd_aware_ws/scripts/run_experiments.sh tune      [seeds...]  # step 3.1: tau and beta, open + walls
+#     TUNE_VALUES="tau:0.1 tau:0.2 tau:0.3 beta:0.05 beta:0.2 beta:0.4 eps:0.1 eps:0.15", TUNE_CONDITIONS="scenario:density:path ...",
+#     seeds 101..105; STEP_NAME=tune_test keeps test runs out of the tune list
 #   JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh compare [seeds...]  # step 3: fixed vs tracking, sim
 #   JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh scand                # step 4: 3 methods, SCAND
 #   JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_experiments.sh broad   [seeds...]  # step 6: all scenarios
@@ -38,11 +41,12 @@ mode=${1:-}; shift || true
 case "$mode" in
   deviation) d_sc="open_area"; d_den="medium"; d_path="line s_curve hard_curve"; d_seeds="1 2 3";;
   jump)      d_sc="dense_crowd dense_static"; d_den="sparse medium dense"; d_path="line"; d_seeds="101 102 103 104 105";;
+  tune)      d_sc="-"; d_den="-"; d_path="-"; d_seeds="101 102 103 104 105";;
   compare)   d_sc="-"; d_den="medium"; d_path="-"; d_seeds="$(seq -s ' ' 1 10)";;
   broad)     d_sc="$(ls "$WS"/src/crowd_aware_simulation/config/scenarios/*.yaml | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')"
              d_den="medium"; d_path="line"; d_seeds="$(seq -s ' ' 11 60)";;
   scand) ;;
-  *) sed -n '2,26p' "$0"; exit 2;;
+  *) sed -n '2,29p' "$0"; exit 2;;
 esac
 SCENARIOS=${SCENARIOS:-${d_sc:-}}; DENSITIES=${DENSITIES:-${d_den:-}}; PATHS=${PATHS:-${d_path:-}}
 seeds=(${@:-${d_seeds:-}})
@@ -66,7 +70,7 @@ sim_run(){  # scenario density path controller variant correspondence jump seed
   local attempt marker bag rejected started active inactive
   for attempt in 1 2 3; do
     marker=$(mktemp); sim_run_once "$@"
-    local tag="${1}_${2}_${3}_${5}_${6}${7:+_j$7}_${SEMANTICS}_seed${8}"
+    local tag="${1}_${2}_${3}_${5}_${6}${7:+_j$7}${RUN_EXTRA:-}_${SEMANTICS}_seed${8}"
     rejected=$(grep -a -c 'Reference goal rejected' "$LOGS/sim_$tag.log" 2>/dev/null); rejected=${rejected:-0}
     # Every lifecycle manager that starts a bringup must report its nodes active. If one does
     # not (e.g. velocity_smoother / collision_monitor never activated), the controller computes
@@ -77,7 +81,7 @@ sim_run(){  # scenario density path controller variant correspondence jump seed
     bag=$(find "$WS/rosbags" -maxdepth 1 -mindepth 1 -type d -newer "$marker" -name '*_seed*' | head -1); rm -f "$marker"
     if (( rejected <= 25 && inactive == 0 && started > 0 )) && [[ -n $bag ]]; then
       # step manifest: metrics_summary.py --step $mode reads only the runs listed here
-      mkdir -p "$STEPS"; basename "$bag" >> "$STEPS/$mode.txt"; return; fi
+      mkdir -p "$STEPS"; basename "$bag" >> "$STEPS/${STEP_NAME:-$mode}.txt"; return; fi
     echo "  attempt $attempt failed (reference goal rejected ${rejected}x, lifecycle managers not active: $inactive of $started, bag: ${bag:-none}); retrying"
     echo "$(date -Is) $tag attempt=$attempt rejected=$rejected inactive=$inactive/$started bag=$(basename "${bag:-none}")" >> "$LOGS/failed_runs.log"
     cp "$LOGS/sim_$tag.log" "$LOGS/sim_${tag}_failed$attempt.log" 2>/dev/null
@@ -91,7 +95,7 @@ sim_run(){  # scenario density path controller variant correspondence jump seed
 
 sim_run_once(){  # scenario density path controller variant correspondence jump seed
   local sc=$1 den=$2 path=$3 ctl=$4 var=$5 corr=$6 jump=$7 seed=$8
-  local tag="${sc}_${den}_${path}_${var}_${corr}${jump:+_j$jump}_${SEMANTICS}_seed${seed}"
+  local tag="${sc}_${den}_${path}_${var}_${corr}${jump:+_j$jump}${RUN_EXTRA:-}_${SEMANTICS}_seed${seed}"
   # stop cleanly before the disk fills up (a run is ~50 MB; a full disk breaks the recorder)
   local free_gb; free_gb=$(df -BG --output=avail "$WS/rosbags" | tail -1 | tr -dc 0-9)
   if (( free_gb < ${MIN_FREE_GB:-3} )); then
@@ -103,7 +107,7 @@ sim_run_once(){  # scenario density path controller variant correspondence jump 
   fi
   echo "$(date +%T) SIM $tag"
   (cd "$WS" && SCENARIO=$sc DENSITY=$den PATH_SHAPE=$path REFERENCE_MODE=autonomous WAIT_FOR_RECORDER=true \
-     HEADLESS=true GUI=false RVIZ=$RVIZ DWAL_VARIANT=$var CORRESPONDENCE=$corr JUMP=$jump \
+     HEADLESS=true GUI=false RVIZ=$RVIZ DWAL_VARIANT=$var CORRESPONDENCE=$corr JUMP=$jump SPLIT_METHOD=${RUN_SPLIT:-} BETA=${RUN_BETA:-} EPS=${RUN_EPS:-} \
      script -qec "bash scripts/run_dwal_cafe.sh run $ctl $SEMANTICS $seed" "$LOGS/sim_$tag.log" >/dev/null 2>&1) &
   local i; for i in $(seq 1 120); do docker exec iwalk_dwal true 2>/dev/null && break; sleep 1; done
   if ! docker exec iwalk_dwal true 2>/dev/null; then echo "  simulation did not start, see $LOGS/sim_$tag.log"; wait; return; fi
@@ -120,7 +124,17 @@ methods(){  # scenario density path seed: the compared methods ($METHODS)
     fixed)    sim_run "$1" "$2" "$3" fixed_dwal fixed upstream "" "$4";;
     upstream) sim_run "$1" "$2" "$3" dynamic_dwal dynamic_split upstream "${JUMP:-}" "$4";;
     tracking) sim_run "$1" "$2" "$3" dynamic_dwal dynamic_split tracking "${JUMP:-}" "$4";;
-    *) echo "unknown method $m (fixed|upstream|tracking)"; exit 2;;
+    changepoint)  # step 3.1: BETA required; use STEP_NAME=compare_cp to keep the step-3 list intact
+      [[ -n ${BETA:-} ]] || { echo "BETA is required for changepoint"; restore; exit 2; }
+      RUN_SPLIT=change_point; RUN_BETA=$BETA; RUN_EXTRA=_cp$BETA
+      sim_run "$1" "$2" "$3" dynamic_dwal dynamic_split tracking "" "$4"
+      RUN_SPLIT=; RUN_BETA=; RUN_EXTRA=;;
+    dbscan)  # step 3.1: EPS required; use STEP_NAME=compare_db to keep the step-3 list intact
+      [[ -n ${EPS:-} ]] || { echo "EPS is required for dbscan"; restore; exit 2; }
+      RUN_SPLIT=dbscan; RUN_EPS=$EPS; RUN_EXTRA=_db$EPS
+      sim_run "$1" "$2" "$3" dynamic_dwal dynamic_split tracking "" "$4"
+      RUN_SPLIT=; RUN_EPS=; RUN_EXTRA=;;
+    *) echo "unknown method $m (fixed|upstream|tracking|changepoint|dbscan)"; exit 2;;
   esac; done
 }
 
@@ -141,8 +155,28 @@ CONDITIONS=${CONDITIONS:-"dense_crowd:hard_curve dense_static:hard_curve dense_s
 if [[ $mode == compare ]]; then
   for seed in "${seeds[@]}"; do for c in $CONDITIONS; do methods "${c%%:*}" medium "${c#*:}" "$seed"; done; done
 fi
+if [[ $mode == tune ]]; then
+  # Step 3.1: open cells of step 2 + the 6 conditions with walls of step 3
+  TUNE_CONDITIONS=${TUNE_CONDITIONS:-"dense_crowd:sparse:line dense_crowd:medium:line dense_crowd:dense:line
+    dense_static:sparse:line dense_static:medium:line dense_static:dense:line
+    doorway:medium:side_approach doorway:medium:u_turn narrow_corridor:medium:keep_right
+    junction:medium:left_turn junction:medium:straight_right cafe:medium:between_tables"}
+  TUNE_VALUES=${TUNE_VALUES:-"tau:0.1 tau:0.2 tau:0.3 beta:0.05 beta:0.2 beta:0.4 eps:0.1 eps:0.15"}
+  for seed in "${seeds[@]}"; do for c in $TUNE_CONDITIONS; do
+    IFS=: read -r sc den path <<< "$c"
+    for v in $TUNE_VALUES; do case "${v%%:*}" in
+      tau)  RUN_SPLIT=jump; RUN_BETA=; RUN_EPS=; RUN_EXTRA=
+            sim_run "$sc" "$den" "$path" dynamic_dwal dynamic_split tracking "${v#*:}" "$seed";;
+      beta) RUN_SPLIT=change_point; RUN_BETA=${v#*:}; RUN_EPS=; RUN_EXTRA=_cp${v#*:}
+            sim_run "$sc" "$den" "$path" dynamic_dwal dynamic_split tracking "" "$seed";;
+      eps)  RUN_SPLIT=dbscan; RUN_BETA=; RUN_EPS=${v#*:}; RUN_EXTRA=_db${v#*:}
+            sim_run "$sc" "$den" "$path" dynamic_dwal dynamic_split tracking "" "$seed";;
+      *) echo "unknown value $v (tau:x, beta:x or eps:x)"; restore; exit 2;;
+    esac; done
+  done; done
+fi
 for seed in "${seeds[@]}"; do
-  [[ $mode == compare ]] && break
+  [[ $mode == compare || $mode == tune ]] && break
   for sc in $SCENARIOS; do for den in $DENSITIES; do for path in $PATHS; do
     case "$mode" in
       deviation|broad) methods "$sc" "$den" "$path" "$seed";;
@@ -161,5 +195,5 @@ echo "$(date +%T) done. Metrics:"
 if [[ $mode == deviation ]]; then
   echo "  python3 $WS/scripts/metrics_summary.py --metrics path_deviation --evaluate"
 else
-  echo "  python3 $WS/scripts/metrics_summary.py $WS/rosbags $SCAND/results --step $mode --evaluate --markdown $WS/rosbags/results/summary_$mode.md --csv $WS/rosbags/results/summary_$mode.csv"
+  echo "  python3 $WS/scripts/metrics_summary.py $WS/rosbags $SCAND/results --step ${STEP_NAME:-$mode} --evaluate --markdown $WS/rosbags/results/summary_$mode.md --csv $WS/rosbags/results/summary_$mode.csv"
 fi

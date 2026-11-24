@@ -158,6 +158,9 @@ args=(
 # ros2 launch rejects empty values: pass the overrides only when set
 if [[ -n "${JUMP:-}" ]]; then args+=("jump:=$JUMP"); fi
 if [[ -n "${CORRESPONDENCE:-}" ]]; then args+=("correspondence:=$CORRESPONDENCE"); fi
+if [[ -n "${SPLIT_METHOD:-}" ]]; then args+=("split_method:=$SPLIT_METHOD"); fi
+if [[ -n "${BETA:-}" ]]; then args+=("beta:=$BETA"); fi
+if [[ -n "${EPS:-}" ]]; then args+=("eps:=$EPS"); fi
 
 if [[ -n "$variant" ]]; then
   args+=("variant:=$variant")

@@ -37,6 +37,10 @@ def record_main():
         method += f'_{cfg.get("correspondence", "upstream")}'
         if cfg.get('length_jump_threshold') is not None:
             method += f'_j{cfg["length_jump_threshold"]:g}'
+        if cfg.get('change_point_penalty') is not None:
+            method += f'_cp{cfg["change_point_penalty"]:g}'
+        if cfg.get('dbscan_eps') is not None:
+            method += f'_db{cfg["dbscan_eps"]:g}'
     name = f'{a.scenario}_{layout}_{method}_{a.semantics}_seed{a.seed}_{stamp}'
     root = Path(resolved['runtime']['result_directory'])/name
     root.mkdir(parents=True, exist_ok=False)

@@ -18,6 +18,8 @@ RUN git clone https://github.com/gmoustri/dwal_planner.git src/dwal_planner && \
     git -C src/dwal_planner checkout 95b1aa5e1f0259ae8a467c731bf994fc0ebc4f6d
 RUN git clone https://github.com/gmoustri/bayesian_shared_control.git src/bayesian_shared_control && \
     git -C src/bayesian_shared_control checkout 9d0df25f8a966db449ec94c073349d09e328d517
+# Keep C++ compilation within the host's RAM (one package at a time, MAKEFLAGS compilers).
+ARG MAKEFLAGS=-j3
 COPY patches /tmp/crowd_aware_patches
 # One upstream implementation: fixed levels by default, variable free prefixes by parameter.
 RUN git -C src/dwal_planner apply --check /tmp/crowd_aware_patches/dwal_variable_length.patch && \
@@ -39,7 +41,7 @@ RUN git -C /home/kiro_ws/src/CoHAN-Nav2 fetch origin 094f095a4cb0dfb774730c60207
     git clone https://github.com/rst-tu-dortmund/costmap_converter.git /home/kiro_ws/src/costmap_converter_humble && \
     git -C /home/kiro_ws/src/costmap_converter_humble checkout --detach 9565858432664e9cfe0b3556e1809336c4ab06d4
 RUN source /opt/ros/humble/setup.bash && source /home/kiro_ws/install/setup.bash && \
-    cd /home/kiro_ws && colcon build --symlink-install \
+    cd /home/kiro_ws && colcon build --parallel-workers 1 --symlink-install \
     --packages-select costmap_converter_msgs costmap_converter ros2_helpers agent_path_prediction cohan_layers hateb_local_planner \
     --cmake-args -DCMAKE_BUILD_TYPE=Release
 # The reused base image can contain an older diagnostic_updater without the shared library.
@@ -61,7 +63,7 @@ COPY src/crowd_aware_simulation src/crowd_aware_simulation
 # Build against the simulator's ROS distribution.
 RUN source /opt/ros/humble/setup.bash && source /home/kiro_ws/install/setup.bash && \
     source /home/hunav_gz_ws/install/setup.bash && \
-    colcon build --symlink-install --packages-select \
+    colcon build --parallel-workers 1 --symlink-install --packages-select \
     iwalk_description crowd_aware_interfaces dwal_planner bayesian_shared_control crowd_aware_simulation \
     --cmake-args -DCMAKE_BUILD_TYPE=Release
 # Reject a build that picked an older DWAL message overlay.
@@ -79,7 +81,7 @@ RUN cd /home/hunav_gz_ws/src/hunav_gazebo_wrapper && \
     source /home/kiro_ws/install/setup.bash && \
     source /home/hunav_gz_ws/install/setup.bash && \
     cd /home/hunav_gz_ws && \
-    colcon build --packages-select hunav_gazebo_wrapper --cmake-args -DCMAKE_BUILD_TYPE=Release
+    colcon build --parallel-workers 1 --packages-select hunav_gazebo_wrapper --cmake-args -DCMAKE_BUILD_TYPE=Release
 # max_vel=0 is made explicitly stationary at the Gazebo boundary; HuNavSim
 # itself has no stationary behavior type and may return social-force motion.
 COPY patches/hunav_stationary_agents.py /tmp/hunav_stationary_agents.py
@@ -88,7 +90,7 @@ RUN python3 /tmp/hunav_stationary_agents.py && \
     source /home/kiro_ws/install/setup.bash && \
     source /home/hunav_gz_ws/install/setup.bash && \
     cd /home/hunav_gz_ws && \
-    colcon build --packages-select hunav_gazebo_wrapper --cmake-args -DCMAKE_BUILD_TYPE=Release
+    colcon build --parallel-workers 1 --packages-select hunav_gazebo_wrapper --cmake-args -DCMAKE_BUILD_TYPE=Release
 # END HUNAV_COLLISION_HEIGHT_FIX
 
 COPY docker/dwal/entrypoint.sh /dwal_entrypoint.sh
