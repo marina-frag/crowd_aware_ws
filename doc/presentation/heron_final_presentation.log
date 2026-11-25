@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023/Debian) (preloaded format=xelatex 2026.11.25)  25 NOV 2026 02:20
+This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023/Debian) (preloaded format=xelatex 2026.11.25)  25 NOV 2026 03:01
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -893,33 +893,37 @@ File: tikzlibraryfadings.code.tex 2023-01-15 v3.1.10 (3.1.10)
 File: pgflibraryfadings.code.tex 2023-01-15 v3.1.10 (3.1.10)
 ))) (/usr/share/texlive/texmf-dist/tex/latex/tcolorbox/tcbposter.code.tex
 Library (tcolorbox): 'tcbposter.code.tex' version '6.2.0'
+)) (/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibraryshapes.symbols.code.tex
+File: tikzlibraryshapes.symbols.code.tex 2023-01-15 v3.1.10 (3.1.10)
+ (/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/shapes/pgflibraryshapes.symbols.code.tex
+File: pgflibraryshapes.symbols.code.tex 2023-01-15 v3.1.10 (3.1.10)
 )) (./heron_final_presentation.aux)
 \openout1 = `heron_final_presentation.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 112.
-LaTeX Font Info:    ... okay on input line 112.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 112.
-LaTeX Font Info:    ... okay on input line 112.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 112.
-LaTeX Font Info:    ... okay on input line 112.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 112.
-LaTeX Font Info:    ... okay on input line 112.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 112.
-LaTeX Font Info:    Trying to load font information for TS1+cmr on input line 112.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 122.
+LaTeX Font Info:    ... okay on input line 122.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 122.
+LaTeX Font Info:    ... okay on input line 122.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 122.
+LaTeX Font Info:    ... okay on input line 122.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 122.
+LaTeX Font Info:    ... okay on input line 122.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 122.
+LaTeX Font Info:    Trying to load font information for TS1+cmr on input line 122.
  (/usr/share/texlive/texmf-dist/tex/latex/base/ts1cmr.fd
 File: ts1cmr.fd 2023/04/13 v2.5m Standard LaTeX font definitions
 )
-LaTeX Font Info:    ... okay on input line 112.
-LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 112.
-LaTeX Font Info:    ... okay on input line 112.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 112.
-LaTeX Font Info:    ... okay on input line 112.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 112.
-LaTeX Font Info:    ... okay on input line 112.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 112.
-LaTeX Font Info:    ... okay on input line 112.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 112.
-LaTeX Font Info:    ... okay on input line 112.
+LaTeX Font Info:    ... okay on input line 122.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 122.
+LaTeX Font Info:    ... okay on input line 122.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 122.
+LaTeX Font Info:    ... okay on input line 122.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 122.
+LaTeX Font Info:    ... okay on input line 122.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 122.
+LaTeX Font Info:    ... okay on input line 122.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 122.
+LaTeX Font Info:    ... okay on input line 122.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: xetex
@@ -955,53 +959,53 @@ LaTeX Font Info:    ... okay on input line 112.
 * \@reversemarginfalse
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
-Package hyperref Info: Link coloring OFF on input line 112.
+Package hyperref Info: Link coloring OFF on input line 122.
 (./heron_final_presentation.out) (./heron_final_presentation.out)
 \@outlinefile=\write5
 \openout5 = `heron_final_presentation.out'.
 
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  OT1/cmr/m/n --> OT1/cmss/m/n on input line 112.
+(Font)                  OT1/cmr/m/n --> OT1/cmss/m/n on input line 122.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  OT1/cmr/bx/n --> OT1/cmss/b/n on input line 112.
+(Font)                  OT1/cmr/bx/n --> OT1/cmss/b/n on input line 122.
 \symnumbers=\mathgroup6
 \sympureletters=\mathgroup7
 LaTeX Font Info:    Overwriting math alphabet `\mathrm' in version `normal'
-(Font)                  OT1/cmss/m/n --> TU/DejaVuSerif(0)/m/n on input line 112.
-LaTeX Font Info:    Redeclaring math alphabet \mathbf on input line 112.
+(Font)                  OT1/cmss/m/n --> TU/DejaVuSerif(0)/m/n on input line 122.
+LaTeX Font Info:    Redeclaring math alphabet \mathbf on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
-(Font)                  OT1/cmr/bx/n --> TU/DejaVuSans(0)/b/n on input line 112.
+(Font)                  OT1/cmr/bx/n --> TU/DejaVuSans(0)/b/n on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `bold'
-(Font)                  OT1/cmr/bx/n --> TU/DejaVuSans(0)/b/n on input line 112.
-LaTeX Font Info:    Redeclaring math alphabet \mathsf on input line 112.
+(Font)                  OT1/cmr/bx/n --> TU/DejaVuSans(0)/b/n on input line 122.
+LaTeX Font Info:    Redeclaring math alphabet \mathsf on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
-(Font)                  OT1/cmss/m/n --> TU/DejaVuSans(0)/m/n on input line 112.
+(Font)                  OT1/cmss/m/n --> TU/DejaVuSans(0)/m/n on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  OT1/cmss/bx/n --> TU/DejaVuSans(0)/m/n on input line 112.
-LaTeX Font Info:    Redeclaring math alphabet \mathit on input line 112.
+(Font)                  OT1/cmss/bx/n --> TU/DejaVuSans(0)/m/n on input line 122.
+LaTeX Font Info:    Redeclaring math alphabet \mathit on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
-(Font)                  OT1/cmr/m/it --> TU/DejaVuSans(0)/m/it on input line 112.
+(Font)                  OT1/cmr/m/it --> TU/DejaVuSans(0)/m/it on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
-(Font)                  OT1/cmr/bx/it --> TU/DejaVuSans(0)/m/it on input line 112.
-LaTeX Font Info:    Redeclaring math alphabet \mathtt on input line 112.
+(Font)                  OT1/cmr/bx/it --> TU/DejaVuSans(0)/m/it on input line 122.
+LaTeX Font Info:    Redeclaring math alphabet \mathtt on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
-(Font)                  OT1/cmtt/m/n --> TU/DejaVuSansMono(0)/m/n on input line 112.
+(Font)                  OT1/cmtt/m/n --> TU/DejaVuSansMono(0)/m/n on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  OT1/cmtt/m/n --> TU/DejaVuSansMono(0)/m/n on input line 112.
+(Font)                  OT1/cmtt/m/n --> TU/DejaVuSansMono(0)/m/n on input line 122.
 LaTeX Font Info:    Overwriting symbol font `numbers' in version `bold'
-(Font)                  TU/DejaVuSans(0)/m/n --> TU/DejaVuSans(0)/b/n on input line 112.
+(Font)                  TU/DejaVuSans(0)/m/n --> TU/DejaVuSans(0)/b/n on input line 122.
 LaTeX Font Info:    Overwriting symbol font `pureletters' in version `bold'
-(Font)                  TU/DejaVuSans(0)/m/it --> TU/DejaVuSans(0)/b/it on input line 112.
+(Font)                  TU/DejaVuSans(0)/m/it --> TU/DejaVuSans(0)/b/it on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathrm' in version `bold'
-(Font)                  OT1/cmss/b/n --> TU/DejaVuSerif(0)/b/n on input line 112.
+(Font)                  OT1/cmss/b/n --> TU/DejaVuSerif(0)/b/n on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `bold'
-(Font)                  TU/DejaVuSans(0)/b/n --> TU/DejaVuSans(0)/b/n on input line 112.
+(Font)                  TU/DejaVuSans(0)/b/n --> TU/DejaVuSans(0)/b/n on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  TU/DejaVuSans(0)/m/n --> TU/DejaVuSans(0)/b/n on input line 112.
+(Font)                  TU/DejaVuSans(0)/m/n --> TU/DejaVuSans(0)/b/n on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
-(Font)                  TU/DejaVuSans(0)/m/it --> TU/DejaVuSans(0)/b/it on input line 112.
+(Font)                  TU/DejaVuSans(0)/m/it --> TU/DejaVuSans(0)/b/it on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  TU/DejaVuSansMono(0)/m/n --> TU/DejaVuSansMono(0)/b/n on input line 112.
+(Font)                  TU/DejaVuSansMono(0)/m/n --> TU/DejaVuSansMono(0)/b/n on input line 122.
  (/usr/share/texlive/texmf-dist/tex/latex/translator/translator-basic-dictionary-English.dict
 Dictionary: translator-basic-dictionary, Language: English 
 ) (/usr/share/texlive/texmf-dist/tex/latex/translator/translator-bibliography-dictionary-English.dict
@@ -1021,165 +1025,49 @@ Package fontspec Info: Adjusting the maths setup (use [no-math] to avoid
 
 \symlegacymaths=\mathgroup8
 LaTeX Font Info:    Overwriting symbol font `legacymaths' in version `bold'
-(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 112.
-LaTeX Font Info:    Redeclaring math accent \acute on input line 112.
-LaTeX Font Info:    Redeclaring math accent \grave on input line 112.
-LaTeX Font Info:    Redeclaring math accent \ddot on input line 112.
-LaTeX Font Info:    Redeclaring math accent \tilde on input line 112.
-LaTeX Font Info:    Redeclaring math accent \bar on input line 112.
-LaTeX Font Info:    Redeclaring math accent \breve on input line 112.
-LaTeX Font Info:    Redeclaring math accent \check on input line 112.
-LaTeX Font Info:    Redeclaring math accent \hat on input line 112.
-LaTeX Font Info:    Redeclaring math accent \dot on input line 112.
-LaTeX Font Info:    Redeclaring math accent \mathring on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Delta on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Theta on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Xi on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Pi on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Phi on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Psi on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \Omega on input line 112.
-LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 112.
-LaTeX Font Info:    Redeclaring symbol font `operators' on input line 112.
+(Font)                  OT1/cmr/m/n --> OT1/cmr/bx/n on input line 122.
+LaTeX Font Info:    Redeclaring math accent \acute on input line 122.
+LaTeX Font Info:    Redeclaring math accent \grave on input line 122.
+LaTeX Font Info:    Redeclaring math accent \ddot on input line 122.
+LaTeX Font Info:    Redeclaring math accent \tilde on input line 122.
+LaTeX Font Info:    Redeclaring math accent \bar on input line 122.
+LaTeX Font Info:    Redeclaring math accent \breve on input line 122.
+LaTeX Font Info:    Redeclaring math accent \check on input line 122.
+LaTeX Font Info:    Redeclaring math accent \hat on input line 122.
+LaTeX Font Info:    Redeclaring math accent \dot on input line 122.
+LaTeX Font Info:    Redeclaring math accent \mathring on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Gamma on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Delta on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Theta on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Lambda on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Xi on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Pi on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Sigma on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Upsilon on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Phi on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Psi on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \Omega on input line 122.
+LaTeX Font Info:    Redeclaring math symbol \mathdollar on input line 122.
+LaTeX Font Info:    Redeclaring symbol font `operators' on input line 122.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `normal' on input line 112.
+(Font)              `operators' in the math version `normal' on input line 122.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  OT1/cmss/m/n --> TU/DejaVuSerif(0)/m/n on input line 112.
+(Font)                  OT1/cmss/m/n --> TU/DejaVuSerif(0)/m/n on input line 122.
 LaTeX Font Info:    Encoding `OT1' has changed to `TU' for symbol font
-(Font)              `operators' in the math version `bold' on input line 112.
+(Font)              `operators' in the math version `bold' on input line 122.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  OT1/cmss/b/n --> TU/DejaVuSerif(0)/m/n on input line 112.
+(Font)                  OT1/cmss/b/n --> TU/DejaVuSerif(0)/m/n on input line 122.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
-(Font)                  TU/DejaVuSerif(0)/m/n --> TU/DejaVuSerif(0)/m/n on input line 112.
-LaTeX Font Info:    Redeclaring math alphabet \mathrm on input line 112.
+(Font)                  TU/DejaVuSerif(0)/m/n --> TU/DejaVuSerif(0)/m/n on input line 122.
+LaTeX Font Info:    Redeclaring math alphabet \mathrm on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
-(Font)                  TU/DejaVuSans(0)/m/it --> TU/DejaVuSerif(0)/m/it on input line 112.
+(Font)                  TU/DejaVuSans(0)/m/it --> TU/DejaVuSerif(0)/m/it on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
-(Font)                  TU/DejaVuSans(0)/b/n --> TU/DejaVuSerif(0)/b/n on input line 112.
+(Font)                  TU/DejaVuSans(0)/b/n --> TU/DejaVuSerif(0)/b/n on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `normal'
-(Font)                  TU/DejaVuSans(0)/m/n --> TU/DejaVuSans(0)/m/n on input line 112.
+(Font)                  TU/DejaVuSans(0)/m/n --> TU/DejaVuSans(0)/m/n on input line 122.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `normal'
-(Font)                  TU/DejaVuSansMono(0)/m/n --> TU/DejaVuSansMono(0)/m/n on input line 112.
+(Font)                  TU/DejaVuSansMono(0)/m/n --> TU/DejaVuSansMono(0)/m/n on input line 122.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  TU/DejaVuSerif(0)/m/n --> TU/DejaVuSerif(0)/b/n on input line 112.
-LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
-(Font)                  TU/DejaVuSans(0)/b/it --> TU/DejaVuSerif(0)/b/it on input line 112.
-LaTeX Font Info:    Overwriting math alphabet `\mathsf' in version `bold'
-(Font)                  TU/DejaVuSans(0)/b/n --> TU/DejaVuSans(0)/b/n on input line 112.
-LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  TU/DejaVuSansMono(0)/b/n --> TU/DejaVuSansMono(0)/b/n on input line 112.
-\c@lstlisting=\count382
-LaTeX Info: Redefining \rmfamily on input line 112.
-LaTeX Info: Redefining \sffamily on input line 112.
-LaTeX Info: Redefining \ttfamily on input line 112.
- (./heron_final_presentation.nav)
-File: heron_logo.png Graphic file (type bmp)
-<heron_logo.png>
- [1
-
-] [2
-
-]
-LaTeX Font Info:    Trying to load font information for U+msa on input line 172.
- (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
-File: umsa.fd 2013/01/14 v3.01 AMS symbols A
-)
-LaTeX Font Info:    Trying to load font information for U+msb on input line 172.
- (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
-File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-) [3
-
-]
-Overfull \vbox (10.5749pt too high) detected at line 267
- []
-
-[4
-
-] [5
-
-] [6
-
-] [7
-
-] [8
-
-] [9
-
-] [10
-
-] [11
-
-] [12
-
-] [13
-
-]
-Overfull \hbox (5.08919pt too wide) in paragraph at lines 469--469
-[]|\TU/DejaVuSans(0)/b/n/8 Step|  
- []
-
-
-Overfull \hbox (1.81467pt too wide) in paragraph at lines 469--469
-\TU/DejaVuSans(0)/m/n/8 progress|  
- []
-
-File: images/step3_plan.png Graphic file (type bmp)
-<images/step3_plan.png>
-[14
-
-] [15
-
-] [16
-
-] [17
-
-] [18
-
-] [19
-
-] [20
-
-] [21
-
-] [22
-
-] [23
-
-] [24
-
-] [25
-
-] [26
-
-]
-\tf@nav=\write6
-\openout6 = `heron_final_presentation.nav'.
-
-\tf@toc=\write7
-\openout7 = `heron_final_presentation.toc'.
-
-\tf@snm=\write8
-\openout8 = `heron_final_presentation.snm'.
-
- (./heron_final_presentation.aux)
- ***********
-LaTeX2e <2023-11-01> patch level 1
-L3 programming layer <2024-01-22>
- ***********
-Package rerunfilecheck Info: File `heron_final_presentation.out' has not changed.
-(rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
- ) 
-Here is how much of TeX's memory you used:
- 35512 strings out of 476846
- 793331 string characters out of 5803823
- 1937627 words of memory out of 5000000
- 56709 multiletter control sequences out of 15000+600000
- 571168 words of font info for 153 fonts, out of 8000000 for 9000
- 14 hyphenation exceptions out of 8191
- 101i,15n,107p,488b,1250s stack positions out of 10000i,1000n,20000p,200000b,200000s
-
-Output written on heron_final_presentation.pdf (26 pages).
+(Font)                  TU/DejaVuSerif(0)/m/n --> TU/DejaVuSerif(0)/b/n on input line 122.
+LaTeX Font Info:    Overwrit

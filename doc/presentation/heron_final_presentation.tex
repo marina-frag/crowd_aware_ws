@@ -52,7 +52,7 @@
 
 \setbeamertemplate{frametitle}{%
   \vspace{0.12cm}%
-  \insertframetitle\par%
+  {\color{HeronBlue}\rule[-0.12em]{3pt}{1.0em}}\hspace{0.45em}\insertframetitle\par%
   \vspace{-0.15cm}%
   {\color{HeronBlue}\rule{\linewidth}{0.7pt}}%
 }
@@ -109,6 +109,16 @@
 \newcommand{\running}{\textcolor{HeronOrange}{\textbf{running}}}
 \newcommand{\planned}{\textcolor{HeronDark}{planned}}
 
+% ---------- Graphics helpers ----------
+\tikzset{
+  chip/.style={rounded corners=2pt,inner sep=2.5pt,font=\tiny\bfseries,text=white},
+  chev/.style={signal,signal to=east,signal from=west,minimum height=0.62cm,inner xsep=6pt,
+    font=\scriptsize,text=white},
+  demoicon/.style={line width=0.9pt}}
+\usetikzlibrary{shapes.symbols}
+\newcommand{\badge}[2]{\tikz[baseline=-0.6ex]\node[circle,fill=#1,text=white,inner sep=1.2pt,
+  minimum size=1.15em,font=\scriptsize\bfseries]{#2};}
+
 \begin{document}
 
 % ---------- Title ----------
@@ -143,11 +153,11 @@
 
 % ---------- Motivation ----------
 \begin{frame}{Motivation}
-  {\centering
+  \begin{center}
     \includegraphics[width=0.82\linewidth]{images/motivation_dwa_dwal.png}\par
     \vspace{0.05cm}
     {\scriptsize\textcolor{HeronBlue}{Figure:} DWA vs Fixed DWAL vs Dynamic DWAL (schematic scene, computed paths)}\par
-  }
+  \end{center}
   \vspace{0.12cm}
   \begin{statusbox}{HeronBlue}
     \footnotesize\textbf{Contribution:}
@@ -156,7 +166,9 @@
   \vspace{0.15cm}
 \end{frame}
 
-\begin{frame}{Motivation Comments}
+\begin{frame}{Motivation Speaker Notes}
+  Αρχικά να δούμε λίγο το κίνητρο. Ξεκινώντας με το παραδοσιακό NAV2
+controller dwa
 \textbf{DWA $\rightarrow$ DWAL}
 \begin{itemize}
   \item Το DWA παράγει τόξα σταθερής καμπυλότητας, που δεν ταιριάζουν στην εύρεση ανοιγμάτων, δηλαδή διακριτών διαδρομών.
@@ -164,6 +176,7 @@
 \end{itemize}
 
 \vspace{0.2cm}
+Ποιο είναι το πρόβλημα με τον DWAL:
 \textbf{Fixed DWAL $\rightarrow$ Dynamic DWAL}
 \begin{itemize}
   \item Σε πειράματα με το πραγματικό ρομπότ σε πλήθος παρατηρήθηκαν εκτεταμένα διαστήματα όπου ζητούνταν κίνηση, υπήρχε χώρος και το ρομπότ έμενε ακίνητο.
@@ -179,7 +192,7 @@
 
 \begin{frame}{Relevant Definitions}
   \centering
-  \begin{tikzpicture}[x=1cm,y=1cm]
+  \resizebox{!}{5.25cm}{\begin{tikzpicture}[x=1cm,y=1cm]
     % six cells of 4.7 x 2.85 cm: columns at x = 0, 4.95, 9.9; rows at y = 0, -3.05
     \foreach \cx in {0,4.95,9.9} \foreach \cy in {0,-3.05}
       \draw[defcell] (\cx,\cy) rectangle ++(4.7,-2.85);
@@ -261,19 +274,27 @@
       \draw[{Latex[length=1.2mm]}-{Latex[length=1.2mm]}] (1.21,-0.4) -- (2.18,-0.4);
       \node[defnote,below] at (1.7,-0.4) {0.885 m body};
     \end{scope}
-  \end{tikzpicture}
-  \vspace{0.1cm}
+  \end{tikzpicture}}
+  \vspace{0.05cm}
   \takeaway{A cluster is a motion option the user can choose: left of, right of, or towards an obstacle.}
 \end{frame}
 
-\begin{frame}{Relevant Definitions Comments}
+\begin{frame}{Relevant Definitions Speaker Notes}
 \footnotesize
 \begin{itemize}\setlength{\itemsep}{1pt}
-  \item \textbf{Path:} κινηματικά εφικτό arc-line, τόξο έως $90^\circ$ και μετά εφαπτόμενη ευθεία, μέσα στο dynamic window ($\Delta t = 0.2$ s, καμπυλότητα έως $\pm 4$).
+  \item \textbf{Path:} κινηματικά εφικτό arc-line, τόξο έως $90^\circ$ και μετά εφαπτόμενη ευθεία, μέσα στο dynamic window συγκεκριμένη καμπυλότητα και συγκεκριμένη δειγματοληψία($\Delta t = 0.2$ s, καμπυλότητα έως $\pm 4$).
   \item \textbf{Free length $L$:} απόσταση πάνω στο path μέχρι το footprint να ακουμπήσει εμπόδιο ή να τελειώσει το path.
   \item \textbf{Free radius $r$:} ευθεία απόσταση από το ρομπότ ως το τέλος του path.
   \item \textbf{Horizon:} τα paths αξιολογούνται έως $1.8$ m.
-  \item \textbf{Cluster:} συνεχόμενα ελεύθερα paths που αντιστοιχούν στην ίδια επιλογή κίνησης.
+  \item \textbf{Cluster:}  Ένα cluster είναι ένα σύνολο κινηματικά εφικτών, ελεύθερων paths που
+αντιστοιχούν στην ίδια επιλογή κίνησης
+ Όταν υπάρχει εμπόδιο μπροστά, οι επιλογές είναι τρεις:
+
+  \begin{itemize}
+    \item προς το εμπόδιο (με φρενάρισμα πριν από αυτό),
+    \item δεξιά του,
+    \item αριστερά του.
+  \end{itemize}
   \item \textbf{Motion choice:} pass (φτάνει τον ορίζοντα) ή brake (σταματά σε εμπόδιο). Χρησιμοποιούνται μόνο στην αξιολόγηση, ως ground truth.
   \item Κάθε path ελέγχεται με όλο το footprint του iWalk. Η γραμμή δείχνει το \texttt{base\_link}, και η μύτη είναι $0.885$ m μπροστά, γι' αυτό στο RViz το path σταματά περίπου 1 m πριν το εμπόδιο ή κρύβεται κάτω από το ρομπότ όταν είναι κοντό.
 \end{itemize}
@@ -282,7 +303,7 @@
 % ---------- Fixed vs Dynamic ----------
 \begin{frame}{Fixed vs Dynamic pipeline}
   \footnotesize
-  \renewcommand{\arraystretch}{1.28}
+  \renewcommand{\arraystretch}{1.0}
   \begin{tabularx}{\textwidth}{@{}L{2.8cm}YY@{}}
     \toprule
     \textbf{Stage} & \textbf{Fixed DWAL} & \textbf{Dynamic DWAL}\\
@@ -294,15 +315,36 @@
     \bottomrule
   \end{tabularx}
 
-  \vspace{0.25cm}
-  \begin{center}
-    $S_{\mathrm{req}}(v) = vT + \dfrac{v^2}{2a} + m$
-    \qquad {\scriptsize $T=0.4$ s,\; $a=0.5$ m/s$^2$,\; $m=0.05$ m \;$\Rightarrow$\; $0.26$ m at $0.3$ m/s}
-  \end{center}
+  \vspace{0.1cm}
+  \begin{columns}[c,totalwidth=\textwidth]
+    \begin{column}{0.62\textwidth}
+      \centering\footnotesize
+      $S_{\mathrm{req}}(v) = vT + \dfrac{v^2}{2a} + m$\par
+      {\scriptsize $T=0.4$ s,\; $a=0.5$ m/s$^2$,\; $m=0.05$ m \;$\Rightarrow$\; $0.26$ m at $0.3$ m/s}\par
+      \vspace{0.12cm}
+      $S_{\mathrm{req}}(v) \le L \;\Leftrightarrow\; v \le v_{\max}(L) = \sqrt{a^2T^2 + 2a\,(L-m)} - aT$
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \centering
+      \begin{tikzpicture}[x=2.3cm,y=0.75cm,font=\tiny]
+        \draw[HeronDark!60,-{Latex[length=1.2mm]}] (0,0) -- (1.08,0) node[below left] {$v$ [m/s]};
+        \draw[HeronDark!60,-{Latex[length=1.2mm]}] (0,0) -- (0,1.6) node[left] {[m]};
+        \fill[HeronGreen!15] (0,0) rectangle (0.689,0.8);
+        \draw[HeronBlue,line width=1.1pt,domain=0:1,samples=40] plot (\x,{0.4*\x+\x*\x+0.05});
+        \node[HeronBlue,right] at (0.98,1.45) {$S_{\mathrm{req}}$};
+        \draw[HeronOrange,line width=1pt] (0,0.8) -- (1.02,0.8) node[right] {$L$};
+        \draw[HeronDark,dashed] (0.689,0.8) -- (0.689,0);
+        \fill[HeronDark] (0.689,0.8) circle (1.4pt);
+        \node[below] at (0.689,0) {$v_{\max}$};
+        \node[HeronGreen!70!black] at (0.3,0.55) {admissible};
+      \end{tikzpicture}
+    \end{column}
+  \end{columns}
+  \vspace{0.05cm}
   \takeaway{Shorter paths become usable, so clustering can no longer rely on free gaps alone.}
 \end{frame}
 
-\begin{frame}{Fixed vs Dynamic pipeline Comments}
+\begin{frame}{Fixed vs Dynamic pipeline Speaker Notes}
 \begin{itemize}
   \item \textbf{Μεταβλητό μήκος:} αντί να ζητάμε πάντα ελεύθερο το ίδιο R, ζητάμε όσο χρειάζεται για να φρενάρει το ρομπότ με την τωρινή ταχύτητα.
   \item \textbf{Clustering:} αφού κρατάμε και κοντά paths, το clustering του fixed δεν αρκεί, γιατί θα ένωνε σε ένα cluster paths που περνούν με paths που σταματούν.
@@ -347,7 +389,7 @@
   \takeaway{Selection: same runs as $\tau=0.3$, 0 collisions, at least as many goals, then the lowest Loss.}
 \end{frame}
 
-\begin{frame}{Clustering Comments}
+\begin{frame}{Clustering Speaker Notes}
 \begin{itemize}
   \item \textbf{Underclustering:} ένα cluster ενώνει διαφορετικές επιλογές, π.χ. δύο περάσματα γύρω από ένα εμπόδιο.
   \item \textbf{Overclustering:} μία επιλογή σπάει σε πολλά clusters, οπότε ο χρήστης βλέπει ψεύτικες εναλλακτικές.
@@ -398,7 +440,7 @@
   \takeaway{The safety layers stay outside the planner, so the method changes options, not the final safety stack.}
 \end{frame}
 
-\begin{frame}{Pipeline Comments}
+\begin{frame}{Pipeline Speaker Notes}
 Οι παραπάνω διαφορές καθορίζουν το pipeline στο οποίο καταλήξαμε.
 \begin{itemize}
   \item Ο generator δίνει τα paths με το ελεύθερο μήκος τους.
@@ -430,7 +472,7 @@
   \end{statusbox}
 \end{frame}
 
-\begin{frame}{Hypothesis and Metrics Comments}
+\begin{frame}{Hypothesis and Metrics Speaker Notes}
 \begin{itemize}
   \item Το H2 βγήκε από τις κύριες υποθέσεις, γιατί ο fixed έχει 0 ανάμεικτα clusters εκ κατασκευής και η σύγκριση δεν θα ήταν δίκαιη.
   \item Τα ζεύγη μοιράζονται σενάριο, διαδρομή και seed, γι' αυτό τα τεστ είναι ζευγαρωτά.
@@ -468,48 +510,13 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Evaluation Protocol Comments}
+\begin{frame}{Evaluation Protocol Speaker Notes}
 \begin{itemize}
   \item Το πρωτόκολλο πάει από τον απλό έλεγχο της αλυσίδας στη σύγκριση των μεθόδων.
   \item Το βήμα 1 δείχνει ότι χωρίς εμπόδια fixed και tracking ακολουθούν την ίδια διαδρομή.
   \item Το βήμα 2 διαλέγει το $\tau$ και το βήμα 3 συγκρίνει τις μεθόδους με αυτό.
   \item Το βήμα 3.1 προστέθηκε γιατί το βήμα 2 δεν είχε τοίχους, ενώ 6 από τις 13 συνθήκες του βήματος 3 έχουν.
   \item Τα βήματα 4 και 6 δεν έχουν τρέξει ακόμα.
-\end{itemize}
-\end{frame}
-
-\begin{frame}{Human Behavior in Simulations}
-  \small
-  \begin{itemize}
-    \item HuNav agents walk to their goals with a \textbf{social force model}
-    \item They avoid the robot, walls and other people through repulsive forces, not scripted reactions
-    \item The seed sets the start point, speed ($\times$0.85--1.15) and force factors; the behavior type stays fixed
-  \end{itemize}
-  \vspace{0.15cm}
-  \scriptsize
-  \renewcommand{\arraystretch}{1.25}
-  \begin{tabularx}{\textwidth}{@{}L{4.6cm}L{3.0cm}Y@{}}
-    \toprule
-    \textbf{Scenario} & \textbf{Humans} & \textbf{Behavior}\\
-    \midrule
-    doorway, crossing, narrow\_corridor, open\_area & 1 & Regular\\
-    junction & 3 & Regular\\
-    dense\_crowd & up to 8 (by density) & Regular\\
-    dense\_static & up to 8, standing & Regular, standing still\\
-    group\_blocking & 3, one group & Impassive, almost still (0.05\,m/s)\\
-    cafe & 5 & One of each: Regular, Impassive, Scared, Curious, Threatening\\
-    \bottomrule
-  \end{tabularx}
-\end{frame}
-
-\begin{frame}{Human Behavior in Simulations Comments}
-\begin{itemize}
-  \item Οι άνθρωποι στο HuNav ακολουθούν στόχους με social force model.
-  \item Αντιδρούν στο ρομπότ με απωστική δύναμη, όχι με σενάριο.
-  \item Η τυχαιότητα μπαίνει μέσω του seed: εκκίνηση, ταχύτητα και συντελεστές δυνάμεων.
-  \item Impassive: αγνοεί το ρομπότ και δεν του κάνει χώρο.
-  \item Scared, Curious, Threatening: αντιδρούν ειδικά στο ρομπότ (απομακρύνεται, πλησιάζει, μπλοκάρει).
-  \item Στο doorway το density δεν αλλάζει τίποτα· έχει πάντα έναν άνθρωπο.
 \end{itemize}
 \end{frame}
 
@@ -529,7 +536,21 @@
         hard\_curve & 0.091 & 0.092\\
         \bottomrule
       \end{tabular}\par
-      \vspace{0.2cm}
+      \vspace{0.18cm}
+      \begin{tikzpicture}[x=26cm,y=0.34cm,font=\tiny]
+        \foreach \n/\f/\k/\y in {line/0.001/0.001/0, s\_curve/0.017/0.016/-1, hard\_curve/0.091/0.092/-2} {
+          \node[anchor=east,text=HeronDark] at (-0.004,\y) {\n};
+          \fill[HeronGray!90!black] (0,\y+0.05) rectangle (\f,\y+0.38);
+          \fill[HeronGreen] (0,\y-0.05) rectangle (\k,\y-0.38);
+        }
+        \draw[HeronDark!60] (0,0.6) -- (0,-2.6);
+        \draw[HeronDark!60] (0,-2.6) -- (0.1,-2.6);
+        \foreach \v in {0,0.05,0.1} \node[below,text=HeronDark!80] at (\v,-2.6) {\v};
+        \node[below,text=HeronDark!80] at (0.05,-3.15) {max deviation [m]};
+        \fill[HeronGray!90!black] (0.068,0.35) rectangle ++(0.004,0.3); \node[right] at (0.072,0.5) {Fixed};
+        \fill[HeronGreen] (0.068,-0.25) rectangle ++(0.004,0.3); \node[right] at (0.072,-0.1) {Tracking};
+      \end{tikzpicture}\par
+      \vspace{0.1cm}
       \footnotesize Without obstacles the two methods follow the same path.
     \end{column}
     \begin{column}{0.48\textwidth}
@@ -545,11 +566,22 @@
         \textbf{0.3} & \textbf{0.133} & \textbf{0.003} & \textbf{0.40} & \textbf{0.919}\\
         \bottomrule
       \end{tabular}\par
-      \vspace{0.2cm}
+      \vspace{0.18cm}
+      \begin{tikzpicture}[x=1.15cm,y=0.8cm,font=\tiny]
+        \foreach \t/\l/\c [count=\i] in {0.1/1.493/HeronGray!90!black, 0.2/1.014/HeronGray!90!black, 0.3/0.919/HeronBlue} {
+          \fill[\c] (\i-0.3,0) rectangle (\i+0.3,\l);
+          \node[above,text=HeronDark] at (\i,\l) {\l};
+          \node[below,text=HeronDark] at (\i,0) {$\tau = \t$};
+        }
+        \draw[HeronDark!60] (0.5,0) -- (3.5,0);
+        \node[rotate=90,text=HeronDark!80] at (0.3,0.8) {Loss};
+        \node[chip,fill=HeronGreen] at (3,1.5) {lowest};
+      \end{tikzpicture}\par
+      \vspace{0.1cm}
       \footnotesize $\tau = 0.3$ has the lowest Loss.
     \end{column}
   \end{columns}
-  \vspace{0.3cm}
+  \vspace{0.1cm}
   \takeaway{The control chain is validated, and $\tau = 0.3$ is the reference value for the next steps.}
 \end{frame}
 
@@ -597,29 +629,6 @@
   \end{statusbox}
 \end{frame}
 
-\begin{frame}{Results per step: Step 3 by condition}
-  \centering
-  \tiny
-  \renewcommand{\arraystretch}{1.02}
-  \begin{tabular}{@{}lcc@{\hspace{1.1cm}}lcc@{}}
-    \toprule
-    \textbf{Condition} & \textbf{Goals F / T} & \textbf{Standstill F / T [s]} & \textbf{Condition} & \textbf{Goals F / T} & \textbf{Standstill F / T [s]}\\
-    \midrule
-    junction:left\_turn & 0 / 9 & 58.6 / 0.2 & cafe:between\_tables & 6 / 9 & 1.9 / 0.4\\
-    junction:straight\_right & 1 / 10 & 57.0 / 0.1 & group\_blocking:detour\_left & 9 / 10 & 0.2 / 0.1\\
-    doorway:side\_approach & 1 / 6 & 31.5 / 0.2 & dense\_static:hard\_curve & 10 / 10 & 0.1 / 0.1\\
-    narrow\_corridor:keep\_right & 3 / 10 & 28.4 / 0.1 & crossing:line & 10 / 10 & 0.1 / 0.1\\
-    doorway:u\_turn & 3 / 8 & 17.9 / 0.2 & open\_area:hard\_curve & 10 / 10 & 0.1 / 0.1\\
-    dense\_crowd:hard\_curve & 3 / 10 & 6.6 / 0.1 & group\_blocking:line & 0 / 0 & 41.0 / 49.5\\
-    dense\_static:hard\_curve\_1m & 0 / 10 & 4.7 / 0.1 & \textbf{Total} & \textbf{56 / 112} & \textbf{mean 18.3 / 6.9}\\
-    \bottomrule
-  \end{tabular}
-
-  \vspace{0.3cm}
-  \raggedright
-  \takeaway{The gain appears in constrained spaces. Open scenes stay equal, and \texttt{group\_blocking:line} is blocked by design.}
-\end{frame}
-
 \begin{frame}{Results per step: Step 3.1}
   \begin{statusbox}{HeronGreen}
     \footnotesize\textbf{We keep $\tau = 0.3$:} the only value that reaches 59/60 goals. No new closed-loop runs needed.
@@ -648,7 +657,7 @@
   Obstacle distance for $\tau = 0.3$: mean minimum 0.41 m (60/60 runs).\par}
 \end{frame}
 
-\begin{frame}{Results per step Comments}
+\begin{frame}{Results per step Speaker Notes}
 \begin{itemize}
   \item Το tracking φτάνει στον στόχο στα διπλάσια runs (112 έναντι 56), χωρίς σύγκρουση.
   \item Το κέρδος φαίνεται κυρίως σε junction, corridor και πυκνό πλήθος. Στις ανοιχτές σκηνές οι μέθοδοι είναι ίδιες.
@@ -663,31 +672,76 @@
 % ---------- Demo ----------
 \begin{frame}{Demo}
   \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.49\textwidth}
-      \begin{statusbox}{HeronGreen}
-        \footnotesize\textbf{Where tracking helps}\\[2pt]
+    \begin{column}{0.325\textwidth}
+      \begin{statusbox}[equal height group=demo]{HeronGreen}
+        \centering
+        \begin{tikzpicture}[scale=0.45,demoicon]
+          \fill[HeronOrange] (1.2,0.75) circle (0.22); \fill[HeronOrange] (1.2,-0.75) circle (0.22);
+          \fill[HeronOrange] (2.3,1.0) circle (0.22);
+          \draw[HeronGreen,line width=1.4pt,-{Latex[length=2mm]}] (0,0) -- (1.6,0) arc[start angle=-90,end angle=0,radius=0.8] -- ++(0,0.5);
+          \fill[HeronDark] (0,0) circle (0.12);
+        \end{tikzpicture}\par\vspace{2pt}
+        \raggedright
+        \badge{HeronGreen}{1}\;\footnotesize\textbf{Where tracking helps}\\[2pt]
         \scriptsize\texttt{junction:left\_turn}, seed 6\\
         Fixed vs tracking, same agents
       \end{statusbox}
     \end{column}
-    \begin{column}{0.49\textwidth}
-      \begin{statusbox}{HeronRed}
-        \footnotesize\textbf{Where tracking fails}\\[2pt]
+    \begin{column}{0.325\textwidth}
+      \begin{statusbox}[equal height group=demo]{HeronRed}
+        \centering
+        \begin{tikzpicture}[scale=0.45,demoicon]
+          \fill[HeronDark!70] (1.6,0.45) rectangle (1.85,1.3); \fill[HeronDark!70] (1.6,-0.45) rectangle (1.85,-1.3);
+          \fill[HeronOrange] (2.4,0.1) circle (0.22);
+          \draw[HeronRed,line width=1.4pt] (0,0) -- (1.2,0);
+          \draw[HeronRed,line width=1.8pt] (1.2,0.28) -- (1.2,-0.28);
+          \fill[HeronDark] (0,0) circle (0.12);
+        \end{tikzpicture}\par\vspace{2pt}
+        \raggedright
+        \badge{HeronRed}{2}\;\footnotesize\textbf{Where tracking fails}\\[2pt]
         \scriptsize\texttt{doorway:side\_approach}, seed 3\\
         Deadlock close to the door frame
       \end{statusbox}
     \end{column}
+    \begin{column}{0.325\textwidth}
+      \begin{statusbox}[equal height group=demo]{HeronBlue}
+        \centering
+        \begin{tikzpicture}[x=0.5cm,y=0.26cm]
+          \foreach \row/\segs in {2/{0/1/HeronGray,1/5/HeronOrange}, 1/{0/1/HeronGray,1/1.8/HeronGreen,1.8/4.2/HeronOrange,4.2/5/HeronGreen}, 0/{0/1/HeronGray,1/1.8/HeronGreen,1.8/4.2/HeronOrange,4.2/5/HeronGreen}}
+            \foreach \a/\b/\c in \segs \fill[\c] (\a+0.04,\row*1.35) rectangle (\b-0.04,\row*1.35+1);
+          \node[font=\tiny,anchor=east] at (0,3.2) {$\tau$}; \node[font=\tiny,anchor=east] at (0,1.85) {$\varepsilon$};
+          \node[font=\tiny,anchor=east] at (0,0.5) {$\beta$};
+        \end{tikzpicture}\par\vspace{2pt}
+        \raggedright
+        \badge{HeronBlue}{3}\;\footnotesize\textbf{Same frame, three split rules}\\[2pt]
+        \scriptsize\texttt{cafe:between\_tables}, seed 3\\
+        $\tau$, DBSCAN $\varepsilon = 0.15$, change-point $\beta$
+      \end{statusbox}
+    \end{column}
   \end{columns}
-  \vspace{0.25cm}
-  \footnotesize
-  \textbf{How to read the replay}
-  \begin{itemize}\setlength{\itemsep}{2pt}
-    \item \textbf{Colored lines:} clusters, traced by \texttt{base\_link}.
-    \item \textbf{Orange cylinders:} humans.
-  \end{itemize}
+  \vspace{0.2cm}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.49\textwidth}
+      \footnotesize
+      \textbf{How to read the replay}
+      \begin{itemize}\setlength{\itemsep}{2pt}
+        \item \textbf{Colored lines:} clusters, traced by \texttt{base\_link}.
+        \item \textbf{Orange cylinders:} humans.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \footnotesize
+      \textbf{How to read the split-rule bars} (demo 3)\par\vspace{3pt}
+      \scriptsize
+      \tikz\fill[HeronGreen] (0,0) rectangle (0.35,0.2);\; pass \quad
+      \tikz\fill[HeronGray] (0,0) rectangle (0.35,0.2);\; brake \quad
+      \tikz\fill[HeronOrange] (0,0) rectangle (0.35,0.2);\; mixed (pass + brake)\par\vspace{2pt}
+      Offline, open loop: the same scan through each rule.
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Demo Comments}
+\begin{frame}{Demo Speaker Notes}
 \footnotesize
 \begin{itemize}
   \item Τα demos είναι replay καταγεγραμμένων runs, άρα δεν εξαρτώνται από τη ζωντανή προσομοίωση.
@@ -698,7 +752,8 @@
 \scriptsize
 \texttt{bash scripts/demo\_side\_by\_side.sh compare junction:left\_turn 6}\\[3pt]
 \texttt{bash scripts/demo\_side\_by\_side.sh compare doorway:side\_approach 3}\\[3pt]
-\texttt{TO=40 RECORD=junction.mp4 bash scripts/demo\_side\_by\_side.sh compare junction:left\_turn 6}
+\texttt{TO=40 RECORD=junction.mp4 bash scripts/demo\_side\_by\_side.sh compare junction:left\_turn 6}\\[3pt]
+\texttt{TAU=0.2 EPS=0.15 BETA=0.2 bash scripts/demo\_side\_by\_side.sh cuts cafe:between\_tables 3}
 \end{frame}
 
 % ---------- Constraints ----------
@@ -728,14 +783,116 @@
       \end{itemize}
     \end{column}
   \end{columns}
+  \vfill
+  \begin{center}
+    \begin{tikzpicture}[node distance=0.12cm]
+      \node[chev,fill=HeronGreen] (a) {Simulation};
+      \node[chev,fill=HeronBlue,right=of a] (b) {New seeds: confirm H1};
+      \node[chev,fill=HeronBlue!75,right=of b] (c) {SCAND recordings};
+      \node[chev,fill=HeronDark!80,right=of c] (d) {Real iWalk};
+      \node[font=\tiny,text=HeronGreen,below=1pt of a] {done};
+      \node[font=\tiny,text=HeronDark,below=1pt of b] {next};
+      \node[font=\tiny,text=HeronDark,below=1pt of c] {planned};
+      \node[font=\tiny,text=HeronDark,below=1pt of d] {planned};
+    \end{tikzpicture}
+  \end{center}
 \end{frame}
 
-\begin{frame}{Constraints and next steps Comments}
+\begin{frame}{Constraints and next steps Speaker Notes}
 \begin{itemize}
   \item Το βασικό εύρημα είναι ότι το ρομπότ σταματά πολύ λιγότερο και φτάνει συχνότερα στον στόχο, χωρίς συγκρούσεις στην προσομοίωση.
   \item Για να γίνει ισχυρός ισχυρισμός χρειάζονται νέα seeds και πειράματα στο πραγματικό ρομπότ.
   \item Η απόσταση από εμπόδια θέλει περισσότερο έλεγχο, γιατί μετριέται από το laser και όχι από το περίγραμμα του ρομπότ.
   \item Το αδιέξοδο στο doorway δεν εμφανίζεται με τον τωρινό κώδικα (20/20). Μένει να βρεθεί ποια αλλαγή το έλυσε και να ξανατρέξει το fixed για δίκαιη σύγκριση.
+\end{itemize}
+\end{frame}
+
+% ---------- Backup ----------
+\begin{frame}[plain]
+  \vfill
+  \begin{center}
+    {\usebeamerfont{title}\textcolor{HeronDark}{Backup slides}}\par\vspace{0.2cm}
+    {\color{HeronBlue}\rule{3cm}{0.7pt}}
+  \end{center}
+  \vfill
+\end{frame}
+
+\begin{frame}{Results per step: Step 3 by condition}
+  \centering
+  \scriptsize
+  \renewcommand{\arraystretch}{1.3}
+  \resizebox{\textwidth}{!}{\begin{tabular}{@{}lcc@{\hspace{1.1cm}}lcc@{}}
+    \toprule
+    \textbf{Condition} & \textbf{Goals F / T} & \textbf{Standstill F / T [s]} & \textbf{Condition} & \textbf{Goals F / T} & \textbf{Standstill F / T [s]}\\
+    \midrule
+    junction:left\_turn & 0 / 9 & 58.6 / 0.2 & cafe:between\_tables & 6 / 9 & 1.9 / 0.4\\
+    junction:straight\_right & 1 / 10 & 57.0 / 0.1 & group\_blocking:detour\_left & 9 / 10 & 0.2 / 0.1\\
+    doorway:side\_approach & 1 / 6 & 31.5 / 0.2 & dense\_static:hard\_curve & 10 / 10 & 0.1 / 0.1\\
+    narrow\_corridor:keep\_right & 3 / 10 & 28.4 / 0.1 & crossing:line & 10 / 10 & 0.1 / 0.1\\
+    doorway:u\_turn & 3 / 8 & 17.9 / 0.2 & open\_area:hard\_curve & 10 / 10 & 0.1 / 0.1\\
+    dense\_crowd:hard\_curve & 3 / 10 & 6.6 / 0.1 & group\_blocking:line & 0 / 0 & 41.0 / 49.5\\
+    dense\_static:hard\_curve\_1m & 0 / 10 & 4.7 / 0.1 & \textbf{Total} & \textbf{56 / 112} & \textbf{mean 18.3 / 6.9}\\
+    \bottomrule
+  \end{tabular}}
+
+  \vspace{0.3cm}
+  \raggedright
+  \takeaway{The gain appears in constrained spaces. Open scenes stay equal, and \texttt{group\_blocking:line} is blocked by design.}
+\end{frame}
+
+\begin{frame}{Human Behavior in Simulations}
+  \begin{columns}[c,totalwidth=\textwidth]
+    \begin{column}{0.6\textwidth}
+      \footnotesize
+      \begin{itemize}\setlength{\itemsep}{3pt}
+        \item HuNav agents walk to their goals with a \textbf{social force model}
+        \item They avoid the robot, walls and other people through repulsive forces, not scripted reactions
+        \item The seed sets the start point, speed ($\times$0.85--1.15) and force factors; the behavior type stays fixed
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \centering
+      \begin{tikzpicture}[x=0.8cm,y=0.8cm,font=\tiny,>={Latex[length=1.5mm]}]
+        \fill[HeronDark!25] (-2.6,-1.25) rectangle (3.0,-1.5);
+        \node[text=HeronDark,anchor=north east] at (3.0,-1.5) {wall};
+        \fill[HeronOrange!60] (-1.4,1.3) circle (0.25);
+        \node[text=HeronDark,left] at (-1.65,1.3) {person};
+        \fill[HeronBlue!45] (2.1,-1.1) rectangle (2.9,-0.75);
+        \node[text=HeronBlue,above] at (2.5,-0.75) {robot};
+        \draw[->,HeronGreen,line width=1pt] (0,0) -- (1.9,0) node[right] {to goal};
+        \draw[->,HeronDark!60,line width=1pt] (0,0) -- (0,0.85) node[above] {from wall};
+        \draw[->,HeronOrange!90!black,line width=1pt] (0,0) -- (0.6,-0.6) node[below left] {from person};
+        \draw[->,HeronRed,line width=1pt] (0,0) -- (-0.8,0.45) node[left] {from robot};
+        \draw[->,HeronDark,line width=1.7pt] (0,0) -- (1.7,0.7) node[above right] {sum};
+        \fill[HeronOrange] (0,0) circle (0.25);
+      \end{tikzpicture}\par
+      {\tiny Forces on one agent: attraction to the goal, repulsion from walls, people and the robot.\par}
+    \end{column}
+  \end{columns}
+  \scriptsize
+  \renewcommand{\arraystretch}{1.05}
+  \begin{tabularx}{\textwidth}{@{}L{4.6cm}L{3.0cm}Y@{}}
+    \toprule
+    \textbf{Scenario} & \textbf{Humans} & \textbf{Behavior}\\
+    \midrule
+    doorway, crossing, narrow\_corridor, open\_area & 1 & Regular\\
+    junction & 3 & Regular\\
+    dense\_crowd & up to 8 (by density) & Regular\\
+    dense\_static & up to 8, standing & Regular, standing still\\
+    group\_blocking & 3, one group & Impassive, almost still (0.05\,m/s)\\
+    cafe & 5 & One of each: Regular, Impassive, Scared, Curious, Threatening\\
+    \bottomrule
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{Human Behavior in Simulations Speaker Notes}
+\begin{itemize}
+  \item Οι άνθρωποι στο HuNav ακολουθούν στόχους με social force model.
+  \item Αντιδρούν στο ρομπότ με απωστική δύναμη, όχι με σενάριο.
+  \item Η τυχαιότητα μπαίνει μέσω του seed: εκκίνηση, ταχύτητα και συντελεστές δυνάμεων.
+  \item Impassive: αγνοεί το ρομπότ και δεν του κάνει χώρο.
+  \item Scared, Curious, Threatening: αντιδρούν ειδικά στο ρομπότ (απομακρύνεται, πλησιάζει, μπλοκάρει).
+  \item Στο doorway το density δεν αλλάζει τίποτα· έχει πάντα έναν άνθρωπο.
 \end{itemize}
 \end{frame}
 
