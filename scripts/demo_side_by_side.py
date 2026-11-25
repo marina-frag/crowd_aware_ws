@@ -289,14 +289,11 @@ def rviz_config(run, slot, geometry, view, folder):
     config = yaml.safe_load(Path(RVIZ_BASE).read_text())
     config['Panels'] = []
     manager = config['Visualization Manager']
-    dynamic = str(run['cfg'].get('variant', '')).startswith('dynamic')
     for display in manager['Displays']:
         if (display.get('Topic') or {}).get('Value') == '/dwal_planner/sampled_pathMarkers':
-            display['Enabled'] = not dynamic  # gray, not clustered: hidden for the dynamic method
+            display['Enabled'] = False  # gray samples hidden: only the clusters are shown
     manager['Displays'].append({'Class': 'rviz_default_plugins/MarkerArray', 'Name': 'Humans', 'Enabled': True,
                                 'Topic': {'Value': '/demo/humans'}})
-    manager['Displays'].append({'Class': 'rviz_default_plugins/MarkerArray', 'Name': 'Robot front reach',
-                                'Enabled': True, 'Topic': {'Value': '/demo/front_reach'}})
     manager['Views'] = {'Current': view}
     config['Window Geometry'] = {'X': x, 'Y': y, 'Width': width, 'Height': height, 'Hide Left Dock': True,
                                  'Hide Right Dock': True}

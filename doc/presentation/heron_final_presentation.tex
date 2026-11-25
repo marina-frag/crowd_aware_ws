@@ -172,53 +172,110 @@
 \end{frame}
 
 % ---------- Definitions ----------
+\tikzset{robotdot/.style={fill=HeronDark}, freepath/.style={HeronGreen,line width=1.2pt},
+  defnote/.style={font=\scriptsize,text=HeronDark,inner sep=1pt},
+  deftitle/.style={font=\footnotesize\bfseries,text=HeronDark,anchor=north},
+  defcell/.style={draw=HeronGray,rounded corners=3pt,fill=HeronSoft}}
+
 \begin{frame}{Relevant Definitions}
-  \begin{columns}[T,totalwidth=\textwidth]
-    \begin{column}{0.56\textwidth}
-      \footnotesize
-      \begin{itemize}\setlength{\itemsep}{3pt}
-        \item \textbf{Path:} kinematically feasible \textbf{arc-line}, an arc up to $90^\circ$ and then a tangent line, sampled inside the dynamic window.
-        \item \textbf{Free length $L$:} distance along the path until the robot footprint meets an obstacle or the path ends.
-        \item \textbf{Free radius $r$:} straight distance from the robot to the path endpoint.
-        \item \textbf{Horizon:} paths are evaluated up to $1.8$ m.
-        \item \textbf{Cluster:} contiguous free paths that represent \textbf{the same motion choice}.
-        \item \textbf{Motion choice:} \textbf{pass} (reaches the horizon) or \textbf{brake} (ends at an obstacle).
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.42\textwidth}
-      \centering
-      \begin{tikzpicture}[x=1.75cm,y=1.75cm]
-        \fill[HeronBlue!25] (0,-0.2) rectangle (0.97,0.2);
-        \draw[HeronBlue,line width=0.9pt] (0,-0.2) rectangle (0.97,0.2);
-        \fill[HeronDark] (0.103,0) circle (1.6pt);
-        \node[font=\tiny,below=2pt] at (0.25,-0.2) {\texttt{base\_link}};
-        \node[font=\tiny,below=2pt] at (0.93,-0.2) {front};
-        \fill[HeronOrange] (2.18,-0.27) rectangle (2.32,0.27);
-        \draw[HeronDark] (2.18,-0.27) rectangle (2.32,0.27);
-        \node[font=\tiny,above=2pt] at (2.25,0.27) {obstacle};
-        \draw[HeronGreen,line width=1.5pt] (0.103,0) -- (1.21,0);
-        \fill[HeronGreen] (1.21,0) circle (1.8pt);
-        \draw[HeronGray!75!black,dashed,line width=1pt] (1.21,0) -- (2.10,0);
-        \draw[{Latex[length=1.4mm]}-{Latex[length=1.4mm]}] (0.103,0.42) -- (1.21,0.42);
-        \node[font=\tiny,above] at (0.66,0.42) {free length $L$};
-        \draw[{Latex[length=1.4mm]}-{Latex[length=1.4mm]}] (1.21,-0.55) -- (2.10,-0.55);
-        \node[font=\tiny,below] at (1.65,-0.55) {$0.885$ m body};
-      \end{tikzpicture}\par
-      \vspace{0.15cm}
-      {\scriptsize The path is traced by \texttt{base\_link}. Its end is where \texttt{base\_link} stops when the \textbf{robot front} reaches the obstacle.\par}
-    \end{column}
-  \end{columns}
+  \centering
+  \begin{tikzpicture}[x=1cm,y=1cm]
+    % six cells of 4.7 x 2.85 cm: columns at x = 0, 4.95, 9.9; rows at y = 0, -3.05
+    \foreach \cx in {0,4.95,9.9} \foreach \cy in {0,-3.05}
+      \draw[defcell] (\cx,\cy) rectangle ++(4.7,-2.85);
+    \node[deftitle] at (2.35,-0.08)  {Path (arc-line)};
+    \node[deftitle] at (7.30,-0.08)  {Free length $L$, radius $r$};
+    \node[deftitle] at (12.25,-0.08) {Horizon};
+    \node[deftitle] at (2.35,-3.13)  {Cluster};
+    \node[deftitle] at (7.30,-3.13)  {Motion choice};
+    \node[deftitle] at (12.25,-3.13) {Path end vs robot front};
+
+    % --- Path: arc up to 90 deg, then the tangent line (metres, k = 0, 1, 2 1/m, horizon 1.8 m) ---
+    \begin{scope}[shift={(1.5,-2.5)},scale=1.15]
+      \draw[HeronGray!80!black,line width=0.8pt] (0,0) -- (1.8,0);
+      \draw[HeronGray!80!black,line width=0.8pt] (0,0) arc[start angle=-90,end angle=0,radius=1] -- ++(0,0.229);
+      \draw[freepath] (0,0) arc[start angle=-90,end angle=0,radius=0.5] coordinate (k) -- ++(0,1.015);
+      \fill[HeronOrange] (k) circle (2.2pt);
+      \node[defnote,text=HeronGreen,left] at (0.3,0.35) {arc ≤ 90°};
+      \node[defnote,text=HeronGreen,left] at (0.48,1.1) {line};
+      \node[defnote,text=HeronGray!60!black,above] at (1.55,0) {k = 0};
+      \node[defnote,text=HeronGray!60!black,right] at (1.0,1.0) {k = 1};
+      \node[defnote,text=HeronGreen,right] at (0.5,1.35) {k = 2};
+      \fill[robotdot] (0,0) circle (2.5pt);
+    \end{scope}
+
+    % --- Free length L vs free radius r ---
+    \begin{scope}[shift={(6.2,-2.6)},scale=0.95]
+      \draw[freepath] (0,0) arc[start angle=-90,end angle=0,radius=0.8] -- ++(0,0.5) coordinate (e);
+      \fill[HeronOrange] ($(e)+(0,0.3)$) circle (0.2);
+      \draw[HeronDark,dashed,line width=0.8pt] (0,0) -- (e);
+      \fill[HeronGreen] (e) circle (2.2pt);
+      \node[defnote,text=HeronGreen,right] at (0.85,0.55) {$L$: along the path};
+      \node[defnote,left] at (0.3,0.75) {$r$: straight};
+      \fill[robotdot] (0,0) circle (2.5pt);
+    \end{scope}
+
+    % --- Horizon (robot at (10.6,-1.6)) ---
+    \begin{scope}[shift={(10.75,-1.65)},scale=0.55]
+      \foreach \a in {-40,-20,0,20,40} \draw[HeronGray!80!black,line width=0.8pt] (0,0) -- (\a:2.6);
+      \draw[HeronBlue,dashed,line width=1pt] (-48:2.6) arc[start angle=-48,end angle=48,radius=2.6];
+      \node[defnote,text=HeronBlue,right] at (2.65,0) {1.8 m};
+      \fill[robotdot] (0,0) circle (2.5pt);
+    \end{scope}
+
+    % --- Cluster (robot at (0.8,-4.75)) ---
+    \begin{scope}[shift={(0.8,-4.75)},scale=0.6]
+      \foreach \a in {20,30,40,50} \draw[HeronBlue,line width=0.9pt] (0,0) -- (\a:2.2);
+      \foreach \a in {-20,-30,-40,-50} \draw[HeronGreen,line width=0.9pt] (0,0) -- (\a:2.2);
+      \foreach \a in {-8,0,8} \draw[HeronOrange,line width=0.9pt] (0,0) -- (\a:1.3);
+      \fill[HeronRed!70] (1.6,0) circle (0.25);
+      \node[defnote,text=HeronBlue,right] at (35:2.3) {left};
+      \node[defnote,text=HeronGreen,right] at (-35:2.3) {right};
+      \node[defnote,text=HeronOrange,right] at (1.9,0) {towards};
+      \fill[robotdot] (0,0) circle (2.5pt);
+    \end{scope}
+
+    % --- Motion choice (robot at (5.6,-4.7)) ---
+    \begin{scope}[shift={(5.6,-4.7)},scale=0.62]
+      \draw[HeronBlue,dashed,line width=0.8pt] (15:3.0) arc[start angle=15,end angle=45,radius=3.0];
+      \draw[freepath,-{Latex[length=1.6mm]}] (0,0) -- (30:3.0);
+      \node[defnote,text=HeronGreen,above left] at (30:1.7) {pass};
+      \draw[HeronRed,line width=1.2pt] (0,0) -- (-12:1.5);
+      \draw[HeronRed,line width=1.6pt] ($(-12:1.5)+(78:0.2)$) -- ($(-12:1.5)+(-102:0.2)$);
+      \fill[HeronOrange] (-12:2.05) circle (0.25);
+      \node[defnote,text=HeronRed,below] at (0.7,-0.3) {brake};
+      \fill[robotdot] (0,0) circle (2.5pt);
+    \end{scope}
+
+    % --- Path end vs robot front (base_link at (10.4,-4.75)) ---
+    \begin{scope}[shift={(10.25,-4.75)},x=1.6cm,y=1.6cm]
+      \fill[HeronBlue!25] (0,-0.2) rectangle (0.97,0.2);
+      \draw[HeronBlue,line width=0.8pt] (0,-0.2) rectangle (0.97,0.2);
+      \fill[HeronDark] (0.103,0) circle (1.5pt);
+      \node[defnote,below] at (0.3,-0.2) {\texttt{base\_link}};
+      \fill[HeronOrange] (2.18,-0.27) rectangle (2.32,0.27);
+      \draw[freepath] (0.103,0) -- (1.21,0);
+      \fill[HeronGreen] (1.21,0) circle (1.6pt);
+      \node[defnote,text=HeronGreen,above] at (0.66,0.2) {path};
+      \draw[HeronGray!75!black,dashed,line width=0.9pt] (1.21,0) -- (2.18,0);
+      \draw[{Latex[length=1.2mm]}-{Latex[length=1.2mm]}] (1.21,-0.4) -- (2.18,-0.4);
+      \node[defnote,below] at (1.7,-0.4) {0.885 m body};
+    \end{scope}
+  \end{tikzpicture}
   \vspace{0.1cm}
   \takeaway{A cluster is a motion option the user can choose: left of, right of, or towards an obstacle.}
 \end{frame}
 
 \begin{frame}{Relevant Definitions Comments}
-\begin{itemize}
-  \item Τα paths εμπνέονται από το DWA: το εύρος τους βγαίνει από το dynamic window, με $\Delta t = 0.2$ s και καμπυλότητα έως $\pm 4$.
-  \item Κάθε path ελέγχεται με όλο το footprint του iWalk, όχι μόνο με ένα σημείο.
-  \item Στο RViz μια ευθεία μπορεί να φαίνεται να σταματά περίπου 1 m πριν από το εμπόδιο. Αυτό είναι σωστό: η γραμμή δείχνει το \texttt{base\_link}, και η μύτη του ρομπότ είναι $0.885$ m μπροστά.
-  \item Όταν υπάρχει εμπόδιο μπροστά, οι επιλογές είναι τρεις: προς το εμπόδιο με φρενάρισμα, δεξιά του ή αριστερά του.
-  \item Το pass και το brake χρησιμοποιούνται μόνο στην αξιολόγηση, ως ground truth.
+\footnotesize
+\begin{itemize}\setlength{\itemsep}{1pt}
+  \item \textbf{Path:} κινηματικά εφικτό arc-line, τόξο έως $90^\circ$ και μετά εφαπτόμενη ευθεία, μέσα στο dynamic window ($\Delta t = 0.2$ s, καμπυλότητα έως $\pm 4$).
+  \item \textbf{Free length $L$:} απόσταση πάνω στο path μέχρι το footprint να ακουμπήσει εμπόδιο ή να τελειώσει το path.
+  \item \textbf{Free radius $r$:} ευθεία απόσταση από το ρομπότ ως το τέλος του path.
+  \item \textbf{Horizon:} τα paths αξιολογούνται έως $1.8$ m.
+  \item \textbf{Cluster:} συνεχόμενα ελεύθερα paths που αντιστοιχούν στην ίδια επιλογή κίνησης.
+  \item \textbf{Motion choice:} pass (φτάνει τον ορίζοντα) ή brake (σταματά σε εμπόδιο). Χρησιμοποιούνται μόνο στην αξιολόγηση, ως ground truth.
+  \item Κάθε path ελέγχεται με όλο το footprint του iWalk. Η γραμμή δείχνει το \texttt{base\_link}, και η μύτη είναι $0.885$ m μπροστά, γι' αυτό στο RViz το path σταματά περίπου 1 m πριν το εμπόδιο ή κρύβεται κάτω από το ρομπότ όταν είναι κοντό.
 \end{itemize}
 \end{frame}
 
@@ -418,6 +475,41 @@
   \item Το βήμα 2 διαλέγει το $\tau$ και το βήμα 3 συγκρίνει τις μεθόδους με αυτό.
   \item Το βήμα 3.1 προστέθηκε γιατί το βήμα 2 δεν είχε τοίχους, ενώ 6 από τις 13 συνθήκες του βήματος 3 έχουν.
   \item Τα βήματα 4 και 6 δεν έχουν τρέξει ακόμα.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Human Behavior in Simulations}
+  \small
+  \begin{itemize}
+    \item HuNav agents walk to their goals with a \textbf{social force model}
+    \item They avoid the robot, walls and other people through repulsive forces, not scripted reactions
+    \item The seed sets the start point, speed ($\times$0.85--1.15) and force factors; the behavior type stays fixed
+  \end{itemize}
+  \vspace{0.15cm}
+  \scriptsize
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabularx}{\textwidth}{@{}L{4.6cm}L{3.0cm}Y@{}}
+    \toprule
+    \textbf{Scenario} & \textbf{Humans} & \textbf{Behavior}\\
+    \midrule
+    doorway, crossing, narrow\_corridor, open\_area & 1 & Regular\\
+    junction & 3 & Regular\\
+    dense\_crowd & up to 8 (by density) & Regular\\
+    dense\_static & up to 8, standing & Regular, standing still\\
+    group\_blocking & 3, one group & Impassive, almost still (0.05\,m/s)\\
+    cafe & 5 & One of each: Regular, Impassive, Scared, Curious, Threatening\\
+    \bottomrule
+  \end{tabularx}
+\end{frame}
+
+\begin{frame}{Human Behavior in Simulations Comments}
+\begin{itemize}
+  \item Οι άνθρωποι στο HuNav ακολουθούν στόχους με social force model.
+  \item Αντιδρούν στο ρομπότ με απωστική δύναμη, όχι με σενάριο.
+  \item Η τυχαιότητα μπαίνει μέσω του seed: εκκίνηση, ταχύτητα και συντελεστές δυνάμεων.
+  \item Impassive: αγνοεί το ρομπότ και δεν του κάνει χώρο.
+  \item Scared, Curious, Threatening: αντιδρούν ειδικά στο ρομπότ (απομακρύνεται, πλησιάζει, μπλοκάρει).
+  \item Στο doorway το density δεν αλλάζει τίποτα· έχει πάντα έναν άνθρωπο.
 \end{itemize}
 \end{frame}
 

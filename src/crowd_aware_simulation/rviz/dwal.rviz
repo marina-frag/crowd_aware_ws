@@ -45,15 +45,18 @@ Visualization Manager:
       Topic:
         Value: /dwal_planner/cluster_markers_near
     - Class: rviz_default_plugins/MarkerArray
-      Name: Fixed DWAL legacy far clusters (not dynamic clusters)
-      Enabled: false
-      Topic:
-        Value: /dwal_planner/cluster_markers_far
-    - Class: rviz_default_plugins/MarkerArray
-      Name: Dynamic DWAL family, clusters, transitions and braking sweep
+      Name: DWAL clusters (far level)
       Enabled: true
       Topic:
-        Value: /dynamic_dwal/markers
+        Value: /dwal_planner/cluster_markers_far
+    - Class: rviz_default_plugins/Path
+      Name: Selected DWAL path
+      Enabled: true
+      Topic:
+        Value: /shared_controller/path_shared
+      Color: 255; 255; 255
+      Line Style: Lines
+      Line Width: 0.04
     - Class: rviz_default_plugins/Path
       Name: Desired reference path
       Enabled: true

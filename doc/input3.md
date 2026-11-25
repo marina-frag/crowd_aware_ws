@@ -10,9 +10,6 @@ Tests
 7. paper/slides.
 8. Demos
 
-
-
-
 # currently working on
 
 SOS πριν τρέξεις SCAND πειράματα να βεβαιωθείς ενδιαφέρον περιβάλλον και cmd_vel του χρήστη όχι μόνο να παίρνει οδομετρία
@@ -35,12 +32,6 @@ correspondance
 γεωμετρία κύκλος και τετράγωνο
 
  νέες σημειώσεις
-
-
-
-
-
-
 
 ---
 
@@ -554,11 +545,11 @@ $$\mathrm{Loss}(\tau)=\frac{U(\tau)}{\max_\tau U}+\frac{O(\tau)}{\max_\tau O}+\f
 
 Ένα cluster **παραβιάζει το homogeneity** όταν οι διαδρομές του ανήκουν σε ≥ 2 επιλογές (underclustering). Το overclustering μετριέται με το completeness, πάνω στις κατηγορίες pass 1, brake 1, pass 2, … (§ Cluster definition, απόφαση Ξ).
 
-| Όρος                        | Μετρική στον κώδικα                                       | Τι μετρά                                                                                                                                                                 |
-| --------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| U = under_split (underclustering) = παραβίαση **homogeneity** | `offline.clustering.far.choice_violation_fraction` (απόφαση Κ) | % clusters με paths από ≥ 2 επιλογές κίνησης (brake, pass 1, pass 2, …) |
-| O = over_split (overclustering) = παραβίαση **completeness** | `offline.clustering.far.completeness_violation_fraction` (απόφαση Ξ) | % γειτονικών ζευγών paths της ίδιας κατηγορίας (και τα δύο περνούν το φίλτρο του clustering) που χωρίζονται σε διαφορετικά clusters |
-| **S** = cluster_instability | `offline.clustering.far.ids_recorded.id_switches_per_min` | **ID switches ανά λεπτό**: πόσες φορές ένα cluster που είναι ουσιαστικά το ίδιο πέρασμα με το προηγούμενο frame (γωνιακή επικάλυψη IoU ≥ 0.5) εμφανίζεται με **άλλο ID** |
+| Όρος                                                          | Μετρική στον κώδικα                                                  | Τι μετρά                                                                                                                                                                 |
+| ------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| U = under_split (underclustering) = παραβίαση **homogeneity** | `offline.clustering.far.choice_violation_fraction` (απόφαση Κ)       | % clusters με paths από ≥ 2 επιλογές κίνησης (brake, pass 1, pass 2, …)                                                                                                  |
+| O = over_split (overclustering) = παραβίαση **completeness**  | `offline.clustering.far.completeness_violation_fraction` (απόφαση Ξ) | % γειτονικών ζευγών paths της ίδιας κατηγορίας (και τα δύο περνούν το φίλτρο του clustering) που χωρίζονται σε διαφορετικά clusters                                      |
+| **S** = cluster_instability                                   | `offline.clustering.far.ids_recorded.id_switches_per_min`            | **ID switches ανά λεπτό**: πόσες φορές ένα cluster που είναι ουσιαστικά το ίδιο πέρασμα με το προηγούμενο frame (γωνιακή επικάλυψη IoU ≥ 0.5) εμφανίζεται με **άλλο ID** |
 
 U, O, S = μέσος όρος όλων των runs με αυτό το τ. Κάθε όρος διαιρείται με τη μέγιστη τιμή του στα τ, ώστε και οι τρεις να είναι στο [0, 1].
 
