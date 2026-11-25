@@ -119,6 +119,10 @@
 \newcommand{\badge}[2]{\tikz[baseline=-0.6ex]\node[circle,fill=#1,text=white,inner sep=1.2pt,
   minimum size=1.15em,font=\scriptsize\bfseries]{#2};}
 
+% Speaker-notes slides: \shownotesfalse hides them, \shownotestrue prints them
+\newif\ifshownotes
+\shownotesfalse
+
 \begin{document}
 
 % ---------- Title ----------
@@ -166,13 +170,18 @@
   \vspace{0.15cm}
 \end{frame}
 
+\ifshownotes
 \begin{frame}{Motivation Speaker Notes}
   Αρχικά να δούμε λίγο το κίνητρο. Ξεκινώντας με το παραδοσιακό NAV2
 controller dwa
+
+
 \textbf{DWA $\rightarrow$ DWAL}
 \begin{itemize}
-  \item Το DWA παράγει τόξα σταθερής καμπυλότητας, που δεν ταιριάζουν στην εύρεση ανοιγμάτων, δηλαδή διακριτών διαδρομών.
+  \item O DWA παράγει τόξα σταθερής καμπυλότητας, που δεν ταιριάζουν στην εύρεση ανοιγμάτων, δηλαδή διακριτών διαδρομών.
   \item Τα τόξα χτυπούν στους τοίχους και έτσι απορρίπτουν έγκυρες κατευθύνσεις κίνησης.
+  \item Η απάντηση ο DWAL ο οποίος χρησιμοποιεί αντί για τόξα arclines αλλά
+όπως και ο DWA απορρίπτει κάθε path που κόβεται από εμπόδιο.
 \end{itemize}
 
 \vspace{0.2cm}
@@ -183,6 +192,7 @@ controller dwa
   \item \textbf{Υπόθεση:} η απόρριψη κάθε path που συναντά εμπόδιο πριν τον ορίζοντα είναι υπερβολικά αυστηρή σε πυκνό πλήθος.
 \end{itemize}
 \end{frame}
+\fi
 
 % ---------- Definitions ----------
 \tikzset{robotdot/.style={fill=HeronDark}, freepath/.style={HeronGreen,line width=1.2pt},
@@ -279,6 +289,7 @@ controller dwa
   \takeaway{A cluster is a motion option the user can choose: left of, right of, or towards an obstacle.}
 \end{frame}
 
+\ifshownotes
 \begin{frame}{Relevant Definitions Speaker Notes}
 \footnotesize
 \begin{itemize}\setlength{\itemsep}{1pt}
@@ -289,16 +300,11 @@ controller dwa
   \item \textbf{Cluster:}  Ένα cluster είναι ένα σύνολο κινηματικά εφικτών, ελεύθερων paths που
 αντιστοιχούν στην ίδια επιλογή κίνησης
  Όταν υπάρχει εμπόδιο μπροστά, οι επιλογές είναι τρεις:
-
-  \begin{itemize}
-    \item προς το εμπόδιο (με φρενάρισμα πριν από αυτό),
-    \item δεξιά του,
-    \item αριστερά του.
-  \end{itemize}
-  \item \textbf{Motion choice:} pass (φτάνει τον ορίζοντα) ή brake (σταματά σε εμπόδιο). Χρησιμοποιούνται μόνο στην αξιολόγηση, ως ground truth.
-  \item Κάθε path ελέγχεται με όλο το footprint του iWalk. Η γραμμή δείχνει το \texttt{base\_link}, και η μύτη είναι $0.885$ m μπροστά, γι' αυτό στο RViz το path σταματά περίπου 1 m πριν το εμπόδιο ή κρύβεται κάτω από το ρομπότ όταν είναι κοντό.
+προς το εμπόδιο (με φρενάρισμα πριν από αυτό), δεξιά του, αριστερά του.
+  \item \textbf{Motion choice:} Κάθε path χαρακτηρίζεται ως pass (φτάνει τον ορίζοντα) ή brake (σταματά σε εμπόδιο). Χρησιμοποιούνται μόνο στην αξιολόγηση, ως ground truth για τον χαρακτηρισμό των clusters σχετικά με το αν κάνουν overclustering, underclustering και την σταθερότητά τους.
 \end{itemize}
 \end{frame}
+\fi
 
 % ---------- Fixed vs Dynamic ----------
 \begin{frame}{Fixed vs Dynamic pipeline}
@@ -344,14 +350,17 @@ controller dwa
   \takeaway{Shorter paths become usable, so clustering can no longer rely on free gaps alone.}
 \end{frame}
 
+\ifshownotes
 \begin{frame}{Fixed vs Dynamic pipeline Speaker Notes}
+  Υπενθυμίζουμε ότι ουσιαστικά εμείς θέλουμε να βελτιώσουμε τον DWAL και για να το πετύχουμε αυτό αλλάζουμε τα εξής σημεία:
 \begin{itemize}
-  \item \textbf{Μεταβλητό μήκος:} αντί να ζητάμε πάντα ελεύθερο το ίδιο R, ζητάμε όσο χρειάζεται για να φρενάρει το ρομπότ με την τωρινή ταχύτητα.
+  \item \textbf{Μεταβλητό μήκος:} αντί να ζητάμε πάντα ελεύθερο το ίδιο R, ζητάμε τουλάχιστον όσο χρειάζεται για να φρενάρει το ρομπότ με την τωρινή ταχύτητα.
   \item \textbf{Clustering:} αφού κρατάμε και κοντά paths, το clustering του fixed δεν αρκεί, γιατί θα ένωνε σε ένα cluster paths που περνούν με paths που σταματούν.
-  \item \textbf{Correspondence:} το ίδιο cluster πρέπει να κρατά το ίδιο ID από frame σε frame, αλλιώς η πρόθεση του χρήστη δεν μένει σταθερή.
-  \item \textbf{Ταχύτητα:} η κίνηση περιορίζεται από το μοντέλο πέδησης, άρα το ρομπότ προχωρά μόνο όσο προλαβαίνει να σταματήσει.
+  \item \textbf{Correspondence:} το ίδιο cluster πρέπει να κρατά το ίδιο ID από frame σε frame, αλλιώς η πρόθεση του χρήστη δεν μένει σταθερή. Αυτό σχετίζεται και με τα πρότζεκτ του Θανάση και του Κώστα.
+  \item \textbf{Ταχύτητα:} η κίνηση περιορίζεται από το μοντέλο πέδησης, άρα το ρομπότ προχωρά μόνο όσο προλαβαίνει να σταματήσει. Στην διαφάνεια βλέπουμε και μια ανισωση η οποία σχετίζεται με το μοντέλο της πέδησης και συμφωνα με την επιλυση τως ως προς u οριζεται η εννοια του admissible velocity που ειναι μια εννοια που υπήρχε στο DWA αλλά όχι στον DWAL
 \end{itemize}
 \end{frame}
+\fi
 
 % ---------- Clustering ----------
 \begin{frame}{Clustering}
@@ -360,9 +369,9 @@ controller dwa
       \footnotesize
       \textbf{\textcolor{HeronBlue}{What a good clustering does}}
       \begin{itemize}\setlength{\itemsep}{3pt}
-        \item \textbf{Homogeneity ($U$):} each cluster contains one motion choice.
-        \item \textbf{Completeness ($O$):} each motion choice stays in one cluster.
-        \item \textbf{Stability ($S$):} few ID switches per minute.
+        \item \textbf{Underclustering as Homogeneity violation ($U$):} each cluster contains one motion choice.
+        \item \textbf{Overclustering as Completeness violation ($O$):} each motion choice stays in one cluster.
+        \item \textbf{Stability ($S$):} ID switches per minute.
       \end{itemize}
       \vspace{0.1cm}
       \[
@@ -389,15 +398,19 @@ controller dwa
   \takeaway{Selection: same runs as $\tau=0.3$, 0 collisions, at least as many goals, then the lowest Loss.}
 \end{frame}
 
+\ifshownotes
 \begin{frame}{Clustering Speaker Notes}
 \begin{itemize}
-  \item \textbf{Underclustering:} ένα cluster ενώνει διαφορετικές επιλογές, π.χ. δύο περάσματα γύρω από ένα εμπόδιο.
-  \item \textbf{Overclustering:} μία επιλογή σπάει σε πολλά clusters, οπότε ο χρήστης βλέπει ψεύτικες εναλλακτικές.
+  \item \textbf{Underclustering:} μετριέται ως παραβίαση homogeneity: κάθε cluster πρέπει να έχει paths μίας μόνο επιλογής. Παραβίαση είναι ένα cluster με pass και brake, αλλά και ένα cluster με pass 1 και pass 2, γιατί γεφυρώνει ένα εμπόδιο.
+  \item \textbf{Overclustering:} μετριέται ως παραβίαση completeness: κάθε κατηγορία πρέπει να βρίσκεται σε ένα cluster
+  \item \textbf{Stability:} μετριέται ως ID switches ανά λεπτό.
   \item Τα ονόματα homogeneity και completeness είναι από Rosenberg \& Hirschberg (2007). Εμείς μετράμε ποσοστό παραβιάσεων.
-  \item Το K-Means αποκλείστηκε γιατί χρειάζεται να δώσουμε από πριν τον αριθμό των clusters.
-  \item Ισοπαλία στο Loss (διαφορά $< 0.02$): μικρότερο $S$. Αν είναι ίδιο και το $S$, μένει το $\tau = 0.3$.
+  \item Τα παραπάνω κανονικοοποιούνται και χρησιμοποιούνται για να ορίσουμε ένα Loss σύμφωνα με το οποίο συγκρίνουμε τις μεθόδους clustering.
+  \item Οι μέθοδοι που συγκρίναμε ήταν τρεις: length jump, change-point και DBSCAN. Κάθε μέθοδος χρειάστηκε fine tune ως προς μία παράμετρο.
+  \item Τα αποτελέσματα των συγκρίσεων φαίνονται σε επόμενη διαφάνεια
 \end{itemize}
 \end{frame}
+\fi
 
 % ---------- Pipeline ----------
 \begin{frame}{Pipeline}
@@ -440,6 +453,7 @@ controller dwa
   \takeaway{The safety layers stay outside the planner, so the method changes options, not the final safety stack.}
 \end{frame}
 
+\ifshownotes
 \begin{frame}{Pipeline Speaker Notes}
 Οι παραπάνω διαφορές καθορίζουν το pipeline στο οποίο καταλήξαμε.
 \begin{itemize}
@@ -447,21 +461,23 @@ controller dwa
   \item Το clustering χωρίζει τις επιλογές και κρατά σταθερά IDs.
   \item Ο intent estimator μένει ίδιος και επιλέγει cluster από την εντολή του χρήστη.
   \item Ο shared controller βγάζει $v$ και $\omega$ και στέλνει πίσω την απαίτηση φρεναρίσματος στο clustering.
-  \item Velocity smoother, collision monitor και watchdog εφαρμόζονται και στις δύο μεθόδους.
+  \item Velocity smoother, collision monitor του NAV2 και custom watchdog εφαρμόζονται και στις δύο μεθόδους.
 \end{itemize}
 \end{frame}
+\fi
 
 % ---------- Hypotheses and metrics ----------
 \begin{frame}{Hypothesis and Metrics}
   \footnotesize
   \renewcommand{\arraystretch}{1.3}
-  \begin{tabularx}{\textwidth}{@{}L{1.2cm}YL{4.2cm}L{3.1cm}@{}}
+  \begin{tabularx}{\textwidth}{@{}L{1.0cm}YL{5.2cm}@{}}
     \toprule
-    & \textbf{Hypothesis} & \textbf{Metric} & \textbf{Role}\\
+    & \textbf{Hypothesis} & \textbf{Metric}\\
     \midrule
-    \textbf{H1} & Variable length reduces standstill while motion is requested & Standstill time [s], tracking $-$ fixed & Primary\\
-    \textbf{H2} & Length-jump clustering separates motion choices & Homogeneity, completeness & Descriptive\\
-    \textbf{H3} & ID tracking reduces ID switches on the same clusters & ID switches/min, offline replay & Primary\\
+    \textbf{H1} & Variable length reduces standstill while motion is requested & Standstill time [s], tracking $-$ fixed\\
+    \textbf{H2} & Length-jump clustering gives clusters consistent with the definition and a low Loss & Homogeneity, completeness, Loss\\
+    \textbf{H3} & Tracking correspondence keeps cluster IDs more stable than the existing greedy matching & ID switches/min, offline replay on the same clusters\\
+    \textbf{H4} & The path selected by the whole pipeline is natural: close to the teleoperator's path in SCAND & $|\varphi^{*}-\varphi_{\mathrm{true}}|$ at 1.8\,m, ADE/FDE vs.\ a user-only baseline\\
     \bottomrule
   \end{tabularx}
 
@@ -472,15 +488,17 @@ controller dwa
   \end{statusbox}
 \end{frame}
 
+\ifshownotes
 \begin{frame}{Hypothesis and Metrics Speaker Notes}
+Υποθέτουμε τα εξής:
 \begin{itemize}
-  \item Το H2 βγήκε από τις κύριες υποθέσεις, γιατί ο fixed έχει 0 ανάμεικτα clusters εκ κατασκευής και η σύγκριση δεν θα ήταν δίκαιη.
-  \item Τα ζεύγη μοιράζονται σενάριο, διαδρομή και seed, γι' αυτό τα τεστ είναι ζευγαρωτά.
-  \item Ο αρχικός κανόνας του H1 ζητούσε CI της διαμέσου χωρίς το 0 και καμία απόσταση χειρότερη.
-  \item Τον αναθεωρήσαμε \textbf{αφού είδαμε τα αποτελέσματα}, γιατί σε πολλά ζεύγη καμία μέθοδος δεν σταματά και η διάμεσος μένει κοντά στο 0.
-  \item Γι' αυτό το αποτέλεσμα αναφέρεται ως post-hoc. Καθαρή επιβεβαίωση δίνουν μόνο νέα seeds.
+  \item \textbf{H1:} το μεταβλητό μήκος μειώνει τον χρόνο ακινησίας όταν ο χρήστης ζητά κίνηση.
+  \item \textbf{H2:} το clustering με length jump φτιάχνει clusters συμβατά με τον ορισμό (μία επιλογή κίνησης ανά cluster, χωρίς να σπάει μια επιλογή σε κομμάτια) και με χαμηλό Loss.
+  \item \textbf{H3:} το tracking correspondence κρατά τα IDs πιο σταθερά από το υπάρχον greedy matching, δηλαδή δίνει λιγότερα ID switches.
+  \item \textbf{H4:} το path που επιλέγει όλο το pipeline είναι «φυσικό», δηλαδή κοντά στη διαδρομή του χειριστή στο SCAND (teleoperated robots σε κοινωνικά περιβάλλοντα).
 \end{itemize}
 \end{frame}
+\fi
 
 % ---------- Protocol ----------
 \begin{frame}{Evaluation Protocol}
@@ -510,15 +528,18 @@ controller dwa
   \end{columns}
 \end{frame}
 
+\ifshownotes
 \begin{frame}{Evaluation Protocol Speaker Notes}
 \begin{itemize}
-  \item Το πρωτόκολλο πάει από τον απλό έλεγχο της αλυσίδας στη σύγκριση των μεθόδων.
-  \item Το βήμα 1 δείχνει ότι χωρίς εμπόδια fixed και tracking ακολουθούν την ίδια διαδρομή.
-  \item Το βήμα 2 διαλέγει το $\tau$ και το βήμα 3 συγκρίνει τις μεθόδους με αυτό.
-  \item Το βήμα 3.1 προστέθηκε γιατί το βήμα 2 δεν είχε τοίχους, ενώ 6 από τις 13 συνθήκες του βήματος 3 έχουν.
+  \item Πάμε να δούμε τώρα το προτόκολλο αξιολόγησης που ελέγχει τόσο το συνολικό αποτέλεσμα του pipeline όσο συγκρίνει και τις επιμέρους μεθόδους. Τα αποτελέσματα ανά βήμα:
+  \item Το βήμα 1 δείχνει ότι χωρίς εμπόδια fixed και tracking πράγματι ακολουθούν την ίδια διαδρομή αυτό είναι σαν baseline.
+  \item Το βήμα 2 κάνει fine tune στην παράματρο τ της μεθόδου μας και το βήμα 3 συγκρίνει τις μεθόδους με αυτό.
+  \item Το βήμα 3.1 προστέθηκε για να δοκιμάσουμε και tuning και σε άλλα σενάρια πχ με τοίχους και τις επιπλέον μεθόδους clustering.
   \item Τα βήματα 4 και 6 δεν έχουν τρέξει ακόμα.
+  \item Eνώ δεξιά βλέπουμε τα usecases-σενάρια που χρησιμοποιήθηκαν στο βήμα 3.
 \end{itemize}
 \end{frame}
+\fi
 
 % ---------- Results ----------
 \begin{frame}{Results per step: Steps 1 and 2}
@@ -549,6 +570,17 @@ controller dwa
         \node[below,text=HeronDark!80] at (0.05,-3.15) {max deviation [m]};
         \fill[HeronGray!90!black] (0.068,0.35) rectangle ++(0.004,0.3); \node[right] at (0.072,0.5) {Fixed};
         \fill[HeronGreen] (0.068,-0.25) rectangle ++(0.004,0.3); \node[right] at (0.072,-0.1) {Tracking};
+      \end{tikzpicture}\hfill
+      % the three desired paths, to scale (8 m long; prepare_scene.py build_path)
+      \begin{tikzpicture}[x=0.25cm,y=0.25cm,font=\tiny]
+        \draw[HeronBlue,line width=0.9pt,-{Latex[length=1.1mm]}] (0,3.9) -- (8,3.9);
+        \draw[HeronBlue,line width=0.9pt,-{Latex[length=1.1mm]}] plot[domain=0:8,samples=61,smooth] (\x,{1.7+1.5*(\x/8-sin(deg(2*pi*\x/8))/(2*pi))});
+        \draw[HeronBlue,line width=0.9pt,-{Latex[length=1.1mm]}] plot[domain=0:8,samples=81,smooth] (\x,{0.4*sin(deg(2*pi*\x/5))*min(\x/3,1)^2*(3-2*min(\x/3,1))});
+        \foreach \y in {3.9,1.7,0} \fill[HeronDark] (0,\y) circle (0.14);
+        \node[anchor=south west,inner sep=1pt,text=HeronDark] at (0,3.95) {line};
+        \node[anchor=south east,inner sep=1pt,text=HeronDark] at (8,1.7) {s\_curve};
+        \node[anchor=south west,inner sep=1pt,text=HeronDark] at (0,0.45) {hard\_curve};
+        \node[anchor=north,inner sep=1pt,text=HeronDark!80] at (4,-0.5) {8\,m, to scale};
       \end{tikzpicture}\par
       \vspace{0.1cm}
       \footnotesize Without obstacles the two methods follow the same path.
@@ -579,17 +611,30 @@ controller dwa
       \end{tikzpicture}\par
       \vspace{0.1cm}
       \footnotesize $\tau = 0.3$ has the lowest Loss.
+      \par{\tiny dense\_crowd, dense\_static $\times$ 3 densities, line, 5 seeds (30 runs per $\tau$). $\tau = 0.5,\,0.7,\,1.0$: rejected by the definition filter.\par}
     \end{column}
   \end{columns}
   \vspace{0.1cm}
   \takeaway{The control chain is validated, and $\tau = 0.3$ is the reference value for the next steps.}
 \end{frame}
 
+\ifshownotes
+\begin{frame}{Results per step: Steps 1 2 Speaker Notes}
+\begin{itemize}
+  \item Εδώ βλέπουμε τα αποτελέσματα των βημάτων 1 και 2.
+  \item Στο βήμα 1 βλέπουμε ότι χωρίς εμπόδια οι δύο μέθοδοι ακολουθούν την ίδια διαδρομή δοκιμάσαμε ευθεία γραμμή και δύο καμπύλες. Όπως βλεπουμε κάθε διαδρομή είναι αυξανόμενης δυσκολίας.
+  \item Στο βήμα 2 τεστάραμε σε σενάρια dense\_crowd και dense\_static, με τρεις πυκνότητες (sparse, medium, dense), ευθεία διαδρομή και 5 seeds (101--105), δηλαδή 30 runs ανά τιμή του τ, για να αιτιολογήσουμε την επιλογή της παραμέτρου τ. Όπως βλέπουμε η τιμή τ=0.3 δίνει το χαμηλότερο Loss.
+  \item Τρέξαμε και τ = 0.5, 0.7 και 1.0. Απορρίφθηκαν από το φίλτρο του ορισμού (χειρότερο κελί πάνω από 0.25), γι' αυτό δεν είναι στον πίνακα. Όλες οι τιμές είχαν 0 συγκρούσεις και έφτασαν στον στόχο.
+\end{itemize}
+
+\end{frame}
+\fi
+
 \begin{frame}{Results per step: Step 3}
   \begin{columns}[T,totalwidth=\textwidth]
     \begin{column}{0.53\textwidth}
       \footnotesize
-      \textbf{H1: tracking reduces standstill} {\scriptsize (130 pairs)}
+      \textbf{H1: variable length reduces standstill} {\scriptsize (130 pairs)}
       \begin{itemize}\setlength{\itemsep}{2pt}
         \item Mean standstill: \textbf{18.3 s $\rightarrow$ 6.9 s}
         \item Difference $-11.4$ s, 95\% CI $[-15.6,\,-7.5]$
@@ -600,7 +645,10 @@ controller dwa
         \item \textbf{Trade-off:} median obstacle distance $-4.7$ cm
       \end{itemize}
       \vspace{0.05cm}
-      \textbf{H3:} not confirmed (Holm $p = 0.36$).
+      {\scriptsize
+      \textbf{H2} (descriptive): lowest Loss in step 2; 6th of 8 with walls (step 3.1)\\
+      \textbf{H3:} not confirmed, Holm $p = 0.36$ (105/130 pairs tied)\\
+      \textbf{H4:} not tested yet (SCAND, step 4)\par}
     \end{column}
     \begin{column}{0.45\textwidth}
       \centering
@@ -624,10 +672,31 @@ controller dwa
     \end{column}
   \end{columns}
   \vspace{0.05cm}
-  \begin{statusbox}{HeronOrange}
-    \scriptsize H1 passes the \textbf{revised} criterion, defined after inspecting these results (post-hoc). New seeds are needed for a clean confirmation.
-  \end{statusbox}
+
 \end{frame}
+
+\ifshownotes
+\begin{frame}{Results per step: Steps 3 Speaker Notes}
+\footnotesize
+\begin{itemize}
+  \item Για το βήμα 3 τώρα είδαμε πριν λίγες διαφανειες ποια σενάρια χρησιμοποιήσαμε.
+  \item Γενικά το κέρδος φαίνεται κυρίως σε junction, corridor και πυκνό πλήθος. Στις ανοιχτές σκηνές οι μέθοδοι είναι ίδιες.
+  \item Συγκεκριμένα σχετικά με την υπόθεση H1
+  \begin{itemize}
+    \item Το tracking μειώνει τον χρόνο ακινησίας κατά 11.4 s, με 95\% CI [-15.6, -7.5] και Holm p < 0.0001.
+    \item Το tracking φτάνει στον στόχο στα διπλάσια runs (112 έναντι 56), χωρίς σύγκρουση.
+    \item Το κόστος είναι ότι περνά πιο κοντά σε εμπόδια, κατά $4.7$ cm στη διάμεσο
+  \end{itemize}
+  \item Για τις υπόλοιπες υποθέσεις:
+  \begin{itemize}
+    \item H2 δεν είναι κύριο τεστ στο βήμα 3, γιατί fixed και tracking βάζουν σε cluster διαφορετικά paths. Στο βήμα 2 το τ = 0.3 περνά το φίλτρο του ορισμού με το χαμηλότερο Loss. Με τοίχους (βήμα 3.1) είναι 6ο στα 8.
+    \item H3 δεν επιβεβαιώνεται: τα ID switches είναι σπάνια και στους δύο τρόπους, 105 από τα 130 ζεύγη είναι ισοπαλία, Holm p = 0.36.
+    \item H4 δεν έχει ελεγχθεί ακόμα. Θα κριθεί στο SCAND (βήμα 4).
+  \end{itemize}
+\end{itemize}
+
+\end{frame}
+\fi
 
 \begin{frame}{Results per step: Step 3.1}
   \begin{statusbox}{HeronGreen}
@@ -657,21 +726,38 @@ controller dwa
   Obstacle distance for $\tau = 0.3$: mean minimum 0.41 m (60/60 runs).\par}
 \end{frame}
 
-\begin{frame}{Results per step Speaker Notes}
+\ifshownotes
+\begin{frame}{Results per step Step 3.1 Speaker Notes}
+\footnotesize
 \begin{itemize}
-  \item Το tracking φτάνει στον στόχο στα διπλάσια runs (112 έναντι 56), χωρίς σύγκρουση.
-  \item Το κέρδος φαίνεται κυρίως σε junction, corridor και πυκνό πλήθος. Στις ανοιχτές σκηνές οι μέθοδοι είναι ίδιες.
-  \item Το κόστος είναι ότι περνά πιο κοντά σε εμπόδια, κατά $4.7$ cm στη διάμεσο.
-  \item Στο doorway το tracking κολλά σε 6 από τα 20 runs. Με τον τωρινό κώδικα φτάνει και στα 20 (ίδια seeds).
-  \item Το H3 δεν επιβεβαιώθηκε: τα ID switches είναι σπάνια και 105 από τα 130 ζεύγη είναι ισοπαλία.
-  \item Στο 3.1 μένει το $\tau = 0.3$ για έναν στόχο διαφορά από το $\varepsilon = 0.15$.
-  \item Διερευνητικά, το $\varepsilon = 0.15$ σε 130 ζεύγη: 117 έναντι 112 στόχων, όλοι οι επιπλέον στο doorway. Στο ίδιο image το $\tau = 0.3$ φτάνει 20/20 και το $\varepsilon$ 19/20, άρα η διαφορά ήταν ο κώδικας, όχι το clustering.
+  \item Το βήμα 2 έγινε χωρίς τοίχους, ενώ 6 από τις 13 συνθήκες του βήματος 3 έχουν τοίχους. Γι' αυτό στο 3.1 κάναμε ξανά tuning, με και χωρίς τοίχους, και δοκιμάσαμε δύο ακόμα κανόνες χωρισμού: DBSCAN στα endpoints (ε) και change-point στο r (β).
+  \item Κάθε τιμή έτρεξε στα ίδια 60 runs: 6 κελιά χωρίς τοίχους και 6 συνθήκες με τοίχους, με 5 seeds (101--105). Σύνολο 480 runs.
+  \item Ο κανόνας κλειδώθηκε πριν δούμε αποτελέσματα: 0 συγκρούσεις, τουλάχιστον τόσοι στόχοι όσοι με τ = 0.3, και μετά το μικρότερο Loss.
+  \item Καμία τιμή δεν είχε σύγκρουση, αλλά μόνο το τ = 0.3 φτάνει τους 59/60 στόχους. Άρα μένει το τ = 0.3 και δεν χρειάζονται νέα closed-loop runs.
+  \item Δεν είναι το καλύτερο clustering: πέντε τιμές έχουν μικρότερο Loss, και το τ = 0.3 έχει το υψηλότερο U. Η απόφαση είναι οριακή, γιατί το ε = 0.15 χάνει μόνο έναν στόχο.
+  \item Η απόσταση από εμπόδια δεν είναι φίλτρο, απλώς την αναφέρουμε: για το τ = 0.3 η μέση ελάχιστη απόσταση είναι 0.41 m.
+  \item Αν ρωτήσουν: διερευνητικά τρέξαμε και το ε = 0.15 σε closed-loop (130 runs). Έφτασε στον στόχο 117 έναντι 112 φορές, όλοι οι επιπλέον στόχοι στο doorway. Έτρεξε όμως με νεότερο Docker image, άρα η διαφορά δεν αποδίδεται με βεβαιότητα στο clustering και δεν αλλάζει το τ = 0.3.
 \end{itemize}
 \end{frame}
+\fi
 
 % ---------- Demo ----------
 \begin{frame}{Demo}
   \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.325\textwidth}
+      \begin{statusbox}[equal height group=demo]{HeronBlue}
+        \centering
+        \begin{tikzpicture}[scale=0.45,demoicon]
+          \foreach \px/\py in {0.9/0.75,1.9/-0.75,2.9/0.75,3.6/-0.75} \fill[HeronOrange] (\px,\py) circle (0.22);
+          \draw[HeronBlue,line width=1.4pt,-{Latex[length=2mm]}] plot[domain=0:4,samples=41,smooth] (\x,{0.35*sin(deg(2*pi*\x/2))});
+          \fill[HeronDark] (0,0) circle (0.12);
+        \end{tikzpicture}\par\vspace{2pt}
+        \raggedright
+        \badge{HeronBlue}{1}\;\footnotesize\textbf{Same frame, four split rules}\\[2pt]
+        \scriptsize\texttt{dense\_static:hard\_curve}, seed 3\\
+        Run ($\tau = 0.3$) vs.\ $\tau = 0.2$, $\varepsilon = 0.15$, $\beta = 0.2$
+      \end{statusbox}
+    \end{column}
     \begin{column}{0.325\textwidth}
       \begin{statusbox}[equal height group=demo]{HeronGreen}
         \centering
@@ -682,25 +768,9 @@ controller dwa
           \fill[HeronDark] (0,0) circle (0.12);
         \end{tikzpicture}\par\vspace{2pt}
         \raggedright
-        \badge{HeronGreen}{1}\;\footnotesize\textbf{Where tracking helps}\\[2pt]
+        \badge{HeronGreen}{2}\;\footnotesize\textbf{Where tracking helps}\\[2pt]
         \scriptsize\texttt{junction:left\_turn}, seed 6\\
         Fixed vs tracking, same agents
-      \end{statusbox}
-    \end{column}
-    \begin{column}{0.325\textwidth}
-      \begin{statusbox}[equal height group=demo]{HeronRed}
-        \centering
-        \begin{tikzpicture}[scale=0.45,demoicon]
-          \fill[HeronDark!70] (1.6,0.45) rectangle (1.85,1.3); \fill[HeronDark!70] (1.6,-0.45) rectangle (1.85,-1.3);
-          \fill[HeronOrange] (2.4,0.1) circle (0.22);
-          \draw[HeronRed,line width=1.4pt] (0,0) -- (1.2,0);
-          \draw[HeronRed,line width=1.8pt] (1.2,0.28) -- (1.2,-0.28);
-          \fill[HeronDark] (0,0) circle (0.12);
-        \end{tikzpicture}\par\vspace{2pt}
-        \raggedright
-        \badge{HeronRed}{2}\;\footnotesize\textbf{Where tracking fails}\\[2pt]
-        \scriptsize\texttt{doorway:side\_approach}, seed 3\\
-        Deadlock close to the door frame
       \end{statusbox}
     \end{column}
     \begin{column}{0.325\textwidth}
@@ -713,13 +783,13 @@ controller dwa
           \node[font=\tiny,anchor=east] at (0,0.5) {$\beta$};
         \end{tikzpicture}\par\vspace{2pt}
         \raggedright
-        \badge{HeronBlue}{3}\;\footnotesize\textbf{Same frame, three split rules}\\[2pt]
+        \badge{HeronBlue}{3}\;\footnotesize\textbf{Split rules between tables}\\[2pt]
         \scriptsize\texttt{cafe:between\_tables}, seed 3\\
-        $\tau$, DBSCAN $\varepsilon = 0.15$, change-point $\beta$
+        Same four rows, close to tables
       \end{statusbox}
     \end{column}
   \end{columns}
-  \vspace{0.2cm}
+  \vspace{0.3cm}
   \begin{columns}[T,totalwidth=\textwidth]
     \begin{column}{0.49\textwidth}
       \footnotesize
@@ -731,30 +801,33 @@ controller dwa
     \end{column}
     \begin{column}{0.49\textwidth}
       \footnotesize
-      \textbf{How to read the split-rule bars} (demo 3)\par\vspace{3pt}
+      \textbf{How to read the split-rule bars} (demos 1 and 3)\par\vspace{3pt}
       \scriptsize
       \tikz\fill[HeronGreen] (0,0) rectangle (0.35,0.2);\; pass \quad
       \tikz\fill[HeronGray] (0,0) rectangle (0.35,0.2);\; brake \quad
       \tikz\fill[HeronOrange] (0,0) rectangle (0.35,0.2);\; mixed (pass + brake)\par\vspace{2pt}
-      Offline, open loop: the same scan through each rule.
+      Offline, open loop: the same scan through each rule. Top row: the clusters the run recorded.
     \end{column}
   \end{columns}
 \end{frame}
 
+\ifshownotes
 \begin{frame}{Demo Speaker Notes}
 \footnotesize
 \begin{itemize}
   \item Τα demos είναι replay καταγεγραμμένων runs, άρα δεν εξαρτώνται από τη ζωντανή προσομοίωση.
-  \item Μετά το πρώτο δευτερόλεπτο τα δύο ρομπότ βρίσκονται σε διαφορετικά σημεία, οπότε τα δύο panels δεν δείχνουν την ίδια στιγμή της σκηνής.
+  \item Demo 1 και 3: ίδιο scan, τέσσερις κανόνες χωρισμού. Η πάνω γραμμή είναι τα clusters που δημοσίευσε το run, οι άλλες τρεις είναι offline. Ένα καλό clustering δεν έχει πορτοκαλί (ανάμεικτο) cluster και δεν σπάει μια επιλογή σε πολλά κομμάτια.
+  \item Demo 2: στο seed 6 το fixed μένει ακίνητο 58.7 s από τα 60 s ενώ ο χρήστης ζητά κίνηση και δεν φτάνει στον στόχο. Το tracking φτάνει στον στόχο σε 36.7 s, χωρίς σύγκρουση.
+  \item Στο demo 2, μετά το πρώτο δευτερόλεπτο τα δύο ρομπότ βρίσκονται σε διαφορετικά σημεία, οπότε τα δύο panels δεν δείχνουν την ίδια στιγμή της σκηνής.
   \item Να υπάρχει εφεδρικό βίντεο σε περίπτωση που δεν ανοίξει το RViz.
 \end{itemize}
 \vspace{0.15cm}
-\scriptsize
+\tiny
+\texttt{TAU=0.2 EPS=0.15 BETA=0.2 bash scripts/demo\_side\_by\_side.sh cuts dense\_static:hard\_curve 3}\\[3pt]
 \texttt{bash scripts/demo\_side\_by\_side.sh compare junction:left\_turn 6}\\[3pt]
-\texttt{bash scripts/demo\_side\_by\_side.sh compare doorway:side\_approach 3}\\[3pt]
-\texttt{TO=40 RECORD=junction.mp4 bash scripts/demo\_side\_by\_side.sh compare junction:left\_turn 6}\\[3pt]
 \texttt{TAU=0.2 EPS=0.15 BETA=0.2 bash scripts/demo\_side\_by\_side.sh cuts cafe:between\_tables 3}
 \end{frame}
+\fi
 
 % ---------- Constraints ----------
 \begin{frame}{Constraints and next steps}
@@ -798,6 +871,7 @@ controller dwa
   \end{center}
 \end{frame}
 
+\ifshownotes
 \begin{frame}{Constraints and next steps Speaker Notes}
 \begin{itemize}
   \item Το βασικό εύρημα είναι ότι το ρομπότ σταματά πολύ λιγότερο και φτάνει συχνότερα στον στόχο, χωρίς συγκρούσεις στην προσομοίωση.
@@ -806,6 +880,7 @@ controller dwa
   \item Το αδιέξοδο στο doorway δεν εμφανίζεται με τον τωρινό κώδικα (20/20). Μένει να βρεθεί ποια αλλαγή το έλυσε και να ξανατρέξει το fixed για δίκαιη σύγκριση.
 \end{itemize}
 \end{frame}
+\fi
 
 % ---------- Backup ----------
 \begin{frame}[plain]
@@ -839,6 +914,93 @@ controller dwa
   \raggedright
   \takeaway{The gain appears in constrained spaces. Open scenes stay equal, and \texttt{group\_blocking:line} is blocked by design.}
 \end{frame}
+
+\begin{frame}{Simulated user: path-following controller}
+  \footnotesize
+  \begin{itemize}\setlength{\itemsep}{4pt}
+    \item The simulated user is the Nav2 \textbf{Regulated Pure Pursuit} (RPP) controller, not a PID.
+    \item It follows the desired path (line, s\_curve, hard\_curve, \dots) from odometry, and its $(v,\omega)$ is the user command that the shared controller receives.
+    \item The same controller and path are used for fixed and tracking runs.
+  \end{itemize}
+  \vspace{0.2cm}
+  \scriptsize
+  \renewcommand{\arraystretch}{1.1}
+  \begin{tabularx}{\textwidth}{@{}L{5.0cm}Y@{}}
+    \toprule
+    \textbf{Setting} & \textbf{Value} (\texttt{config/controllers/reference.yaml})\\
+    \midrule
+    Lookahead & 0.6\,m, scaled with speed (1.5\,s) between 0.3 and 0.9\,m\\
+    Rotate to heading & on, above $45^\circ$ (0.785\,rad), at 0.5\,rad/s\\
+    Reversing & off\\
+    RPP collision detection & off: obstacles are handled by the shared controller\\
+    \bottomrule
+  \end{tabularx}
+\end{frame}
+
+% intervals [rad]: A [-0.5,0.5], B [0.55,1.45], X [0.05,1.05], Y [1.1,2.1]; mean angles 0, 1, 0.55, 1.6
+% IoU: A-X 0.29, B-X 0.36, B-Y 0.23, A-Y 0 (same numbers as doc/input1.md, greedy example)
+\begin{frame}{Correspondence: a greedy failure and the tracking fix}
+  \begin{columns}[T,totalwidth=\textwidth]
+    \begin{column}{0.50\textwidth}
+      \footnotesize\textbf{\textcolor{HeronRed}{Greedy (upstream)}}\par\vspace{2pt}
+      \begin{tikzpicture}[x=1.45cm,y=0.62cm,font=\tiny]
+        \node[anchor=east,text=HeronDark] at (-0.6,1) {frame $t-1$};
+        \node[anchor=east,text=HeronDark] at (-0.6,0) {frame $t$};
+        \fill[HeronBlue!30] (-0.5,0.8) rectangle (0.5,1.2); \node at (0,1) {A};
+        \fill[HeronOrange!40] (0.55,0.8) rectangle (1.45,1.2); \node at (1,1) {B};
+        \fill[HeronGray] (0.05,-0.2) rectangle (1.05,0.2); \node at (0.55,0) {X};
+        \fill[HeronGray] (1.1,-0.2) rectangle (2.1,0.2); \node at (1.6,0) {Y};
+        \draw[HeronRed,line width=1pt,-{Latex[length=1.5mm]}] (1,0.8) -- (0.55,0.2);
+        \draw[HeronRed,line width=1pt,-{Latex[length=1.5mm]}] (0,0.8) -- (1.6,0.2);
+        \node[chip,fill=HeronRed,anchor=west] at (2.15,0.85) {1st: B$\to$X 0.45};
+        \node[chip,fill=HeronRed,anchor=west] at (2.15,0.15) {2nd: A$\to$Y 1.60};
+      \end{tikzpicture}\par
+      {\scriptsize Mean angle $\bar\varphi$, cheapest pair first: total 2.05, not 1.15. The order flips: the user's intent on B moves to X, and A's ID goes to Y, which A does not overlap.\par}
+      \vspace{0.1cm}
+      \footnotesize\textbf{\textcolor{HeronGreen}{Tracking (dynamic)}}\par\vspace{2pt}
+      \begin{tikzpicture}[x=1.45cm,y=0.62cm,font=\tiny]
+        \node[anchor=east,text=HeronDark] at (-0.6,1) {frame $t-1$};
+        \node[anchor=east,text=HeronDark] at (-0.6,0) {frame $t$};
+        \fill[HeronBlue!30] (-0.5,0.8) rectangle (0.5,1.2); \node at (0,1) {A};
+        \fill[HeronOrange!40] (0.55,0.8) rectangle (1.45,1.2); \node at (1,1) {B};
+        \fill[HeronGray] (0.05,-0.2) rectangle (1.05,0.2); \node at (0.55,0) {X};
+        \fill[HeronGray] (1.1,-0.2) rectangle (2.1,0.2); \node at (1.6,0) {Y};
+        \draw[HeronGray!70!black,dashed,line width=0.7pt] (1,0.8) -- (0.55,0.2);
+        \node[anchor=east,text=HeronGray!50!black] at (0.74,0.5) {0.36};
+        \draw[HeronGreen,line width=1pt,-{Latex[length=1.5mm]}] (0,0.8) -- (0.55,0.2);
+        \draw[HeronGreen,line width=1pt,-{Latex[length=1.5mm]}] (1,0.8) -- (1.6,0.2);
+        \node[chip,fill=HeronGreen,anchor=west] at (2.15,0.85) {A$\to$X: $J = 0.29$};
+        \node[chip,fill=HeronGreen,anchor=west] at (2.15,0.15) {B$\to$Y: $J = 0.23$};
+      \end{tikzpicture}\par
+      {\scriptsize Interval IoU, best non-crossing set: $0.29 + 0.23 = 0.52 >$ B$\to$X alone ($0.36$). Both pass the gate ($J \geq 0.2$), order kept.\par}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \footnotesize\textbf{\textcolor{HeronBlue}{Tracking correspondence}}
+      \scriptsize
+      \begin{enumerate}\setlength{\itemsep}{0pt}
+        \item \textbf{Interval IoU:} compares the angular intervals $[\varphi_{\min},\varphi_{\max}]$ at 1.8\,m, not the mean angle: $J$ = overlap / union.
+        \item \textbf{Optimal order-preserving assignment:} dynamic programming that maximizes the total IoU; the Hungarian method restricted to non-crossing assignments.
+        \item \textbf{Gating:} if $J < 0.2$, the cluster gets a new ID instead of inheriting one.
+        \item \textbf{Track management:} a lost ID is kept for 2 frames (0.4\,s), in case it was lost to noise. IDs are never reused.
+        \item \textbf{Split/merge:} when a cluster splits, the piece with the largest IoU inherits the ID.
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+  \takeaway{Greedy takes the cheapest pair first; tracking matches all at once, without crossings.}
+\end{frame}
+
+\ifshownotes
+\begin{frame}{Correspondence example Speaker Notes}
+\footnotesize
+\begin{itemize}
+  \item Το ID κάθε cluster μετράει γιατί ο intent estimator κρατά την πίστη για την πρόθεση του χρήστη ανά ID. Αν το ID πηδήξει σε άλλο πέρασμα, η πρόθεση πάει σε λάθος κατεύθυνση.
+  \item Greedy: παίρνει πρώτα το φθηνότερο ζεύγος, B$\to$X (0.45), και μετά αναγκαστικά δίνει A$\to$Y (1.60). Τα περάσματα διασταυρώνονται, κάτι φυσικά αδύνατο, και το A δίνει το ID του σε cluster που δεν επικαλύπτει καθόλου.
+  \item Tracking: συγκρίνει διαστήματα με IoU και διαλέγει όλες τις αντιστοιχίσεις μαζί, χωρίς διασταύρωση. Το A$\to$X μαζί με το B$\to$Y δίνει 0.52, περισσότερο από το B$\to$X μόνο του (0.36).
+  \item Ακόμα και με IoU, ένα greedy θα έπαιρνε πρώτα το B$\to$X (0.36). Το λάθος είναι η τοπική επιλογή, όχι μόνο το μέτρο.
+  \item Στα πειράματα όμως τα ID switches ήταν σπάνια και στα δύο (H3: Holm p = 0.36), άρα η διαφορά δεν φάνηκε στην προσομοίωση.
+\end{itemize}
+\end{frame}
+\fi
 
 \begin{frame}{Human Behavior in Simulations}
   \begin{columns}[c,totalwidth=\textwidth]
@@ -885,6 +1047,7 @@ controller dwa
   \end{tabularx}
 \end{frame}
 
+\ifshownotes
 \begin{frame}{Human Behavior in Simulations Speaker Notes}
 \begin{itemize}
   \item Οι άνθρωποι στο HuNav ακολουθούν στόχους με social force model.
@@ -895,5 +1058,6 @@ controller dwa
   \item Στο doorway το density δεν αλλάζει τίποτα· έχει πάντα έναν άνθρωπο.
 \end{itemize}
 \end{frame}
+\fi
 
 \end{document}

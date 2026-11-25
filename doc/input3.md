@@ -10,6 +10,12 @@ Tests
 7. paper/slides.
 8. Demos
 
+Υποθέσεις (το H4 είναι το Β5 του input1):
+- **H1** (μεταβλητό μήκος): μειώνει την ακινησία όταν ο χρήστης ζητά κίνηση. Μετρική: `standstill_while_requested_s`, tracking − fixed.
+- **H2** (length jump): φτιάχνει clusters συμβατά με τον ορισμό (μία επιλογή κίνησης ανά cluster, χωρίς να σπάει μια επιλογή σε κομμάτια) και με χαμηλό Loss. Μετρικές: homogeneity, completeness, Loss. Περιγραφικό, όχι κύριο τεστ (απόφαση Π).
+- **H3** (tracking correspondence): κρατά τα IDs πιο σταθερά από το υπάρχον greedy (upstream) matching. Μετρική: ID switches/min, offline replay στα ίδια clusters.
+- **H4** (όλο το pipeline): το path που επιλέγεται είναι «φυσικό», δηλαδή κοντά στη διαδρομή του χειριστή στο SCAND. Μετρικές: |φ* − φ_true| στα 1.8 m, ADE/FDE έναντι του «μόνο χρήστης».
+
 # currently working on
 
 SOS πριν τρέξεις SCAND πειράματα να βεβαιωθείς ενδιαφέρον περιβάλλον και cmd_vel του χρήστη όχι μόνο να παίρνει οδομετρία
@@ -761,7 +767,7 @@ CONDITIONS="group_blocking:line" JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_expe
 
 Το SCAND διαβάζει το `experiment.yaml`, οπότε το script γράφει εκεί προσωρινά τα `correspondence` και `length_jump_threshold` και τα επαναφέρει στο τέλος. Είναι open loop: όλες οι μέθοδοι βλέπουν ακριβώς τα ίδια δεδομένα, οπότε δεν υπάρχουν seeds. Η σύγκριση είναι περιγραφική ανά frame.
 
-Μετρικές με νόημα στο SCAND: clustering (H2), IDs (H3), επιλογή path (Β5), διαγνωστικά r (H1 SCAND). Οι μετρικές ασφάλειας **δεν** υπολογίζονται, γιατί η θέση είναι η καταγραφή του Jackal και όχι εφικτή κίνηση του iWalk.
+Μετρικές με νόημα στο SCAND: clustering (H2), IDs (H3), επιλογή path (H4), διαγνωστικά r (H1 SCAND). Οι μετρικές ασφάλειας **δεν** υπολογίζονται, γιατί η θέση είναι η καταγραφή του Jackal και όχι εφικτή κίνηση του iWalk.
 
 ## Βήμα 5 — Αξιολόγηση 🟡
 
@@ -825,12 +831,12 @@ CONDITIONS="group_blocking:line" JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_expe
 | Βήμα 1              | Ακολουθεί τη διαδρομή;                 | autonomous, open_area, 3 διαδρομές                                          | `path_deviation.cross_track_*`, `ade_m`, `fde_m`, `goal_reached`                                                                                                                                                                                      | κριτήριο βήματος 1                                                                       | ✅ ελεγμένο σε runs |
 | **H1** μεταβλητό r  | Κόβει λιγότερα ασφαλή paths;           | HuNav, fixed έναντι tracking, ίδια seeds                                    | **κύρια:** `standstill_while_requested_s`· ασφάλεια: `collision_episodes` (`obstacle_` / `human_`), `additional_metrics.minimum_human_center_distance_m`, `minimum_obstacle_distance_m`, `personal_zone_time_s`                                       | standstill ↓, ασφάλεια όχι χειρότερη                                                     | ✅                  |
 |                     |                                        | SCAND, 3 μέθοδοι                                                            | (α) `dwal_diagnostics.*.mean_path_fraction.clustered` (αποδεκτά paths), (β) `no_cluster_message_fraction`, (γ) `offline.intent.false_stop.fraction`: προτεινόμενη v < 0.01 m/s ενώ το Jackal κινούνταν > 0.1 m/s                                      | (α) ↑ (β) ↓ (γ) ↓                                                                        | ✅                  |
-| **H2** άλμα μήκους  | Χωρίζει επιλογές χωρίς να θρυμματίζει; | βήμα 2 (σάρωση τ), βήμα 3                                                   | **βήμα 2 (επιλογή τ):** `offline.clustering.far.choice_violation_fraction` (underclustering, homogeneity)· `completeness_violation_fraction` (overclustering, completeness). **βήμα 3:** τα ίδια, περιγραφικά ανά μέθοδο, όχι κύριο τεστ (απόφαση Π)  | under ↓, over μικρό                                                                      | ✅                  |
+| **H2** άλμα μήκους  | Χωρίζει επιλογές χωρίς να θρυμματίζει, με χαμηλό Loss; | βήμα 2 (σάρωση τ), βήμα 3                                                   | **βήμα 2 (επιλογή τ):** `offline.clustering.far.choice_violation_fraction` (underclustering, homogeneity)· `completeness_violation_fraction` (overclustering, completeness). **βήμα 3:** τα ίδια, περιγραφικά ανά μέθοδο, όχι κύριο τεστ (απόφαση Π)  | under ↓, over μικρό                                                                      | ✅                  |
 |                     | Τρεμοπαίζει;                           | HuNav, SCAND                                                                | `flicker_per_min`: αλλαγή πλήθους clusters που αναιρείται σε < 0.5 s                                                                                                                                                                                  | όχι χειρότερο από fixed                                                                  | ✅                  |
 |                     | Είναι σταθερό σε θόρυβο;               | offline, ίδιο frame                                                         | `stability_ari_mean`, `stability_ari_p05`: ARI ανάμεσα στα labels των ίδιων paths από το καθαρό scan και από scan με Gaussian θόρυβο απόστασης **σ = 0.03 m**                                                                                         | κοντά στο 1                                                                              | ✅                  |
 |                     | Αλλάζει τη συμπεριφορά;                | HuNav                                                                       | standstill, συγκρούσεις, αποστάσεις (όπως H1)                                                                                                                                                                                                         | όχι χειρότερα                                                                            | ✅                  |
-| **H3** αντιστοίχιση | Κρατά σταθερά IDs;                     | offline replay upstream / tracking στα ίδια clusters (sim) + online (SCAND) | **κύρια:** `ids_replay_tracking.id_switches_per_min` έναντι `ids_replay_upstream`· επίσης `fragmentations_per_min`, `crossings_per_min`, `duplicate_id_frames`, `unsupported_inheritance_per_min` (J < 0.1), και `ids_recorded` (τα δημοσιευμένα IDs) | όλα ↓, διπλά = 0                                                                         | ✅                  |
-| **Β5** επιλογή path | Πόσο κοντά στην πραγματική διαδρομή;   | SCAND                                                                       | `phi_error_mean_rad` (\|φ* − φ_true\| στα 1.8 m), `ade_mean_m`, `fde_mean_m` (ίσο μήκος τόξου)                                                                                                                                                        | καλύτερα από `baseline_ade_mean_m` («μόνο χρήστης»), κυρίως `by_obstacle_distance` < 1 m | ✅                  |
+| **H3** αντιστοίχιση | Κρατά πιο σταθερά IDs από το greedy (upstream); | offline replay upstream / tracking στα ίδια clusters (sim) + online (SCAND) | **κύρια:** `ids_replay_tracking.id_switches_per_min` έναντι `ids_replay_upstream`· επίσης `fragmentations_per_min`, `crossings_per_min`, `duplicate_id_frames`, `unsupported_inheritance_per_min` (J < 0.1), και `ids_recorded` (τα δημοσιευμένα IDs) | όλα ↓, διπλά = 0                                                                         | ✅                  |
+| **H4** επιλογή path (όλο το pipeline, πρώην Β5) | Είναι φυσικό, δηλαδή κοντά στη διαδρομή του χειριστή; | SCAND                                                                       | `phi_error_mean_rad` (\|φ* − φ_true\| στα 1.8 m), `ade_mean_m`, `fde_mean_m` (ίσο μήκος τόξου)                                                                                                                                                        | καλύτερα από `baseline_ade_mean_m` («μόνο χρήστης»), κυρίως `by_obstacle_distance` < 1 m | ✅                  |
 | Καθυστέρηση         | Πόσο είναι το T στην πράξη;            | κάθε run                                                                    | `offline.latency.total_mean_s`, `total_p95_sum_s` (ηλικία scan → /cmd_vel)                                                                                                                                                                            | —                                                                                        | ✅                  |
 | Αλυσίδα εντολών     | Πού χάνεται η ταχύτητα;                | κάθε run                                                                    | `offline.command_chain.mean_speed_mps`, `drops`                                                                                                                                                                                                       | —                                                                                        | ✅                  |
 | Στατιστική          | Είναι η διαφορά αξιόπιστη;             | ζεύγη runs                                                                  | Wilcoxon, rank-biserial r, bootstrap 95% CI, Holm (κύριες: στις 2 υποθέσεις H1, H3· δευτερεύουσες: ανά μετρική)                                                                                                                                       | —                                                                                        | ✅                  |
@@ -839,7 +845,7 @@ CONDITIONS="group_blocking:line" JUMP=0.3 bash ~/crowd_aware_ws/scripts/run_expe
 
 Βήμα 3.1: `completeness_violation_fraction` από τα καταγεγραμμένα `segments` όταν υπάρχουν (απόφαση Φ), `mixed_clusters_per_frame` ενημερωτικά, και `stability_ari_*` = κενό για change-point και DBSCAN.
 
-Η πρόβλεψη πρόθεσης (`dwal_intent_estimator.hpp`) **δεν αξιολογείται**: δεν είναι συνεισφορά της εργασίας και δεν ισχυριζόμαστε βελτίωσή της. Ο estimator είναι **ο αρχικός του upstream, ίδιος σε όλες τις μεθόδους**: το `intent.split_by_overlap` (μοίρασμα πίστης σε split, που ήταν ενεργό μόνο στο tracking) αφαιρέθηκε 2026-11-10. Έτσι οι μέθοδοι διαφέρουν **μόνο** στο clustering και την αντιστοίχιση IDs. Τα runs tracking πριν από αυτή την αλλαγή (2026-11-04 και τα δοκιμαστικά 2026-11-10) έτρεξαν με το μοίρασμα ενεργό. Γι' αυτό δεν υπάρχουν μετρικές πιθανοτήτων (hit rate, Brier, log-loss). Στο SCAND αξιολογείται μόνο το **path** που διαλέγει ο controller (Β5) και το αν κάποιο cluster περιέχει την κατεύθυνση του οδηγού (`phi_true_inside_any_cluster_fraction`, μετρική clustering).
+Η πρόβλεψη πρόθεσης (`dwal_intent_estimator.hpp`) **δεν αξιολογείται**: δεν είναι συνεισφορά της εργασίας και δεν ισχυριζόμαστε βελτίωσή της. Ο estimator είναι **ο αρχικός του upstream, ίδιος σε όλες τις μεθόδους**: το `intent.split_by_overlap` (μοίρασμα πίστης σε split, που ήταν ενεργό μόνο στο tracking) αφαιρέθηκε 2026-11-10. Έτσι οι μέθοδοι διαφέρουν **μόνο** στο clustering και την αντιστοίχιση IDs. Τα runs tracking πριν από αυτή την αλλαγή (2026-11-04 και τα δοκιμαστικά 2026-11-10) έτρεξαν με το μοίρασμα ενεργό. Γι' αυτό δεν υπάρχουν μετρικές πιθανοτήτων (hit rate, Brier, log-loss). Στο SCAND αξιολογείται μόνο το **path** που διαλέγει ο controller (H4) και το αν κάποιο cluster περιέχει την κατεύθυνση του οδηγού (`phi_true_inside_any_cluster_fraction`, μετρική clustering).
 
 ---
 
@@ -902,8 +908,21 @@ bash ~/crowd_aware_ws/scripts/plot_dwal_live.sh
 ```
 Κάθε mode δέχεται τα δικά του seeds στο τέλος και τα `SCENARIOS`, `DENSITIES`, `PATHS`, `JUMPS`, `METHODS` (`fixed`, `upstream`, `tracking`, `changepoint` με `BETA`, `dbscan` με `EPS`) για να περιοριστεί. Το `tune` δέχεται `TUNE_VALUES` (π.χ. `"tau:0.3 beta:0.2 eps:0.1"`), `TUNE_CONDITIONS` (`σενάριο:πυκνότητα:διαδρομή`) και `STEP_NAME` (άλλη λίστα runs, π.χ. `tune_test`).
 
-
-
+| SCENARIO        | PATH_SHAPE     |
+| --------------- | -------------- |
+| dense_crowd     | hard_curve     |
+| dense_static    | hard_curve     |
+| dense_static    | hard_curve_1m  |
+| open_area       | hard_curve     |
+| crossing        | line           |
+| group_blocking  | line           |
+| group_blocking  | detour_left    |
+| doorway         | side_approach  |
+| doorway         | u_turn         |
+| narrow_corridor | keep_right     |
+| junction        | left_turn      |
+| junction        | straight_right |
+| cafe            | between_tables |
 
 ---
 

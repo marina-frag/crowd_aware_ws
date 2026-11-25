@@ -29,7 +29,8 @@ pattern(){  # method -> fragment of the run directory name
 
 find_run(){  # scenario path seed method
   local fragment matches; fragment=$(pattern "$4")
-  matches=$(cat "$STEPS"/*.txt 2>/dev/null | grep -E "^$1_medium_$2_.*${fragment}.*_seed$3_" | sort -u || true)
+  # the variant must follow the path directly, so hard_curve does not also match hard_curve_1m
+  matches=$(cat "$STEPS"/*.txt 2>/dev/null | grep -E "^$1_medium_$2_(fixed|dynamic)" | grep -E "${fragment}.*_seed$3_" | sort -u || true)
   [[ -n $matches ]] || { echo "No run for $1:$2 seed $3 method $4" >&2; exit 1; }
   (( $(wc -l <<<"$matches") == 1 )) || echo "Several runs match $4, using the latest" >&2
   tail -1 <<<"$matches"
